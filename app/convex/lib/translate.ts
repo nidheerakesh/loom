@@ -1,7 +1,9 @@
 // LLM translation for NEW skills only (en↔ml + an emoji). Runs inside a Convex action
-// (fetch allowed). Reads API keys from Convex env (never hardcode):
-//   npx convex env set ANTHROPIC_API_KEY sk-...     (preferred)
-//   npx convex env set GEMINI_API_KEY ...           (fallback)
+// (fetch allowed). Reads API keys from Convex env (never hardcode). Preference order:
+//   npx convex env set NVIDIA_API_KEY nvapi-...      (NVIDIA NIM, preferred)
+//   npx convex env set ANTHROPIC_API_KEY sk-...
+//   npx convex env set GEMINI_API_KEY ...
+// Optional: NVIDIA_MODEL (default meta/llama-3.3-70b-instruct).
 // If no key is set, falls back to a deterministic echo so the app still works offline.
 
 export type Translation = { en: string; ml: string; emoji: string };
@@ -21,6 +23,28 @@ function parseJson(text: string): Translation | null {
     /* ignore */
   }
   return null;
+}
+
+// NVIDIA NIM — OpenAI-compatible chat completions.
+async function viaNvidia(phrase: string, key: string): Promise<Translation | null> {
+  const model = process.env.NVIDIA_MODEL ?? "meta/llama-3.3-70b-instruct";
+  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 200,
+      temperature: 0.2,
+      messages: [{ role: "user", content: PROMPT(phrase) }],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  return typeof text === "string" ? parseJson(text) : null;
 }
 
 async function viaAnthropic(phrase: string, key: string): Promise<Translation | null> {
@@ -65,9 +89,14 @@ function hasMalayalam(s: string): boolean {
 
 export async function translateSkill(phrase: string): Promise<Translation> {
   const clean = phrase.trim();
+  const nvidia = process.env.NVIDIA_API_KEY;
   const anthropic = process.env.ANTHROPIC_API_KEY;
   const gemini = process.env.GEMINI_API_KEY;
   try {
+    if (nvidia) {
+      const t = await viaNvidia(clean, nvidia);
+      if (t) return t;
+    }
     if (anthropic) {
       const t = await viaAnthropic(clean, anthropic);
       if (t) return t;
