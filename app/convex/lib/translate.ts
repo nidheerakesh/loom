@@ -41,10 +41,15 @@ async function viaNvidia(phrase: string, key: string): Promise<Translation | nul
       messages: [{ role: "user", content: PROMPT(phrase) }],
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.error(`[nim] ${res.status} model=${model}: ${(await res.text()).slice(0, 300)}`);
+    return null;
+  }
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content;
-  return typeof text === "string" ? parseJson(text) : null;
+  const parsed = typeof text === "string" ? parseJson(text) : null;
+  if (!parsed) console.error(`[nim] unparseable response: ${JSON.stringify(text).slice(0, 300)}`);
+  return parsed;
 }
 
 async function viaAnthropic(phrase: string, key: string): Promise<Translation | null> {
@@ -87,12 +92,44 @@ function hasMalayalam(s: string): boolean {
   return /[ഀ-ൿ]/.test(s);
 }
 
+// Keyless en↔ml translation via MyMemory (free, rate-limited). No emoji.
+async function viaMyMemory(text: string, source: string, target: string): Promise<string | null> {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error(`[mymemory] ${res.status}`);
+    return null;
+  }
+  const data = await res.json();
+  const t = data?.responseData?.translatedText;
+  return typeof t === "string" && t.trim() ? t.trim() : null;
+}
+
+// Rough emoji for a skill (best-effort; not critical).
+function guessEmoji(en: string): string {
+  const map: [RegExp, string][] = [
+    [/stitch|tailor|sew|garment|embroider/, "🧵"],
+    [/cut/, "✂️"],
+    [/pack|box|wrap/, "📦"],
+    [/cook|cater|food|bak|pickle/, "🍲"],
+    [/craft|art|paint|pottery|clay|weav/, "🎨"],
+    [/tutor|teach|coach/, "📚"],
+    [/bee|honey|farm|garden|agri/, "🐝"],
+    [/clean|wash/, "🧹"],
+    [/beaut|salon|hair|mehendi|henna/, "💅"],
+  ];
+  for (const [re, e] of map) if (re.test(en)) return e;
+  return "🛠️";
+}
+
 export async function translateSkill(phrase: string): Promise<Translation> {
   const clean = phrase.trim();
+  const lower = clean.toLowerCase();
   const nvidia = process.env.NVIDIA_API_KEY;
   const anthropic = process.env.ANTHROPIC_API_KEY;
   const gemini = process.env.GEMINI_API_KEY;
   try {
+    // 1. LLM providers (also produce an emoji) — used only if a key is set.
     if (nvidia) {
       const t = await viaNvidia(clean, nvidia);
       if (t) return t;
@@ -105,12 +142,18 @@ export async function translateSkill(phrase: string): Promise<Translation> {
       const t = await viaGemini(clean, gemini);
       if (t) return t;
     }
-  } catch {
-    /* fall through to offline fallback */
+    // 2. Keyless translation API (no LLM, no key).
+    const src = hasMalayalam(clean) ? "ml" : "en";
+    const tgt = src === "ml" ? "en" : "ml";
+    const translated = await viaMyMemory(clean, src, tgt);
+    if (translated) {
+      const en = src === "en" ? lower : translated.toLowerCase();
+      const ml = src === "ml" ? clean : translated;
+      return { en, ml, emoji: guessEmoji(en) };
+    }
+  } catch (e) {
+    console.error(`[translate] ${String(e)}`);
   }
-  // Offline fallback: keep the phrase; mirror across languages as best we can.
-  const lower = clean.toLowerCase();
-  return hasMalayalam(clean)
-    ? { en: lower, ml: clean, emoji: "🛠️" }
-    : { en: lower, ml: clean, emoji: "🛠️" };
+  // 3. Offline fallback: keep the phrase as-is.
+  return { en: lower, ml: clean, emoji: guessEmoji(lower) };
 }
