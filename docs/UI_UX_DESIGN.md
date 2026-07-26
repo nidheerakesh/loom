@@ -43,7 +43,7 @@ Malayalam legibility is a real design constraint, not an afterthought — these 
 | --- | --- | --- |
 | Display / headings | **Manjari** (Malayalam) | Community-made, characterful, warm; the app's voice |
 | Body (Malayalam) | **Noto Sans Malayalam** | Maximum legibility at small sizes |
-| Latin / numerals | **Inter** | For numbers (distance, pay, quantity), coordinator/admin |
+| Latin / numerals | **Inter** | For numbers (distance, pay, rate, quantity), Customer/admin |
 
 Type scale (mobile-first): 28 / 22 / 18 / 16 / 14. Body min 16px. Numerals (pay, distance, size) get one step up and medium weight — numbers are how low-literacy users read the app's most important facts.
 
@@ -77,17 +77,25 @@ This is the memorable moment (PRD "Demo Moment"). Everything else stays quiet so
 | **Skill chip** | Icon + Malayalam name; tap to add/remove; selected = `--indigo` fill. Every skill has an illustrated icon (icon set is a P0 asset). |
 | **Match card** | Big icon/image, title (Manjari), numerals for distance + pay, prominent ▶ play. One card = one opportunity. |
 | **Play (▶) button** | Consistent everywhere; triggers Malayalam narration + path animation. Same icon in feed and detail. |
-| **Team panel** | Row of member discs (grouped by SHG colour band), each with assigned-skill icon; coverage bar (required vs covered). |
+| **Team panel** | Row of provider discs (grouped by SHG colour band), each with assigned-skill icon + covered units; coverage bar (required vs covered). |
 | **Listen 🔊** | Persistent; reads current screen's key action. Long-press any label to hear it. |
-| **Bottom nav** | 4 items, icon + Malayalam label, ≥56px, current item in `--indigo`. |
+| **Bottom nav** | 4 items, icon + Malayalam label, ≥56px, current item in `--indigo`. Provider: *Current · Requests · Communities · Profile*. Customer: *Browse · Request · Accepted · Profile*. |
+| **Provider card** | For the Customer directory: name/shop (Manjari) · ★ rating · rate + delivery (numerals) · distance · skill icons · portfolio thumb. `(tap)` → profile. |
+| **Filter bar** | Distance slider (within N km), experience tiers (any / 1+ / 3+ / 5+, as tappable chips), price range — all ≥56px, icon-labelled, voice-readable. Active filters shown as removable chips. |
+| **Rating display** | ★ 0–5 in `--kasavu` (gold, sparingly), numeric aggregate + review count. Display only. |
+| **Portfolio grid** | 2–3 col image grid of uploaded work; `(tap)` enlarges; each has a spoken caption via 🔊. |
+| **Rate + delivery tag** | Numerals + icon (₹ + clock); one step-up type size (numbers carry the message). |
+| **Request form** | Customer: description, skill multi-select, no. of ppl, **individual/group segmented toggle**, units, location, pay, deadline. Large targets; voice entry per field. |
+| **Chat thread** | Bubbles; incoming has a 🔊 read-aloud; composer has a 🎤 mic (voice-to-text) + text. |
+| **Accept/decline** | Provider request card: big ✓ (`--leaf`) / ✗ (`--madder`) buttons, ≥56px, consequence read aloud. |
 
-Icon-first everywhere; text always paired with an icon so meaning survives low literacy.
+Icon-first everywhere; text always paired with an icon so meaning survives low literacy. Customer surfaces may lean more on text, but keep the same tokens and target sizes.
 
 ---
 
 ## 5. Screen layouts (ASCII wireframes, mobile)
 
-**Home / Find work**
+**Provider Home / Find work**
 ```
 ┌───────────────────────────────┐
 │  Loom            🔊            │
@@ -102,7 +110,7 @@ Icon-first everywhere; text always paired with an icon so meaning survives low l
 │ │ 1.5 km · ₹800              │ │
 │ └───────────────────────────┘ │
 ├───────────────────────────────┤
-│  🔍 ജോലി   👥 ടീം   📋   👤    │  ← bottom nav (icon+label)
+│ 📋 നിലവിൽ  📨 അഭ്യർത്ഥന 💬 👤  │  ← Current · Requests · Communities · Profile
 └───────────────────────────────┘
 ```
 
@@ -122,13 +130,13 @@ Icon-first everywhere; text always paired with an icon so meaning survives low l
 └───────────────────────────────┘
 ```
 
-**Proposed team (coordinator)**
+**Proposed team (Customer)**
 ```
 ┌───────────────────────────────┐
 │  Team for: 200 uniforms       │
 │                               │
 │   ●──┐                        │
-│   ●──┼──══threads══►  ▣ order │  ← threads converge
+│   ●──┼──══threads══► ▣ request│  ← threads converge
 │   ●──┤                        │
 │   ●──┘                        │
 │  Coverage: cutting·stitching· │
@@ -138,11 +146,75 @@ Icon-first everywhere; text always paired with an icon so meaning survives low l
 └───────────────────────────────┘
 ```
 
+**Customer Browse + filters**
+```
+┌───────────────────────────────┐
+│  ‹ back   തയ്യൽ (tailoring)    │
+│  [ within 5km ▾ ][ 3+ yrs ▾ ] │  ← filter chips
+│  [ ≤ ₹500 ▾ ]                 │
+├───────────────────────────────┤
+│ ┌───────────────────────────┐ │
+│ │ [◍] Ammu's Tailors  ★4.8   │ │  ← provider card
+│ │ ₹450/pc · 2 days · 2.1 km  │ │
+│ │ 🧵 stitching  ✂ cutting    │ │
+│ └───────────────────────────┘ │
+│ ┌───────────────────────────┐ │
+│ │ [◍] Reena (solo)   ★4.5    │ │
+│ │ ₹400/pc · 3 days · 4.4 km  │ │
+│ └───────────────────────────┘ │
+├───────────────────────────────┤
+│  🔎 Browse  ➕ Request 📥 👤   │  ← Browse · Request · Accepted · Profile
+└───────────────────────────────┘
+```
+
+**Provider profile (viewed by Customer)**
+```
+┌───────────────────────────────┐
+│  ‹ back                   💬   │
+│  [◍] Ammu's Tailors           │
+│  ★4.8 (32) · 👥 4 ppl         │  ← rating · capacity
+│  ₹450/pc · ⏱ 2 days           │
+│  🧵 stitching  ✂ cutting      │
+│  ┌────┐┌────┐┌────┐  portfolio │
+│  │work││work││work│           │
+│  └────┘└────┘└────┘           │
+│  [ ✋ Request ]   [ 💬 Chat ]  │
+└───────────────────────────────┘
+```
+
+**Customer request form**
+```
+┌───────────────────────────────┐
+│  New request              🎤   │
+│  Description [_____________]   │
+│  Skills  🧵 ✂ + …             │
+│  No. of ppl [ 5 ]             │
+│  ( ◉ individual  ○ group )    │  ← mode toggle
+│  Units [ 200 ]                │
+│  Location 📍   Pay ₹   By 📅   │
+│  [        Submit        ]     │
+└───────────────────────────────┘
+```
+
+**Chat thread (Communities)**
+```
+┌───────────────────────────────┐
+│  ‹ Ammu's Tailors         🔊   │
+│  ┌───────────────┐            │
+│  │ rate for 200? │ (them) 🔊  │
+│  └───────────────┘            │
+│           ┌────────────────┐  │
+│           │ ₹450/pc, 2 days │  │ (you)
+│           └────────────────┘  │
+│  [ 🎤  type a message… ] [➤]  │  ← mic-to-send + text
+└───────────────────────────────┘
+```
+
 ---
 
 ## 6. Accessibility & inclusivity floor (non-negotiable)
 
-- **Voice + icons complete every P0 member flow** without reading English.
+- **Voice + icons complete every P0 Provider flow** without reading English — including skill entry (with canonical read-back), filters, incoming request accept/decline, and chat (mic-to-send + 🔊 read-aloud). Customer surfaces may use text but keep the same target sizes and tokens.
 - Touch targets ≥56px; body ≥16px; AA contrast throughout.
 - Visible keyboard focus; screen-reader labels in Malayalam.
 - `prefers-reduced-motion` honoured (path draws instantly).
@@ -166,7 +238,7 @@ All user-facing strings live in the i18n Malayalam catalogue (`react-i18next`); 
 
 ## 8. What to avoid
 
-- No dense text screens; no English-only paths in member flows.
+- No dense text screens; no English-only paths in Provider flows.
 - No decorative motion competing with the woven path.
 - No gold (`--kasavu`) for body text or large fills — it's a thread, not a wall.
 - Not the generic AI aesthetic (cream+terracotta serif / black+neon). If a screen starts to look like that, it's drifted from the brief.
