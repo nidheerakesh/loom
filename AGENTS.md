@@ -7,7 +7,7 @@ Read this before writing code. Read `docs/PRD.md`, `docs/TDD.md`, `docs/USER_FLO
 
 ## Your role
 
-You are a contributor building **Loom**, an AI matching engine that routes income through women's self-help group networks. You surface individual work and **assemble cross-group teams** for orders no one can do alone, and you explain every match in spoken Malayalam.
+You are a contributor building **Loom**, a two-sided AI marketplace that routes income through women's self-help group networks. **Providers** (a skilled woman or a small shop) offer skills; **Customers** browse, filter, and request work. You surface individual work and **assemble cross-group teams** for orders no one can do alone, and you explain every match in spoken Malayalam. (Personas: Provider = former Member; Customer = former Coordinator + buyer.)
 
 Build to the design docs. Prefer small, correct, well-typed changes over large speculative ones. When a task is ambiguous, state your assumption and proceed; when it conflicts with a rule below, stop and ask.
 
@@ -26,7 +26,8 @@ Build to the design docs. Prefer small, correct, well-typed changes over large s
 - **Determinism:** matching, scoring, and team assembly must be deterministic and seedable. Same input + seed → same output. No randomness without an injected seed.
 - **Secrets:** never hardcode or commit API keys, tokens, or credentials. Everything sensitive comes from environment variables via `settings.py` / `.env` (git-ignored). Do not print secrets in logs. *(This repo's team has hit GitHub secret-scanning before — treat this as non-negotiable and scan diffs before committing.)*
 - **Adapters for externals:** all STT / TTS / LLM / DB access goes through the interfaces in `services/` (see TDD §4). Never call a provider SDK directly from a route or component.
-- **Malayalam-first UX:** every P0 member flow must be completable with voice + icons, no English reading required. User-facing strings go in the i18n catalogue, never hardcoded in components.
+- **Malayalam-first UX:** every P0 Provider flow must be completable with voice + icons, no English reading required (incl. skill entry with canonical read-back, filters, request accept/decline, chat). Customer surfaces may use text. User-facing strings go in the i18n catalogue, never hardcoded in components.
+- **Determinism extends to the marketplace:** skill canonicalization (synonym merge) is a curated-alias + LaBSE-cosine resolver — **no runtime LLM**. Filters are deterministic hard constraints. Ratings/chat/portfolio/grievance stay **out of the match decision**.
 - **No PII in URLs or logs;** store `phone_hash`, never raw phone numbers, in the graph.
 
 ---
@@ -61,24 +62,30 @@ loom/
 │   │   ├── main.py              # FastAPI app + router mount only
 │   │   ├── settings.py          # the ONLY place env vars are read
 │   │   ├── api/                 # routers, one file per resource (<400 lines)
-│   │   │   ├── auth.py  input.py  members.py  matches.py
-│   │   │   ├── opportunities.py  teams.py  coordinator.py  health.py
+│   │   │   ├── auth.py  input.py  providers.py  customers.py  matches.py
+│   │   │   ├── requests.py  teams.py  chat.py  grievance.py  health.py
 │   │   ├── models/              # Pydantic schemas + domain types
 │   │   ├── services/            # business logic + provider adapters
 │   │   │   ├── graph.py         # GraphRepository (Neo4j) interface + impl
 │   │   │   ├── embeddings.py    # LaBSE embedder
-│   │   │   ├── matching/        # individual.py, team_assembly.py, scoring.py
+│   │   │   ├── skills.py        # canonical skill resolver (synonym merge, S9)
+│   │   │   ├── matching/        # individual.py, team_assembly.py, provider_search.py, scoring.py
+│   │   │   ├── ratings.py       # reputation aggregate (display-first)
+│   │   │   ├── chat.py          # threaded messaging (outside match path)
+│   │   │   ├── grievance.py     # grievance portal
 │   │   │   ├── narration.py     # Gemini narrator + groundedness validator
 │   │   │   ├── stt.py  tts.py   # adapters (Bhashini/Google)
 │   │   │   └── audit.py         # match + event logging
 │   │   └── db/                  # Postgres access, migrations
 │   ├── scripts/seed.py          # synthetic data generator (seeded)
+│   ├── scripts/suggest_aliases.py  # OFFLINE LLM alias suggester → human review (never runtime)
 │   └── tests/                   # mirrors app/ ; pytest
 ├── frontend/
 │   ├── src/
 │   │   ├── main.tsx  App.tsx
-│   │   ├── pages/               # Home, MatchDetail, Skills, Teams, ...
-│   │   ├── components/          # MatchCard, MicButton, GraphPath, TeamPanel...
+│   │   ├── pages/               # Provider: Current, MatchDetail, Skills, ProfileEdit, Teams, Communities, Grievance
+│   │   │                        # Customer: Browse, ProviderProfile, RequestForm, Accepted, History
+│   │   ├── components/          # MatchCard, ProviderCard, FilterBar, MicButton, GraphPath, TeamPanel, PortfolioGrid, RatingStars, ChatThread...
 │   │   ├── graph/               # Cytoscape setup + woven-path animation
 │   │   ├── i18n/                # ml.json (primary), en.json (fallback)
 │   │   ├── api/                 # typed client for /api/v1
@@ -129,7 +136,7 @@ Keep this structure. New backend logic → `services/`; new endpoints → thin r
 - [ ] Tests added and passing (incl. determinism where relevant).
 - [ ] No secrets in diff; nothing sensitive logged.
 - [ ] LLM/narration changes preserve "graph decides, LLM narrates."
-- [ ] Member-facing UI works via voice + icons; strings in i18n.
+- [ ] Provider-facing UI works via voice + icons; strings in i18n.
 - [ ] Files under 400 lines.
 - [ ] Docs updated if behaviour or API changed.
 
@@ -148,4 +155,4 @@ Keep this structure. New backend logic → `services/`; new endpoints → thin r
 - A change would let the LLM influence which match is produced.
 - You'd need to add a secret, a new external provider, or a new heavy dependency (GNN libs, etc.).
 - The synthetic-data schema would diverge from anticipated Kudumbashree fields.
-- A member flow would require reading English to complete.
+- A Provider flow would require reading English to complete.
