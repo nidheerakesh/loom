@@ -1,0 +1,105 @@
+import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+
+export function Button({
+  variant = "primary",
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "gold" | "ghost" | "danger" | "leaf";
+}) {
+  const base =
+    "min-h-[48px] px-4 rounded-[14px] font-medium text-base transition active:scale-95 disabled:opacity-40";
+  const styles: Record<string, string> = {
+    primary: "bg-loom-indigo text-loom-cotton hover:bg-loom-indigoSoft",
+    gold: "bg-loom-kasavu text-loom-ink hover:brightness-105",
+    ghost: "bg-loom-cottonDeep text-loom-indigo hover:brightness-95",
+    danger: "bg-loom-madder text-white hover:brightness-110",
+    leaf: "bg-loom-leaf text-white hover:brightness-110",
+  };
+  return <button className={`${base} ${styles[variant]} ${className}`} {...props} />;
+}
+
+export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`bg-loom-cottonDeep rounded-[14px] p-4 shadow-sm ${className}`}>{children}</div>
+  );
+}
+
+export function Field({
+  label,
+  className = "",
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+  return (
+    <label className="block mb-3">
+      {label && <span className="block text-sm text-loom-indigoSoft mb-1">{label}</span>}
+      <input
+        className={`w-full min-h-[48px] px-3 rounded-[14px] border border-loom-cottonDeep bg-white text-loom-ink text-base ${className}`}
+        {...props}
+      />
+    </label>
+  );
+}
+
+export function Stars({ value, count }: { value: number; count?: number }) {
+  const full = Math.round(value);
+  return (
+    <span className="text-loom-kasavu" title={`${value}`}>
+      {"★".repeat(full)}
+      <span className="text-loom-cottonDeep">{"★".repeat(5 - full)}</span>
+      {count !== undefined && <span className="text-loom-indigoSoft text-sm ml-1">({count})</span>}
+    </span>
+  );
+}
+
+// Mock TTS — "reads aloud" by showing the string (real deployment swaps in Bhashini/TTS).
+export function ListenButton({ text }: { text: string }) {
+  return (
+    <button
+      onClick={() => window.alert("🔊 " + text)}
+      className="text-loom-indigo text-lg"
+      aria-label="listen"
+    >
+      🔊
+    </button>
+  );
+}
+
+export function TabBar({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { key: string; label: string; icon: string }[];
+  active: string;
+  onChange: (k: string) => void;
+}) {
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 max-w-[520px] mx-auto bg-loom-cotton border-t border-loom-cottonDeep flex">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => onChange(tab.key)}
+          className={`flex-1 py-2 min-h-[56px] flex flex-col items-center justify-center text-xs ${
+            active === tab.key ? "text-loom-indigo font-semibold" : "text-loom-indigoSoft"
+          }`}
+        >
+          <span className="text-xl">{tab.icon}</span>
+          {tab.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+export function Screen({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="max-w-[520px] mx-auto min-h-screen bg-loom-cotton pb-24">
+      <header className="sticky top-0 bg-loom-cotton px-4 py-3 flex items-center justify-between border-b border-loom-cottonDeep z-10">
+        <h1 className="text-xl font-bold text-loom-indigo">{title}</h1>
+        {right}
+      </header>
+      <main className="p-4 space-y-3">{children}</main>
+    </div>
+  );
+}
