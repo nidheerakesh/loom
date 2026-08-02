@@ -1,23 +1,60 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth";
 import { Button, Card, Screen, ListenButton } from "../../ui";
+import { apiGet, apiPost } from "../../lib/api";
+
+type FeedCard = {
+  requestId: string;
+  title: string;
+  mode: "individual" | "group";
+  units: number;
+  pay: number | null;
+  distanceKm: number;
+  matchedSkill: string;
+  matchedSkillMl: string | null;
+  total: number;
+};
+type MyTeam = {
+  teamId: string;
+  teamStatus: string;
+  requestTitle: string;
+  skill: string;
+  skillMl: string | null;
+  coveredUnits: number;
+  state: string;
+};
 
 export function ProviderCurrent() {
   const { token, t } = useAuth();
-  const feed = useQuery(api.matching.individualFeed, token ? { token } : "skip");
-  const teams = useQuery(api.teamAssembly.myTeams, token ? { token } : "skip");
-  const getNarration = useMutation(api.narration.getForMatch);
-  const respond = useMutation(api.requests.respond);
-  const respondInvite = useMutation(api.teamAssembly.respondInvite);
+  const queryClient = useQueryClient();
+  const { data: feed } = useQuery({
+    queryKey: ["matching/feed", token],
+    queryFn: () => apiGet<FeedCard[]>("/api/matching/feed", { token: token! }),
+    enabled: !!token,
+  });
+  const { data: teams } = useQuery({
+    queryKey: ["team-assembly/my-teams", token],
+    queryFn: () => apiGet<MyTeam[]>("/api/team-assembly/my-teams", { token: token! }),
+    enabled: !!token,
+  });
+  const respondInvite = useMutation({
+    mutationFn: (body: { teamId: string; accept: boolean }) => apiPost("/api/team-assembly/respond-invite", { token, ...body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/my-teams", token] }),
+  });
+  const respond = useMutation({
+    mutationFn: (body: { requestId: string; accept: boolean }) => apiPost("/api/requests/respond", { token, ...body }),
+  });
+  const getNarration = useMutation({
+    mutationFn: (requestId: string) =>
+      apiPost<{ text: string; path: string[][] }>("/api/narration/get", { token, requestId }),
+  });
 
-  const [open, setOpen] = useState<{ requestId: Id<"requests">; title: string; text: string; path: string[][] } | null>(null);
+  const [open, setOpen] = useState<{ requestId: string; title: string; text: string; path: string[][] } | null>(null);
 
-  const openMatch = async (requestId: Id<"requests">, title: string) => {
+  const openMatch = async (requestId: string, title: string) => {
     if (!token) return;
-    const res = await getNarration({ token, requestId });
+    const res = await getNarration.mutateAsync(requestId);
     setOpen({ requestId, title, text: res.text, path: res.path });
   };
 
@@ -34,10 +71,10 @@ export function ProviderCurrent() {
               </div>
               {tm.state === "invited" && token && (
                 <div className="flex gap-2 mt-2">
-                  <Button variant="leaf" onClick={() => respondInvite({ token, teamId: tm.teamId, accept: true })}>
+                  <Button variant="leaf" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: true })}>
                     ✓ {t("accept")}
                   </Button>
-                  <Button variant="danger" onClick={() => respondInvite({ token, teamId: tm.teamId, accept: false })}>
+                  <Button variant="danger" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: false })}>
                     ✗ {t("decline")}
                   </Button>
                 </div>
@@ -85,7 +122,7 @@ export function ProviderCurrent() {
                 variant="gold"
                 className="w-full"
                 onClick={async () => {
-                  await respond({ token, requestId: open.requestId, accept: true });
+                  await respond.mutateAsync({ requestId: open.requestId, accept: true });
                   setOpen(null);
                 }}
               >
@@ -101,7 +138,6 @@ export function ProviderCurrent() {
 
 export function SignOut() {
   const { token, setToken, lang, setLang, t } = useAuth();
-  const signOut = useMutation(api.auth.signOut);
   return (
     <div className="flex items-center gap-2">
       <button className="text-sm underline text-loom-indigoSoft" onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
@@ -110,7 +146,7 @@ export function SignOut() {
       <button
         className="text-sm text-loom-madder"
         onClick={async () => {
-          if (token) await signOut({ token });
+          if (token) await apiPost("/api/auth/sign-out", { token });
           setToken(null);
         }}
       >

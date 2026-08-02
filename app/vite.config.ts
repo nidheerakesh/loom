@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // Local stand-in for Vercel's same-origin /api routing — see scripts/dev-api-server.ts
+    proxy: {
+      "/api": "http://localhost:3001",
+    },
+  },
 });

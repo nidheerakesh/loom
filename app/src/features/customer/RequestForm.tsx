@@ -1,16 +1,28 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
 
+type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string };
+
 export function RequestForm({ onDone }: { onDone: () => void }) {
   const { token, t } = useAuth();
-  const skills = useQuery(api.skills.listSkills, {});
-  const create = useMutation(api.requests.create);
-  const assemble = useMutation(api.teamAssembly.assemble);
+  const { data: skills } = useQuery({ queryKey: ["skills"], queryFn: () => apiGet<SkillOption[]>("/api/skills/list") });
+  const create = useMutation({
+    mutationFn: (body: {
+      title: string;
+      description: string;
+      mode: "individual" | "group";
+      units: number;
+      pay: number | undefined;
+      skills: { skillId: string; quantity: number }[];
+    }) => apiPost<{ requestId: string; teamSuggested: boolean }>("/api/requests/create", { token, ...body }),
+  });
+  const assemble = useMutation({
+    mutationFn: (requestId: string) => apiPost("/api/team-assembly/assemble", { token, requestId }),
+  });
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -18,7 +30,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
   const [units, setUnits] = useState(1);
   const [pay, setPay] = useState<number | "">("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [created, setCreated] = useState<{ requestId: Id<"requests">; group: boolean } | null>(null);
+  const [created, setCreated] = useState<{ requestId: string; group: boolean } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const toggle = (id: string) => {
@@ -31,14 +43,13 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
     if (!token) return;
     setErr(null);
     try {
-      const res = await create({
-        token,
+      const res = await create.mutateAsync({
         title,
         description,
         mode,
         units,
         pay: pay === "" ? undefined : Number(pay),
-        skills: [...selected].map((skillId) => ({ skillId: skillId as Id<"skills">, quantity: units })),
+        skills: [...selected].map((skillId) => ({ skillId, quantity: units })),
       });
       setCreated({ requestId: res.requestId, group: res.teamSuggested });
     } catch (e) {
@@ -58,7 +69,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
                 variant="gold"
                 className="w-full"
                 onClick={async () => {
-                  if (token) await assemble({ token, requestId: created.requestId });
+                  if (token) await assemble.mutateAsync(created.requestId);
                   onDone();
                 }}
               >

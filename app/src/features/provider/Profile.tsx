@@ -1,24 +1,49 @@
 import { useState } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
 
 type Readback = { raw: string; canonicalName: string | null; canonicalNameMl: string | null; matchedVia: string };
+type SkillRow = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string; proficiency: number };
+type PortfolioItem = { _id: string; url: string | null; caption: string | null };
+type GrievanceRow = { _id: string; subject: string; body: string; status: string };
 
 export function ProviderProfile() {
   const { token, t, me } = useAuth();
+  const queryClient = useQueryClient();
   const provider = me && me.role === "provider" ? me.provider : null;
-  const skills = useQuery(api.skills.myProviderSkills, token ? { token } : "skip");
-  const portfolio = useQuery(api.providers.myPortfolio, token ? { token } : "skip");
-  const grievances = useQuery(api.grievances.mine, token ? { token } : "skip");
 
-  const updateProfile = useMutation(api.providers.updateProfile);
-  const setSkills = useAction(api.skills.addSkills);
-  const genUpload = useMutation(api.providers.generateUploadUrl);
-  const addPortfolio = useMutation(api.providers.addPortfolioItem);
-  const submitGrievance = useMutation(api.grievances.submit);
+  const { data: grievances } = useQuery({
+    queryKey: ["grievances/mine", token],
+    queryFn: () => apiGet<GrievanceRow[]>("/api/grievances/mine", { token: token! }),
+    enabled: !!token,
+  });
+  const submitGrievance = useMutation({
+    mutationFn: (body: { subject: string; body: string }) => apiPost("/api/grievances/submit", { token, ...body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["grievances/mine", token] }),
+  });
+
+  const { data: skills } = useQuery({
+    queryKey: ["mySkills", token],
+    queryFn: () => apiGet<SkillRow[]>("/api/skills/mine", { token: token! }),
+    enabled: !!token,
+  });
+  const { data: portfolio } = useQuery({
+    queryKey: ["portfolio", token],
+    queryFn: () => apiGet<PortfolioItem[]>("/api/providers/portfolio", { token: token! }),
+    enabled: !!token,
+  });
+  const updateProfile = useMutation({
+    mutationFn: (patch: Record<string, unknown>) => apiPost("/api/providers/update-profile", { token, ...patch }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me", token] }),
+  });
+  const addPortfolioItem = useMutation({
+    mutationFn: (body: { path: string; caption: string }) =>
+      apiPost("/api/providers/portfolio", { token, ...body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portfolio", token] }),
+  });
 
   const [skillText, setSkillText] = useState("");
   const [readback, setReadback] = useState<Readback[] | null>(null);
@@ -28,21 +53,27 @@ export function ProviderProfile() {
 
   if (!provider || !token) return <Screen title={t("profile")} right={<SignOut />}><div /></Screen>;
 
-  const saveField = (patch: Record<string, unknown>) => updateProfile({ token, ...patch });
+  const saveField = (patch: Record<string, unknown>) => updateProfile.mutate(patch);
 
   const addSkills = async () => {
     const phrases = skillText.split(",").map((s) => s.trim()).filter(Boolean);
     if (phrases.length === 0) return;
-    const res = await setSkills({ token, phrases: [...(skills ?? []).map((s) => s.canonicalName), ...phrases] });
+    const res = await apiPost<{ readback: Readback[] }>("/api/skills/resolve", {
+      token,
+      phrases: [...(skills ?? []).map((s) => s.canonicalName), ...phrases],
+    });
     setReadback(res.readback);
     setSkillText("");
+    queryClient.invalidateQueries({ queryKey: ["mySkills", token] });
   };
 
   const uploadImage = async (file: File) => {
-    const url = await genUpload({ token });
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-    const { storageId } = await r.json();
-    await addPortfolio({ token, storageId, caption: file.name });
+    const { signedUrl, path } = await apiPost<{ signedUrl: string; path: string }>(
+      "/api/providers/portfolio/upload-url",
+      { token, fileName: file.name },
+    );
+    await fetch(signedUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
+    addPortfolioItem.mutate({ path, caption: file.name });
   };
 
   return (
@@ -109,7 +140,7 @@ export function ProviderProfile() {
               variant="ghost"
               className="w-full"
               onClick={async () => {
-                await submitGrievance({ token, subject: gSubject, body: gBody });
+                await submitGrievance.mutateAsync({ subject: gSubject, body: gBody });
                 setGSubject("");
                 setGBody("");
               }}

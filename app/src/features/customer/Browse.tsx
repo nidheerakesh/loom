@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Screen, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
@@ -11,29 +10,49 @@ const EXP_TIERS = [0, 1, 3, 5];
 const DIST = [0, 3, 5, 10];
 const RATES = [0, 400, 500, 700];
 
+type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string };
+type ProviderCard = {
+  _id: string;
+  name: string;
+  shopName: string | null;
+  capacity: number;
+  rate: number | null;
+  rateUnit: string | null;
+  deliveryDays: number | null;
+  experienceYears: number;
+  rating: number;
+  ratingCount: number;
+  distanceKm: number | null;
+  skills: { _id: string; iconKey: string; canonicalName: string; canonicalNameMl: string | null }[];
+};
+type ProviderProfile = ProviderCard & {
+  portfolio: { _id: string; url: string | null; caption: string | null }[];
+  reviews: { stars: number; comment: string | null }[];
+};
+
 export function Browse() {
   const { token, t } = useAuth();
-  const skills = useQuery(api.skills.listSkills, {});
-  const [skillId, setSkillId] = useState<Id<"skills"> | undefined>(undefined);
+  const { data: skills } = useQuery({ queryKey: ["skills"], queryFn: () => apiGet<SkillOption[]>("/api/skills/list") });
+  const [skillId, setSkillId] = useState<string | undefined>(undefined);
   const [maxDistanceKm, setMaxDistanceKm] = useState(0);
   const [minExperience, setMinExperience] = useState(0);
   const [maxRate, setMaxRate] = useState(0);
 
-  const results = useQuery(
-    api.providers.search,
-    token
-      ? {
-          token,
-          skillId,
-          maxDistanceKm: maxDistanceKm || undefined,
-          minExperience: minExperience || undefined,
-          maxRate: maxRate || undefined,
-        }
-      : "skip",
-  );
+  const { data: results } = useQuery({
+    queryKey: ["providers/search", token, skillId, maxDistanceKm, minExperience, maxRate],
+    queryFn: () =>
+      apiGet<ProviderCard[]>("/api/providers/search", {
+        token: token!,
+        skillId,
+        maxDistanceKm: maxDistanceKm ? String(maxDistanceKm) : undefined,
+        minExperience: minExperience ? String(minExperience) : undefined,
+        maxRate: maxRate ? String(maxRate) : undefined,
+      }),
+    enabled: !!token,
+  });
 
-  const [profileId, setProfileId] = useState<Id<"providers"> | null>(null);
-  const [chatId, setChatId] = useState<Id<"chatThreads"> | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   if (chatId) return <ChatThread threadId={chatId} onBack={() => setChatId(null)} />;
   if (profileId) return <ProviderDetail providerId={profileId} onBack={() => setProfileId(null)} onChat={setChatId} />;
@@ -124,17 +143,23 @@ function ProviderDetail({
   onBack,
   onChat,
 }: {
-  providerId: Id<"providers">;
+  providerId: string;
   onBack: () => void;
-  onChat: (id: Id<"chatThreads">) => void;
+  onChat: (id: string) => void;
 }) {
   const { token, t } = useAuth();
-  const p = useQuery(api.providers.getProfile, { providerId });
-  const openThread = useMutation(api.chat.openThread);
+  const { data: p } = useQuery({
+    queryKey: ["providers/get", providerId],
+    queryFn: () => apiGet<ProviderProfile>("/api/providers/get", { providerId }),
+  });
+  const openThread = useMutation({
+    mutationFn: (title: string) =>
+      apiPost<string>("/api/chat/threads", { token, contextType: "provider", contextId: providerId, title }),
+  });
 
   const startChat = async () => {
     if (!token || !p) return;
-    const id = await openThread({ token, contextType: "provider", contextId: providerId, title: p.shopName ?? p.name });
+    const id = await openThread.mutateAsync(p.shopName ?? p.name);
     onChat(id);
   };
 

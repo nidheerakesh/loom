@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { apiPost, ApiError } from "../lib/api";
 import { useAuth } from "../auth";
 import { Button, Card, Field } from "../ui";
 
@@ -8,8 +7,6 @@ type Role = "provider" | "customer";
 
 export function SignIn() {
   const { setToken, t, lang, setLang } = useAuth();
-  const requestOtp = useMutation(api.auth.requestOtp);
-  const verifyOtp = useMutation(api.auth.verifyOtp);
 
   const [role, setRole] = useState<Role>("provider");
   const [phone, setPhone] = useState("");
@@ -22,21 +19,26 @@ export function SignIn() {
   const send = async () => {
     setErr(null);
     try {
-      const res = await requestOtp({ phone, role });
+      const res = await apiPost<{ devCode: string | null }>("/api/auth/request-otp", { phone, role });
       setSent(true);
       setDevCode(res.devCode);
     } catch (e) {
-      setErr(String(e));
+      setErr(e instanceof ApiError ? e.message : String(e));
     }
   };
 
   const verify = async () => {
     setErr(null);
     try {
-      const res = await verifyOtp({ phone, code, role, name: name || undefined });
+      const res = await apiPost<{ token: string }>("/api/auth/verify-otp", {
+        phone,
+        code,
+        role,
+        name: name || undefined,
+      });
       setToken(res.token);
     } catch (e) {
-      setErr(String(e));
+      setErr(e instanceof ApiError ? e.message : String(e));
     }
   };
 

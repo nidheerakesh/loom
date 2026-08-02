@@ -1,13 +1,23 @@
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Screen } from "../../ui";
 import { SignOut } from "./Current";
 
+type IncomingRequest = { _id: string; title: string; units: number; pay: number | null; distanceKm: number };
+
 export function ProviderRequests() {
   const { token, t } = useAuth();
-  const incoming = useQuery(api.requests.myIncoming, token ? { token } : "skip");
-  const respond = useMutation(api.requests.respond);
+  const queryClient = useQueryClient();
+  const { data: incoming } = useQuery({
+    queryKey: ["requests/my-incoming", token],
+    queryFn: () => apiGet<IncomingRequest[]>("/api/requests/my-incoming", { token: token! }),
+    enabled: !!token,
+  });
+  const respond = useMutation({
+    mutationFn: (body: { requestId: string; accept: boolean }) => apiPost("/api/requests/respond", { token, ...body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requests/my-incoming", token] }),
+  });
 
   return (
     <Screen title={t("requests")} right={<SignOut />}>
@@ -22,10 +32,10 @@ export function ProviderRequests() {
           </div>
           {token && (
             <div className="flex gap-2 mt-2">
-              <Button variant="leaf" onClick={() => respond({ token, requestId: r._id, accept: true })}>
+              <Button variant="leaf" onClick={() => respond.mutate({ requestId: r._id, accept: true })}>
                 ✓ {t("accept")}
               </Button>
-              <Button variant="danger" onClick={() => respond({ token, requestId: r._id, accept: false })}>
+              <Button variant="danger" onClick={() => respond.mutate({ requestId: r._id, accept: false })}>
                 ✗ {t("decline")}
               </Button>
             </div>
