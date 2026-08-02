@@ -42,14 +42,20 @@ Open http://localhost:5173.
 
 - `supabase/schema.sql` — Postgres schema (24 tables, deterministic tiebreak columns like
   `providers.seq`/`team_members.seq`, RLS policies for the two chat tables).
-- `api/` — Vercel Serverless Functions, **one file per route**: `_lib/` (shared
-  `supabaseAdmin` client, auth, scoring, geo, skill-text matching, LLM translation fallback
-  chain), then one route group per resource (`auth/`, `providers/`, `customers/`, `skills/`,
-  `requests/`, `matching/`, `team-assembly/`, `narration/`, `ratings/`, `grievances/`,
-  `chat/`). Each non-underscore `.ts` file becomes its own function, routed by its path —
-  `api/auth/me.ts` serves `/api/auth/me`. Underscore-prefixed directories like `_lib/` are
-  excluded from function detection. See "Keep one file per route" under Deploying before
-  reorganising this.
+- `api/` — the backend, deployed as a **single** Vercel Serverless Function:
+  - `router.ts` — the only file Vercel turns into a function. `vercel.json` rewrites
+    `/api/*` onto it with the original path in `?path=`, and it dispatches through the
+    route map. Public URLs are unchanged: `/api/auth/me` still works.
+  - `_routes/` — the handlers, one group per resource (`auth/`, `providers/`, `customers/`,
+    `skills/`, `requests/`, `matching/`, `team-assembly/`, `narration/`, `ratings/`,
+    `grievances/`, `chat/`), plus `index.ts` mapping path → handler.
+  - `_lib/` — shared `supabaseAdmin` client, auth, scoring, geo, skill-text matching, LLM
+    translation fallback chain.
+
+  Underscore-prefixed directories are excluded from Vercel's function detection, so only
+  `router.ts` ships as a function. **A new route needs an entry in `_routes/index.ts`** —
+  it is not discovered from the filesystem. See "Why one function, and why not a catch-all"
+  under Deploying before reorganising any of this; the shape is load-bearing.
 - `scripts/` — `seed.ts` (full demo data), `reset-users.ts` (clear accounts, keep the skill/
   geography catalogue; `--reference` also rebuilds the catalogue), `dev-api-server.ts` (local
   stand-in for `vercel dev`).
@@ -92,24 +98,46 @@ without them the deploy fails or ships broken:
 
 `vercel.json` covers the rest: Vite framework preset, `dist` output, and the SPA rewrite.
 
-The SPA rewrite is written `/((?!api/).*)` → `/index.html` rather than a plain `/(.*)`.
-Each API route is an exact filesystem match and the filesystem is checked before rewrites,
-so a plain catch-all also works — but excluding `/api/` is cheap insurance. If API calls ever
-start returning the app shell instead of JSON, this line is the first thing to check: the
-symptom is a green build and a ● Ready deployment serving `index.html` from every endpoint.
+Both rewrites matter, and the order matters:
 
-### Keep one file per route
+```json
+{ "source": "/api/(.*)",      "destination": "/api/router?path=$1" },
+{ "source": "/((?!api/).*)",  "destination": "/index.html" }
+```
 
-It is tempting to collapse these 32 functions into a single `api/[...path].ts` catch-all
-that dispatches internally — fewer cold starts, and it dodges the Hobby plan's 12-function
-cap. **It does not work on this project.** Vercel builds the catch-all happily
-(`λ api/[...path]` appears in the build output) and then never routes to it: every
-`/api/*` request returns Vercel's own `NOT_FOUND`, with no invocation and no runtime logs.
-A static `api/ping.ts` deployed alongside it returned 200 from the same deployment, which
-isolates the cause to catch-all routing rather than `/api` routing in general.
+The first routes the whole API onto the single function. The second is the SPA fallback, and
+it **must** exclude `/api/` — a plain `/(.*)` swallows API requests and returns `index.html`
+from every endpoint, with a green build and a ● Ready deployment. If API calls ever start
+returning the app shell instead of JSON, check this line first.
 
-For the record, the 12-function cap is not a live constraint here: all 32 functions deploy
-successfully.
+### Why one function, and why not a catch-all
 
-`scripts/dev-api-server.ts` mirrors the same file-based routing locally, so dev and
-production run the identical handler files.
+Vercel creates one Serverless Function per file under `api/`, and the Hobby plan caps a
+deployment at **12**. With 32 routes as separate files the build succeeds and the *deploy*
+step fails — which reads like a code problem but is a plan limit.
+
+The obvious fix, a single `api/[...path].ts` catch-all, **does not work here**. Vercel builds
+it (`λ api/[...path]` appears in the build output) and then never routes to it: every
+`/api/*` request returns Vercel's own `NOT_FOUND`, with no invocation and no runtime logs. A
+static `api/ping.ts` deployed alongside it answered 200 from the same deployment, isolating
+the fault to catch-all routing rather than `/api` routing generally.
+
+Hence `router.ts` — a static filename, reached by an explicit rewrite.
+
+### Relative imports under `api/` need `.js`
+
+`@vercel/node` does not bundle these functions. It compiles them and runs the output under
+Node's native ESM loader, so every relative import must be fully specified:
+
+```ts
+import { supabaseAdmin } from "../../_lib/supabase.js";   // not "../../_lib/supabase"
+import { routes } from "./_routes/index.js";              // not "./_routes"
+```
+
+Omitting the extension produces `TS2835` at build time — which is easy to dismiss, because
+the build still completes and the deployment still reports Ready. It fails at *invocation*
+instead, with `ERR_UNSUPPORTED_DIR_IMPORT` or `ERR_MODULE_NOT_FOUND`. TypeScript resolves
+`./x.js` to `./x.ts`, so Vite and tsx are unaffected.
+
+`scripts/dev-api-server.ts` dispatches through the same `_routes/index.ts` map, so local dev
+and production run identical handlers with identical routing.
