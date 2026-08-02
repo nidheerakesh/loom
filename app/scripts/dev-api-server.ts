@@ -1,20 +1,29 @@
 // Local stand-in for `vercel dev`, which crashes in some sandboxed environments.
-// Resolves routes through `api/_routes/index.ts` — the same map `api/[...path].ts`
-// dispatches through in production — so the exact same handler files run in local dev
-// and on Vercel, with no separate dev-only code path and no second routing table to keep
-// in sync. Run via `npm run dev:api`; Vite's dev server proxies /api/* to this (see
-// vite.config.ts), matching same-origin production behavior.
+// Serves api/**/*.ts with the same file-based routing Vercel uses in production
+// (api/auth/me.ts -> /api/auth/me), so the exact same handler files run in local dev
+// and on Vercel — no separate dev-only code path. Run via `npm run dev:api`; Vite's
+// dev server proxies /api/* to this (see vite.config.ts), matching same-origin
+// production behavior.
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { routes } from "../api/_routes";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const PORT = Number(process.env.API_PORT ?? 3001);
+const API_DIR = path.join(process.cwd(), "api");
 
 type Handler = (req: unknown, res: unknown) => Promise<void>;
 
-function resolveHandler(urlPath: string): Handler | null {
-  // "/api/auth/verify-otp" -> routes["auth/verify-otp"]
-  const key = urlPath.replace(/^\/api\/?/, "").replace(/^\/+|\/+$/g, "");
-  return (routes as Record<string, Handler>)[key] ?? null;
+function resolveHandlerFile(urlPath: string): string | null {
+  // "/api/auth/verify-otp" -> "<API_DIR>/auth/verify-otp.ts"
+  // "/api/providers/portfolio" -> "<API_DIR>/providers/portfolio/index.ts" (folder route)
+  const rel = urlPath.replace(/^\/api\/?/, "");
+  if (rel.includes("..")) return null;
+  const direct = path.join(API_DIR, rel + ".ts");
+  if (existsSync(direct)) return direct;
+  const indexed = path.join(API_DIR, rel, "index.ts");
+  if (existsSync(indexed)) return indexed;
+  return null;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -44,8 +53,8 @@ function wrapResponse(res: ServerResponse) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
-  const handler = resolveHandler(url.pathname);
-  if (!handler) {
+  const file = resolveHandlerFile(url.pathname);
+  if (!file) {
     res.statusCode = 404;
     res.end(JSON.stringify({ error: "Not found" }));
     return;
@@ -55,6 +64,8 @@ const server = createServer(async (req, res) => {
   for (const [k, v] of url.searchParams) query[k] = v;
   const body = req.method === "POST" ? await readJsonBody(req) : undefined;
 
+  const mod = await import(pathToFileURL(file).href + `?t=${Date.now()}`); // bust cache each request in dev
+  const handler = mod.default as Handler;
   await handler({ query, body, method: req.method }, wrapResponse(res));
 });
 

@@ -19,7 +19,7 @@ npm install                 # first time only
 # or `psql "$SUPABASE_DB_URL" -f supabase/schema.sql`), then seed deterministic demo data:
 npm run seed
 
-# Terminal 1 — local API server (dispatches through api/_routes, same as production)
+# Terminal 1 — local API server (serves api/**/*.ts the same way Vercel does in production)
 npm run dev:api
 
 # Terminal 2 — frontend
@@ -42,18 +42,14 @@ Open http://localhost:5173.
 
 - `supabase/schema.sql` — Postgres schema (24 tables, deterministic tiebreak columns like
   `providers.seq`/`team_members.seq`, RLS policies for the two chat tables).
-- `api/` — the backend, deployed as a **single** Vercel Serverless Function:
-  - `[...path].ts` — the only file Vercel turns into a function; it dispatches every
-    `/api/*` request through the route map. See "Why one function" under Deploying.
-  - `_routes/` — the actual handlers, one group per resource (`auth/`, `providers/`,
-    `customers/`, `skills/`, `requests/`, `matching/`, `team-assembly/`, `narration/`,
-    `ratings/`, `grievances/`, `chat/`), plus `index.ts` mapping path → handler.
-  - `_lib/` — shared `supabaseAdmin` client, auth, scoring, geo, skill-text matching, LLM
-    translation fallback chain.
-
-  Underscore-prefixed directories are excluded from Vercel's function detection, so only
-  `[...path].ts` ships as a function. A new route needs an entry in `_routes/index.ts` —
-  it is not picked up from the filesystem.
+- `api/` — Vercel Serverless Functions, **one file per route**: `_lib/` (shared
+  `supabaseAdmin` client, auth, scoring, geo, skill-text matching, LLM translation fallback
+  chain), then one route group per resource (`auth/`, `providers/`, `customers/`, `skills/`,
+  `requests/`, `matching/`, `team-assembly/`, `narration/`, `ratings/`, `grievances/`,
+  `chat/`). Each non-underscore `.ts` file becomes its own function, routed by its path —
+  `api/auth/me.ts` serves `/api/auth/me`. Underscore-prefixed directories like `_lib/` are
+  excluded from function detection. See "Keep one file per route" under Deploying before
+  reorganising this.
 - `scripts/` — `seed.ts` (full demo data), `reset-users.ts` (clear accounts, keep the skill/
   geography catalogue; `--reference` also rebuilds the catalogue), `dev-api-server.ts` (local
   stand-in for `vercel dev`).
@@ -96,21 +92,24 @@ without them the deploy fails or ships broken:
 
 `vercel.json` covers the rest: Vite framework preset, `dist` output, and the SPA rewrite.
 
-The SPA rewrite **must** exclude `/api/` explicitly — it is written
-`/((?!api/).*)` → `/index.html`, not `/(.*)`. With a file-per-route API a plain `/(.*)`
-was harmless, because each route was an exact filesystem match and the filesystem is checked
-before rewrites. The single `api/[...path].ts` is a *dynamic* route, and the catch-all
-rewrite beats it — so every `/api/*` request silently returns `index.html` instead of JSON.
-The frontend then fails on parsing HTML as JSON, with a green build and a healthy-looking
-deployment. If you ever see API calls returning the app shell, check this line first.
+The SPA rewrite is written `/((?!api/).*)` → `/index.html` rather than a plain `/(.*)`.
+Each API route is an exact filesystem match and the filesystem is checked before rewrites,
+so a plain catch-all also works — but excluding `/api/` is cheap insurance. If API calls ever
+start returning the app shell instead of JSON, this line is the first thing to check: the
+symptom is a green build and a ● Ready deployment serving `index.html` from every endpoint.
 
-### Why one function
+### Keep one file per route
 
-Vercel creates one Serverless Function per file under `api/`, and the Hobby plan caps a
-deployment at **12**. This API has 32 routes, so the original file-per-route layout could
-build fine and then fail the deploy on the function limit. All handlers therefore live in
-`api/_routes/` (underscore = not a function) behind the single `api/[...path].ts` entry
-point, which also means one warm instance serves every route instead of 32 cold starts.
+It is tempting to collapse these 32 functions into a single `api/[...path].ts` catch-all
+that dispatches internally — fewer cold starts, and it dodges the Hobby plan's 12-function
+cap. **It does not work on this project.** Vercel builds the catch-all happily
+(`λ api/[...path]` appears in the build output) and then never routes to it: every
+`/api/*` request returns Vercel's own `NOT_FOUND`, with no invocation and no runtime logs.
+A static `api/ping.ts` deployed alongside it returned 200 from the same deployment, which
+isolates the cause to catch-all routing rather than `/api` routing in general.
 
-`scripts/dev-api-server.ts` dispatches through that same `_routes/index.ts` map, so local
-dev and production run identical handlers with identical routing.
+For the record, the 12-function cap is not a live constraint here: all 32 functions deploy
+successfully.
+
+`scripts/dev-api-server.ts` mirrors the same file-based routing locally, so dev and
+production run the identical handler files.
