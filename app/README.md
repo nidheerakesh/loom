@@ -95,8 +95,14 @@ without them the deploy fails or ships broken:
    error; `SUPABASE_*` are read at runtime and throw on the first request if absent.
 
 `vercel.json` covers the rest: Vite framework preset, `dist` output, and the SPA rewrite.
-The rewrite (`/(.*)` → `/index.html`) is evaluated *after* the filesystem check, so it does
-not shadow `/api/*`.
+
+The SPA rewrite **must** exclude `/api/` explicitly — it is written
+`/((?!api/).*)` → `/index.html`, not `/(.*)`. With a file-per-route API a plain `/(.*)`
+was harmless, because each route was an exact filesystem match and the filesystem is checked
+before rewrites. The single `api/[...path].ts` is a *dynamic* route, and the catch-all
+rewrite beats it — so every `/api/*` request silently returns `index.html` instead of JSON.
+The frontend then fails on parsing HTML as JSON, with a green build and a healthy-looking
+deployment. If you ever see API calls returning the app shell, check this line first.
 
 ### Why one function
 
