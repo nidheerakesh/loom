@@ -19,7 +19,7 @@ npm install                 # first time only
 # or `psql "$SUPABASE_DB_URL" -f supabase/schema.sql`), then seed deterministic demo data:
 npm run seed
 
-# Terminal 1 — local API server (serves api/**/*.ts the same way Vercel does in production)
+# Terminal 1 — local API server (dispatches through api/_routes, same as production)
 npm run dev:api
 
 # Terminal 2 — frontend
@@ -42,10 +42,18 @@ Open http://localhost:5173.
 
 - `supabase/schema.sql` — Postgres schema (24 tables, deterministic tiebreak columns like
   `providers.seq`/`team_members.seq`, RLS policies for the two chat tables).
-- `api/` — Vercel Serverless Functions: `_lib/` (shared `supabaseAdmin` client, auth, scoring,
-  geo, skill-text matching, LLM translation fallback chain), then one route group per resource
-  (`auth/`, `providers/`, `customers/`, `skills/`, `requests/`, `matching/`, `team-assembly/`,
-  `narration/`, `ratings/`, `grievances/`, `chat/`).
+- `api/` — the backend, deployed as a **single** Vercel Serverless Function:
+  - `[...path].ts` — the only file Vercel turns into a function; it dispatches every
+    `/api/*` request through the route map. See "Why one function" under Deploying.
+  - `_routes/` — the actual handlers, one group per resource (`auth/`, `providers/`,
+    `customers/`, `skills/`, `requests/`, `matching/`, `team-assembly/`, `narration/`,
+    `ratings/`, `grievances/`, `chat/`), plus `index.ts` mapping path → handler.
+  - `_lib/` — shared `supabaseAdmin` client, auth, scoring, geo, skill-text matching, LLM
+    translation fallback chain.
+
+  Underscore-prefixed directories are excluded from Vercel's function detection, so only
+  `[...path].ts` ships as a function. A new route needs an entry in `_routes/index.ts` —
+  it is not picked up from the filesystem.
 - `scripts/` — `seed.ts` (full demo data), `reset-users.ts` (clear accounts, keep the skill/
   geography catalogue; `--reference` also rebuilds the catalogue), `dev-api-server.ts` (local
   stand-in for `vercel dev`).
@@ -73,3 +81,30 @@ Local dev reads `app/.env.local` (git-ignored); on Vercel, set these as project 
 
 All three Twilio values must be set together — the app checks for the full set before
 attempting real SMS (see `twilioConfigured()` in `api/_lib/sms.ts`).
+
+## Deploying to Vercel
+
+Two project settings are **not** in this repo and must be set in the Vercel dashboard —
+without them the deploy fails or ships broken:
+
+1. **Root Directory = `app`.** The repo root holds `app/`, `docs/` and `AGENTS.md`; if the
+   project root is left at the repo root, Vercel finds no `package.json` or `api/`.
+2. **Environment variables** — all four from the table above, on every environment you
+   deploy (Production/Preview). The two `VITE_*` values are inlined into the bundle at
+   build time, so a missing one produces a silently broken frontend rather than a build
+   error; `SUPABASE_*` are read at runtime and throw on the first request if absent.
+
+`vercel.json` covers the rest: Vite framework preset, `dist` output, and the SPA rewrite.
+The rewrite (`/(.*)` → `/index.html`) is evaluated *after* the filesystem check, so it does
+not shadow `/api/*`.
+
+### Why one function
+
+Vercel creates one Serverless Function per file under `api/`, and the Hobby plan caps a
+deployment at **12**. This API has 32 routes, so the original file-per-route layout could
+build fine and then fail the deploy on the function limit. All handlers therefore live in
+`api/_routes/` (underscore = not a function) behind the single `api/[...path].ts` entry
+point, which also means one warm instance serves every route instead of 32 cold starts.
+
+`scripts/dev-api-server.ts` dispatches through that same `_routes/index.ts` map, so local
+dev and production run identical handlers with identical routing.
