@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local Convex runtime data left over from the pre-Supabase backend. Nothing reads it;
+# ignored so it stops riding along in `vercel deploy` uploads from the working tree.
+.convex
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
