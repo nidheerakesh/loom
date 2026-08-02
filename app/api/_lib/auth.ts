@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "./supabase";
-import { HttpError } from "./http";
+import { supabaseAdmin } from "./supabase.js";
+import { HttpError } from "./http.js";
 
 export type Role = "provider" | "customer" | "admin";
 

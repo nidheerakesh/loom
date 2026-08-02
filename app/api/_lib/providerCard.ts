@@ -1,6 +1,6 @@
-import { supabaseAdmin } from "./supabase";
-import { HttpError } from "./http";
-import { distanceKm } from "./geo";
+import { supabaseAdmin } from "./supabase.js";
+import { HttpError } from "./http.js";
+import { distanceKm } from "./geo.js";
 
 // Ported from convex/providers.ts's hydrateCard() — was an unexported helper shared by
 // providers.search and providers.getProfile, kept unexported there so duplicated in Convex;

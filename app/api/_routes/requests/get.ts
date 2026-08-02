@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const requestId = typeof req.query.requestId === "string" ? req.query.requestId : undefined;

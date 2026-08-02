@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { sessionByToken } from "../../_lib/auth";
-import { distanceKm } from "../../_lib/geo";
-import { score, skillFit } from "../../_lib/scoring";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { sessionByToken } from "../../_lib/auth.js";
+import { distanceKm } from "../../_lib/geo.js";
+import { score, skillFit } from "../../_lib/scoring.js";
 
 // Individual "Find work" feed for a provider. Read-only + deterministic: same data -> same
 // ranking. Audit rows + narration are written when the provider opens a match (narration.ts).

@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { requireRole } from "../../_lib/auth";
-import { normalize, similarity, SKILL_MERGE_THRESHOLD } from "../../_lib/text";
-import { translateSkill } from "../../_lib/translate";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { requireRole } from "../../_lib/auth.js";
+import { normalize, similarity, SKILL_MERGE_THRESHOLD } from "../../_lib/text.js";
+import { translateSkill } from "../../_lib/translate.js";
 
 // Add skills for a provider. Deterministic merge to existing skills; genuinely-new skills
 // are translated by an LLM (en<->ml + emoji) and created so EVERY skill becomes usable

@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { requireRole } from "../../_lib/auth";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { requireRole } from "../../_lib/auth.js";
 
 const Body = z.object({ token: z.string().min(1), name: z.string().optional(), company: z.string().optional() });
 

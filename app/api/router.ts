@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { routes } from "./_routes";
+import { routes } from "./_routes/index.js";
 
 // The ONE serverless function for the whole API.
 //

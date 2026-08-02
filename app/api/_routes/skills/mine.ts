@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { sessionByToken } from "../../_lib/auth";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { sessionByToken } from "../../_lib/auth.js";
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const token = typeof req.query.token === "string" ? req.query.token : undefined;
