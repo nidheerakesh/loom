@@ -1,16 +1,53 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
 
+type MyRequest = {
+  _id: string;
+  title: string;
+  mode: "individual" | "group";
+  units: number;
+  status: string;
+  interestedCount: number;
+  acceptedCount: number;
+  teamId: string | null;
+};
+type TeamMember = {
+  providerId: string;
+  name: string;
+  shopName: string | null;
+  group: string | null;
+  skill: string;
+  skillMl: string | null;
+  coveredUnits: number;
+  state: string;
+};
+type TeamDetailData = {
+  _id: string;
+  status: string;
+  rationale: string;
+  complete: boolean;
+  requestTitle: string;
+  requestUnits: number;
+  members: TeamMember[];
+};
+
 export function Accepted() {
   const { token, t } = useAuth();
-  const requests = useQuery(api.customers.myRequests, token ? { token } : "skip");
-  const assemble = useMutation(api.teamAssembly.assemble);
-  const [teamId, setTeamId] = useState<Id<"teams"> | null>(null);
+  const queryClient = useQueryClient();
+  const { data: requests } = useQuery({
+    queryKey: ["customers/my-requests", token],
+    queryFn: () => apiGet<MyRequest[]>("/api/customers/my-requests", { token: token! }),
+    enabled: !!token,
+  });
+  const assemble = useMutation({
+    mutationFn: (requestId: string) => apiPost("/api/team-assembly/assemble", { token, requestId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
+  });
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   if (teamId) return <TeamDetail teamId={teamId} onBack={() => setTeamId(null)} />;
 
@@ -29,7 +66,7 @@ export function Accepted() {
           </div>
           <div className="flex gap-2 mt-2">
             {r.mode === "group" && !r.teamId && token && (
-              <Button variant="gold" onClick={() => assemble({ token, requestId: r._id })}>
+              <Button variant="gold" onClick={() => assemble.mutate(r._id)}>
                 🧵 {t("assembleTeam")}
               </Button>
             )}
@@ -41,11 +78,20 @@ export function Accepted() {
   );
 }
 
-function TeamDetail({ teamId, onBack }: { teamId: Id<"teams">; onBack: () => void }) {
+function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) {
   const { token, t } = useAuth();
-  const team = useQuery(api.teamAssembly.getTeam, { teamId });
-  const confirm = useMutation(api.teamAssembly.confirm);
-  const rate = useMutation(api.ratings.rate);
+  const queryClient = useQueryClient();
+  const { data: team } = useQuery({
+    queryKey: ["team-assembly/get", teamId],
+    queryFn: () => apiGet<TeamDetailData>("/api/team-assembly/get", { teamId }),
+  });
+  const confirm = useMutation({
+    mutationFn: () => apiPost("/api/team-assembly/confirm", { token, teamId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] }),
+  });
+  const rate = useMutation({
+    mutationFn: (body: { providerId: string; stars: number }) => apiPost("/api/ratings/rate", { token, ...body }),
+  });
 
   return (
     <Screen title={t("teams")} right={<button onClick={onBack} className="text-loom-indigo">‹ back</button>}>
@@ -70,7 +116,7 @@ function TeamDetail({ teamId, onBack }: { teamId: Id<"teams">; onBack: () => voi
                   </div>
                 </div>
                 {token && (
-                  <Button variant="ghost" onClick={() => rate({ token, providerId: m.providerId, stars: 5 })}>
+                  <Button variant="ghost" onClick={() => rate.mutate({ providerId: m.providerId, stars: 5 })}>
                     ★ {t("rateProvider")}
                   </Button>
                 )}
@@ -78,7 +124,7 @@ function TeamDetail({ teamId, onBack }: { teamId: Id<"teams">; onBack: () => voi
             </Card>
           ))}
           {token && team.status === "proposed" && (
-            <Button variant="leaf" className="w-full" onClick={() => confirm({ token, teamId })}>
+            <Button variant="leaf" className="w-full" onClick={() => confirm.mutate()}>
               ✓ {t("confirmTeam")}
             </Button>
           )}

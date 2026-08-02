@@ -1,15 +1,23 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost, POLL_MS } from "../../lib/api";
+import { supabaseRealtime } from "../../lib/realtime";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, ListenButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 
+type ThreadRow = { _id: string; title: string; lastMessage: string | null };
+type MessageRow = { _id: string; body: string; senderId: string; senderRole: string; mine: boolean };
+
 export function Communities() {
   const { token, t } = useAuth();
-  const threads = useQuery(api.chat.listThreads, token ? { token } : "skip");
-  const [openThreadId, setOpenThreadId] = useState<Id<"chatThreads"> | null>(null);
+  const { data: threads } = useQuery({
+    queryKey: ["chat/threads", token],
+    queryFn: () => apiGet<ThreadRow[]>("/api/chat/threads", { token: token! }),
+    enabled: !!token,
+    refetchInterval: POLL_MS,
+  });
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
 
   if (openThreadId) return <ChatThread threadId={openThreadId} onBack={() => setOpenThreadId(null)} />;
 
@@ -29,15 +37,52 @@ export function Communities() {
   );
 }
 
-export function ChatThread({ threadId, onBack }: { threadId: Id<"chatThreads">; onBack: () => void }) {
-  const { token, t } = useAuth();
-  const messages = useQuery(api.chat.listMessages, token ? { token, threadId } : "skip");
-  const send = useMutation(api.chat.send);
+export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () => void }) {
+  const { token, t, me } = useAuth();
+  const queryClient = useQueryClient();
+  const queryKey = ["chat/messages", threadId];
+  const { data: messages } = useQuery({
+    queryKey,
+    queryFn: () => apiGet<MessageRow[]>("/api/chat/messages", { token: token!, threadId }),
+    enabled: !!token,
+  });
+  const send = useMutation({
+    mutationFn: (body: string) => apiPost("/api/chat/messages", { token, threadId, body }),
+  });
   const [text, setText] = useState("");
+
+  // Realtime, not polling: the ONE place a Supabase client ships to the browser (anon key,
+  // public-read RLS — see supabase/schema.sql). Only ever subscribes; writes go through
+  // /api/chat/messages with the service-role key.
+  useEffect(() => {
+    const myUserId = me?.userId;
+    const channel = supabaseRealtime
+      .channel(`messages:${threadId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
+        (payload) => {
+          const row = payload.new as { id: string; body: string; sender_id: string; sender_role: string };
+          const msg: MessageRow = {
+            _id: row.id,
+            body: row.body,
+            senderId: row.sender_id,
+            senderRole: row.sender_role,
+            mine: row.sender_id === myUserId,
+          };
+          queryClient.setQueryData<MessageRow[]>(queryKey, (prev) => (prev ? [...prev, msg] : [msg]));
+        },
+      )
+      .subscribe();
+    return () => {
+      supabaseRealtime.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, me?.userId]);
 
   const submit = async () => {
     if (!token || !text.trim()) return;
-    await send({ token, threadId, body: text });
+    await send.mutateAsync(text);
     setText("");
   };
 
