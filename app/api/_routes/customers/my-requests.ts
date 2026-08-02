@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { sessionByToken } from "../../_lib/auth";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { sessionByToken } from "../../_lib/auth.js";
 
 // Ported from convex/customers.ts's `myRequests`.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {

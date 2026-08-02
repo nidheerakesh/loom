@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "./supabase";
-import { HttpError } from "./http";
+import { supabaseAdmin } from "./supabase.js";
+import { HttpError } from "./http.js";
 
 // Distance within the cluster. Prefer the precomputed near_distances edge; fall back to a
 // deterministic haversine over stored lat/lng so any pair resolves. Ported from convex/lib/geo.ts.

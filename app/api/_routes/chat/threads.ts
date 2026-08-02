@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { requireSession, sessionByToken } from "../../_lib/auth";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { requireSession, sessionByToken } from "../../_lib/auth.js";
 
 const OpenBody = z.object({
   token: z.string().min(1),

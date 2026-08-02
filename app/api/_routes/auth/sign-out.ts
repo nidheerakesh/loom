@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
+import { withHandler } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
 
 const Body = z.object({ token: z.string().min(1) });
 

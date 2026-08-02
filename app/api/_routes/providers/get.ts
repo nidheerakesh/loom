@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { hydrateCard } from "../../_lib/providerCard";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { hydrateCard } from "../../_lib/providerCard.js";
 
 // Ported from convex/providers.ts's `getProfile`.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {

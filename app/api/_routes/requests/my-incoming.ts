@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { sessionByToken } from "../../_lib/auth";
-import { distanceKm } from "../../_lib/geo";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { sessionByToken } from "../../_lib/auth.js";
+import { distanceKm } from "../../_lib/geo.js";
 
 // Provider "Requests" tab — open individual requests matching this provider's skills
 // that they have not yet responded to. Ported from convex/requests.ts's `myIncoming`.

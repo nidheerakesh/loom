@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { fnv1a } from "../../_lib/text";
-import { toE164, testCodeFor, twilioConfigured, startVerification } from "../../_lib/sms";
+import { withHandler } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { fnv1a } from "../../_lib/text.js";
+import { toE164, testCodeFor, twilioConfigured, startVerification } from "../../_lib/sms.js";
 
 const Body = z.object({
   phone: z.string().min(1),

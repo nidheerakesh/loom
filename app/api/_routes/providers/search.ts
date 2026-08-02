@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { withHandler, HttpError } from "../../_lib/http";
-import { supabaseAdmin } from "../../_lib/supabase";
-import { sessionByToken } from "../../_lib/auth";
-import { hydrateCard, ProviderCard } from "../../_lib/providerCard";
-import { skillFit } from "../../_lib/scoring";
+import { withHandler, HttpError } from "../../_lib/http.js";
+import { supabaseAdmin } from "../../_lib/supabase.js";
+import { sessionByToken } from "../../_lib/auth.js";
+import { hydrateCard, ProviderCard } from "../../_lib/providerCard.js";
+import { skillFit } from "../../_lib/scoring.js";
 
 function qNum(v: unknown): number | undefined {
   return typeof v === "string" && v !== "" ? Number(v) : undefined;
