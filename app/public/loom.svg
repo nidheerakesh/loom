@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Loom">
+  <!-- Warp and weft, in the app's own palette (tailwind.config.js): indigo ground,
+       cotton warp threads, a kasavu-gold weft crossing them. Kept to four shapes so it
+       still reads as weaving at 16px. -->
+  <rect width="32" height="32" rx="7" fill="#26364F"/>
+  <g stroke="#F3EFE6" stroke-width="2.6" stroke-linecap="round">
+    <path d="M11 7v18"/>
+    <path d="M16 7v18"/>
+    <path d="M21 7v18"/>
+  </g>
+  <path d="M6 16h20" stroke="#C9A227" stroke-width="3.4" stroke-linecap="round"/>
+</svg>
