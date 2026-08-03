@@ -1,115 +1,153 @@
-import { supabaseAdmin } from "../api/_lib/supabase";
-import { fnv1a as hash } from "../api/_lib/text";
-import { clearTables, seedReference, USER_TABLES } from "./seedHelpers";
+import { supabaseAdmin } from "../api/_lib/supabase.js";
+import { fnv1a as hash } from "../api/_lib/text.js";
+import { clearTables, seedReference, USER_TABLES } from "./seedHelpers.js";
+import { PROVIDERS, PORTFOLIO_CAPTIONS, RATING_COMMENTS, CUSTOMERS, REQUESTS, CHAT } from "./demoData.js";
 
-// FULL demo seed: reference + fake providers/customers/requests (for the scripted demo).
-// For a clean slate to create your own accounts, use `reset-users.ts` instead.
+// FULL demo seed: reference data + the demo providers/customers/requests/chat in demoData.ts.
+// DESTRUCTIVE — clears every user table first (including `sessions`, so everyone currently
+// signed in is logged out). For a clean slate that keeps your own account, use reset-users.ts.
 // Run: npm run seed
-// Ported from convex/seed.ts's `run`.
 async function main() {
   await clearTables(USER_TABLES);
   const { skillId, groupIds, locIds } = await seedReference();
 
-  const skillPlans = [
-    ["stitching", "cutting"],
-    ["stitching", "packaging"],
-    ["cutting", "packaging"],
-    ["cooking", "craft"],
-    ["stitching", "craft"],
-    ["tutoring", "cooking"],
-  ];
-  const capacities = [1, 3, 4, 5];
+  // --- providers ------------------------------------------------------------------------
   const providerIds: string[] = [];
-  for (let i = 0; i < 40; i++) {
-    const plan = skillPlans[i % skillPlans.length];
-    const capacity = capacities[i % capacities.length];
-    const isShop = capacity > 1;
-    const { data: p, error: pErr } = await supabaseAdmin
+  for (let i = 0; i < PROVIDERS.length; i++) {
+    const p = PROVIDERS[i];
+    // Ratings are recomputed from the `ratings` rows below; seed a plausible aggregate so
+    // listings look populated even for providers with no individual review attached.
+    const rating = 3.6 + ((i * 7) % 14) / 10;
+    const { data: row, error } = await supabaseAdmin
       .from("providers")
       .insert({
-        name: `Provider ${i + 1}`,
-        shop_name: isShop ? `Shop ${i + 1}` : null,
+        name: p.name,
+        shop_name: p.shopName,
         phone_hash: hash("seedprovider" + i),
-        available: true,
-        capacity,
-        rate: 300 + (i % 5) * 50,
-        rate_unit: "piece",
-        delivery_days: 1 + (i % 4),
-        experience_years: 1 + (i % 8),
-        rating: 3.5 + (i % 4) * 0.4,
-        rating_count: 5 + (i % 20),
+        available: i % 11 !== 0, // a few unavailable, so the availability filter has an effect
+        capacity: p.capacity,
+        rate: p.rate,
+        rate_unit: p.rateUnit,
+        delivery_days: p.deliveryDays,
+        experience_years: p.experienceYears,
+        rating: Math.round(rating * 10) / 10,
+        rating_count: 4 + ((i * 3) % 21),
         languages: ["ml"],
         home_location_id: locIds[i % locIds.length],
         group_id: groupIds[i % groupIds.length],
       })
       .select("id")
       .single();
-    if (pErr) throw new Error(pErr.message);
-    providerIds.push(p.id);
-    const { error: psErr } = await supabaseAdmin
-      .from("provider_skills")
-      .insert(plan.map((sName) => ({ provider_id: p.id, skill_id: skillId[sName], proficiency: 3 + (i % 3) })));
-    if (psErr) throw new Error(psErr.message);
+    if (error) throw new Error(`provider ${p.name}: ${error.message}`);
+    providerIds.push(row.id);
+
+    const { error: psErr } = await supabaseAdmin.from("provider_skills").insert(
+      p.skills.map((s, n) => ({
+        provider_id: row.id,
+        skill_id: skillId[s],
+        proficiency: n === 0 ? 4 + (i % 2) : 3 + (i % 2), // primary skill graded higher
+      })),
+    );
+    if (psErr) throw new Error(`provider_skills ${p.name}: ${psErr.message}`);
   }
 
+  // --- portfolios -----------------------------------------------------------------------
+  // storage_id is null: these are caption-only entries. The portfolio screen renders the
+  // caption list without them; real images arrive via api/providers/portfolio/upload-url.ts.
+  const portfolioRows = PORTFOLIO_CAPTIONS.map((caption, i) => ({
+    provider_id: providerIds[i],
+    storage_id: null,
+    caption,
+  }));
+  const { error: pfErr } = await supabaseAdmin.from("portfolio_items").insert(portfolioRows);
+  if (pfErr) throw new Error(`portfolio_items: ${pfErr.message}`);
+
+  // --- customers ------------------------------------------------------------------------
   const customerIds: string[] = [];
-  const custNames = ["Meera", "St. Mary's School", "Anil Traders"];
-  for (let i = 0; i < custNames.length; i++) {
-    const { data: c, error } = await supabaseAdmin
+  for (let i = 0; i < CUSTOMERS.length; i++) {
+    const c = CUSTOMERS[i];
+    const { data: row, error } = await supabaseAdmin
       .from("customers")
       .insert({
-        name: custNames[i],
-        company: i === 1 ? "St. Mary's School" : null,
+        name: c.name,
+        company: c.company,
         phone_hash: hash("seedcustomer" + i),
         location_id: locIds[i % locIds.length],
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
-    customerIds.push(c.id);
+    if (error) throw new Error(`customer ${c.name}: ${error.message}`);
+    customerIds.push(row.id);
   }
 
-  const { data: indReq, error: indErr } = await supabaseAdmin
-    .from("requests")
-    .insert({
-      title: "Blouse stitching",
-      description: "Stitch one blouse",
-      mode: "individual",
-      units: 1,
-      pay: 400,
-      location_id: locIds[0],
-      status: "open",
-      customer_id: customerIds[0],
-    })
+  // --- ratings --------------------------------------------------------------------------
+  const ratingRows = RATING_COMMENTS.map((r, i) => ({
+    provider_id: providerIds[i],
+    customer_id: customerIds[i % customerIds.length],
+    stars: r.stars,
+    comment: r.comment,
+  }));
+  const { error: rErr } = await supabaseAdmin.from("ratings").insert(ratingRows);
+  if (rErr) throw new Error(`ratings: ${rErr.message}`);
+
+  // --- requests -------------------------------------------------------------------------
+  const requestIds: string[] = [];
+  for (const r of REQUESTS) {
+    const { data: row, error } = await supabaseAdmin
+      .from("requests")
+      .insert({
+        title: r.title,
+        description: r.description,
+        mode: r.mode,
+        units: r.units,
+        pay: r.pay,
+        location_id: locIds[r.locationIndex],
+        status: r.status,
+        customer_id: customerIds[r.customerIndex],
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`request ${r.title}: ${error.message}`);
+    requestIds.push(row.id);
+
+    const { error: rsErr } = await supabaseAdmin
+      .from("request_skills")
+      .insert(r.skills.map((s) => ({ request_id: row.id, skill_id: skillId[s.name], quantity: s.quantity })));
+    if (rsErr) throw new Error(`request_skills ${r.title}: ${rsErr.message}`);
+  }
+
+  // --- interests ------------------------------------------------------------------------
+  // A few providers have already expressed interest in the open group order, so the
+  // customer's "interested providers" screen is not empty.
+  const { error: iErr } = await supabaseAdmin.from("interests").insert(
+    [0, 2, 5, 15].map((n) => ({ provider_id: providerIds[n], request_id: requestIds[1], state: "interested" as const })),
+  );
+  if (iErr) throw new Error(`interests: ${iErr.message}`);
+
+  // --- chat -----------------------------------------------------------------------------
+  const { data: thread, error: tErr } = await supabaseAdmin
+    .from("chat_threads")
+    .insert({ context_type: "request", context_id: requestIds[1], title: CHAT.title })
     .select("id")
     .single();
-  if (indErr) throw new Error(indErr.message);
-  const { error: indSkillErr } = await supabaseAdmin
-    .from("request_skills")
-    .insert({ request_id: indReq.id, skill_id: skillId["stitching"], quantity: 1 });
-  if (indSkillErr) throw new Error(indSkillErr.message);
+  if (tErr) throw new Error(`chat_thread: ${tErr.message}`);
 
-  const { data: groupReq, error: groupErr } = await supabaseAdmin
-    .from("requests")
-    .insert({
-      title: "30 school uniform sets",
-      description: "Cut, stitch and pack 30 school uniform sets",
-      mode: "group",
-      units: 30,
-      pay: 15000,
-      location_id: locIds[1],
-      status: "open",
-      customer_id: customerIds[1],
-    })
-    .select("id")
-    .single();
-  if (groupErr) throw new Error(groupErr.message);
-  const { error: groupSkillErr } = await supabaseAdmin
-    .from("request_skills")
-    .insert(["cutting", "stitching", "packaging"].map((sName) => ({ request_id: groupReq.id, skill_id: skillId[sName], quantity: 10 })));
-  if (groupSkillErr) throw new Error(groupSkillErr.message);
+  const { error: mErr } = await supabaseAdmin.from("messages").insert(
+    CHAT.messages.map((m) => ({
+      thread_id: thread.id,
+      sender_id: m.role === "provider" ? providerIds[2] : customerIds[1],
+      sender_role: m.role,
+      body: m.body,
+      read_at: null,
+    })),
+  );
+  if (mErr) throw new Error(`messages: ${mErr.message}`);
 
-  console.log(`Seeded ${providerIds.length} providers, ${customerIds.length} customers, 2 requests.`);
+  console.log(
+    `Seeded ${providerIds.length} providers, ${customerIds.length} customers, ` +
+      `${requestIds.length} requests, ${portfolioRows.length} portfolio items, ` +
+      `${ratingRows.length} ratings, ${CHAT.messages.length} chat messages.`,
+  );
 }
 
 main().catch((e) => {

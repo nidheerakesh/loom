@@ -1,4 +1,4 @@
-import { clearTables, seedReference, USER_TABLES } from "./seedHelpers";
+import { clearTables, seedReference, USER_TABLES } from "./seedHelpers.js";
 
 // Clear user-generated data (accounts, requests, teams, chat…), keep the reference catalogue
 // (skills, geography) intact — a clean slate for creating real accounts.

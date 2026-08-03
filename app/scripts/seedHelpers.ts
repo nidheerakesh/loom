@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "../api/_lib/supabase";
-import { haversine } from "../api/_lib/geo";
+import { supabaseAdmin } from "../api/_lib/supabase.js";
+import { haversine } from "../api/_lib/geo.js";
 
 // Reference (catalogue + geography) is required for the app to function: providers resolve
 // skills against it, customers pick skills from it, matching needs locations/distances.
