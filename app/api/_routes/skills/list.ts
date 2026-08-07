@@ -5,7 +5,7 @@ import { supabaseAdmin } from "../../_lib/supabase.js";
 export default withHandler(async (_req: VercelRequest, res: VercelResponse) => {
   const { data, error } = await supabaseAdmin
     .from("skills")
-    .select("id, canonical_name, canonical_name_ml, icon_key")
+    .select("id, canonical_name, canonical_name_ml")
     .order("created_at", { ascending: true })
     .limit(500);
   if (error) throw new HttpError(500, error.message);
@@ -14,7 +14,6 @@ export default withHandler(async (_req: VercelRequest, res: VercelResponse) => {
       _id: s.id,
       canonicalName: s.canonical_name,
       canonicalNameMl: s.canonical_name_ml ?? null,
-      iconKey: s.icon_key,
     })),
   );
 });

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
+import { RoleSwitch } from "../shared/RoleSwitch";
 import { useAuth } from "../../auth";
 import { Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
@@ -40,6 +41,7 @@ export function CustomerProfile() {
           </div>
         ))}
       </Card>
+      <RoleSwitch />
     </Screen>
   );
 }

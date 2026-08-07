@@ -19,10 +19,10 @@ export function CustomerApp() {
         active={tab}
         onChange={setTab}
         tabs={[
-          { key: "browse", label: t("browse"), icon: "🔎" },
-          { key: "request", label: t("request"), icon: "➕" },
-          { key: "accepted", label: t("accepted"), icon: "📥" },
-          { key: "profile", label: t("profile"), icon: "👤" },
+          { key: "browse", label: t("browse") },
+          { key: "request", label: t("request") },
+          { key: "accepted", label: t("accepted") },
+          { key: "profile", label: t("profile") },
         ]}
       />
     </>

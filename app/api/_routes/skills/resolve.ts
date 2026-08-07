@@ -7,7 +7,7 @@ import { normalize, similarity, SKILL_MERGE_THRESHOLD } from "../../_lib/text.js
 import { translateSkill } from "../../_lib/translate.js";
 
 // Add skills for a provider. Deterministic merge to existing skills; genuinely-new skills
-// are translated by an LLM (en<->ml + emoji) and created so EVERY skill becomes usable
+// are translated by an LLM (en<->ml) and created so EVERY skill becomes usable
 // across the app (Browse, Request, matching). No LLM influences a match — only labels a node.
 // Ported from convex/skills.ts's resolveExisting + createSkillNode + assignProviderSkills +
 // addSkills — Convex split these into internalQuery/internalMutation/action because it needed
@@ -16,7 +16,7 @@ import { translateSkill } from "../../_lib/translate.js";
 
 const Body = z.object({ token: z.string().min(1), phrases: z.array(z.string()) });
 
-type SkillRow = { id: string; canonical_name: string; canonical_name_ml: string | null; icon_key: string };
+type SkillRow = { id: string; canonical_name: string; canonical_name_ml: string | null };
 type AliasRow = { skill_id: string; alias_text: string };
 
 type ResolveExisting =
@@ -34,7 +34,7 @@ async function resolveExisting(phrase: string): Promise<ResolveExisting> {
 
   const { data: skills, error: skillsErr } = await supabaseAdmin
     .from("skills")
-    .select("id, canonical_name, canonical_name_ml, icon_key")
+    .select("id, canonical_name, canonical_name_ml")
     .limit(500);
   if (skillsErr) throw new HttpError(500, skillsErr.message);
   const skillRows = (skills ?? []) as SkillRow[];
@@ -100,7 +100,6 @@ async function resolveExisting(phrase: string): Promise<ResolveExisting> {
 async function createSkillNode(
   canonicalName: string,
   canonicalNameMl: string,
-  iconKey: string,
   aliasText: string,
 ): Promise<{ skillId: string; canonicalName: string; canonicalNameMl: string }> {
   const { data: existing, error: existErr } = await supabaseAdmin
@@ -118,7 +117,7 @@ async function createSkillNode(
   }
   const { data: created, error: insErr } = await supabaseAdmin
     .from("skills")
-    .insert({ canonical_name: canonicalName, canonical_name_ml: canonicalNameMl, icon_key: iconKey })
+    .insert({ canonical_name: canonicalName, canonical_name_ml: canonicalNameMl, icon_key: "" })
     .select("id")
     .single();
   if (insErr) throw new HttpError(500, insErr.message);
@@ -181,7 +180,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       });
     } else {
       const t = await translateSkill(phrase); // LLM (or graceful fallback)
-      const created = await createSkillNode(t.en, t.ml, t.emoji, phrase);
+      const created = await createSkillNode(t.en, t.ml, phrase);
       skillIds.push(created.skillId);
       readback.push({
         raw: phrase,

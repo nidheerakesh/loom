@@ -72,10 +72,10 @@ export function ProviderCurrent() {
               {tm.state === "invited" && token && (
                 <div className="flex gap-2 mt-2">
                   <Button variant="leaf" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: true })}>
-                    ✓ {t("accept")}
+                    {t("accept")}
                   </Button>
                   <Button variant="danger" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: false })}>
-                    ✗ {t("decline")}
+                    {t("decline")}
                   </Button>
                 </div>
               )}
@@ -126,7 +126,7 @@ export function ProviderCurrent() {
                   setOpen(null);
                 }}
               >
-                ✋ {t("interested")}
+                {t("interested")}
               </Button>
             )}
           </div>

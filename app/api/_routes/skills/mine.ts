@@ -12,7 +12,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
   const { data, error } = await supabaseAdmin
     .from("provider_skills")
-    .select("proficiency, skills(id, canonical_name, canonical_name_ml, icon_key)")
+    .select("proficiency, skills(id, canonical_name, canonical_name_ml)")
     .eq("provider_id", s.userId);
   if (error) throw new HttpError(500, error.message);
   res.status(200).json(
@@ -22,14 +22,12 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
           id: string;
           canonical_name: string;
           canonical_name_ml: string | null;
-          icon_key: string;
         } | null;
         if (!sk) return null;
         return {
           _id: sk.id,
           canonicalName: sk.canonical_name,
           canonicalNameMl: sk.canonical_name_ml ?? null,
-          iconKey: sk.icon_key,
           proficiency: row.proficiency,
         };
       })

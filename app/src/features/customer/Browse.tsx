@@ -10,7 +10,7 @@ const EXP_TIERS = [0, 1, 3, 5];
 const DIST = [0, 3, 5, 10];
 const RATES = [0, 400, 500, 700];
 
-type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string };
+type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null };
 type ProviderCard = {
   _id: string;
   name: string;
@@ -23,7 +23,7 @@ type ProviderCard = {
   rating: number;
   ratingCount: number;
   distanceKm: number | null;
-  skills: { _id: string; iconKey: string; canonicalName: string; canonicalNameMl: string | null }[];
+  skills: { _id: string; canonicalName: string; canonicalNameMl: string | null }[];
 };
 type ProviderProfile = ProviderCard & {
   portfolio: { _id: string; url: string | null; caption: string | null }[];
@@ -62,7 +62,7 @@ export function Browse() {
       <div className="flex gap-1 overflow-x-auto pb-2">
         <Chip active={!skillId} label={t("anySkill")} onClick={() => setSkillId(undefined)} />
         {skills?.map((s) => (
-          <Chip key={s._id} active={skillId === s._id} label={`${s.iconKey} ${s.canonicalNameMl ?? s.canonicalName}`} onClick={() => setSkillId(s._id)} />
+          <Chip key={s._id} active={skillId === s._id} label={s.canonicalNameMl ?? s.canonicalName} onClick={() => setSkillId(s._id)} />
         ))}
       </div>
       <div className="space-y-2">
@@ -84,9 +84,9 @@ export function Browse() {
               <div className="text-sm text-loom-indigoSoft">
                 {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"} · {p.deliveryDays ?? "?"}d · {p.experienceYears}
                 {t("yrs")}
-                {p.distanceKm !== null ? ` · ${p.distanceKm} ${t("km")}` : ""} · 👥{p.capacity}
+                {p.distanceKm !== null ? ` · ${p.distanceKm} ${t("km")}` : ""} · {p.capacity} {t("people")}
               </div>
-              <div className="text-sm mt-1">{p.skills.map((s) => s.iconKey).join(" ")}</div>
+              <div className="text-sm mt-1 text-loom-indigoSoft">{p.skills.map((s) => s.canonicalNameMl ?? s.canonicalName).join(" · ")}</div>
             </button>
           </Card>
         ))}
@@ -176,12 +176,12 @@ function ProviderDetail({
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">
               {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"} · {p.deliveryDays ?? "?"}d · {p.experienceYears}
-              {t("yrs")} · 👥{p.capacity}
+              {t("yrs")} · {p.capacity} {t("people")}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {p.skills.map((s) => (
                 <span key={s._id} className="bg-loom-indigo text-loom-cotton rounded-full px-3 py-1 text-sm">
-                  {s.iconKey} {s.canonicalNameMl ?? s.canonicalName}
+                  {s.canonicalNameMl ?? s.canonicalName}
                 </span>
               ))}
             </div>
@@ -195,7 +195,7 @@ function ProviderDetail({
               ))}
             </div>
           )}
-          <Button variant="gold" className="w-full" onClick={startChat}>💬 {t("chat")}</Button>
+          <Button variant="gold" className="w-full" onClick={startChat}>{t("chat")}</Button>
           {p.reviews.length > 0 && (
             <Card>
               {p.reviews.map((r, i) => (

@@ -1,4 +1,4 @@
-// LLM translation for NEW skills only (en↔ml + an emoji). Ported from
+// LLM translation for NEW skills only (en↔ml). Ported from
 // convex/lib/translate.ts — logic unchanged, only the env-var source moves from Convex
 // env to Vercel env. Preference order:
 //   npx vercel env add NVIDIA_API_KEY      (NVIDIA NIM, preferred)
@@ -7,10 +7,10 @@
 // Optional: NVIDIA_MODEL (default meta/llama-3.3-70b-instruct).
 // If no key is set, falls back to a deterministic echo so the app still works offline.
 
-export type Translation = { en: string; ml: string; emoji: string };
+export type Translation = { en: string; ml: string };
 
 const PROMPT = (phrase: string) =>
-  `You label skills for a women's livelihood app in Kerala. For the skill "${phrase}", return ONLY compact JSON: {"en":"<short English canonical name, lowercase>","ml":"<Malayalam translation>","emoji":"<a single emoji>"}. No prose.`;
+  `You label skills for a women's livelihood app in Kerala. For the skill "${phrase}", return ONLY compact JSON: {"en":"<short English canonical name, lowercase>","ml":"<Malayalam translation>"}. No prose.`;
 
 function parseJson(text: string): Translation | null {
   const m = text.match(/\{[\s\S]*\}/);
@@ -18,7 +18,7 @@ function parseJson(text: string): Translation | null {
   try {
     const o = JSON.parse(m[0]);
     if (typeof o.en === "string" && typeof o.ml === "string") {
-      return { en: o.en.trim().toLowerCase(), ml: String(o.ml).trim(), emoji: typeof o.emoji === "string" && o.emoji ? o.emoji : "🛠️" };
+      return { en: o.en.trim().toLowerCase(), ml: String(o.ml).trim() };
     }
   } catch {
     /* ignore */
@@ -93,7 +93,7 @@ function hasMalayalam(s: string): boolean {
   return /[ഀ-ൿ]/.test(s);
 }
 
-// Keyless en↔ml translation via MyMemory (free, rate-limited). No emoji.
+// Keyless en↔ml translation via MyMemory (free, rate-limited).
 async function viaMyMemory(text: string, source: string, target: string): Promise<string | null> {
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
   const res = await fetch(url);
@@ -106,23 +106,6 @@ async function viaMyMemory(text: string, source: string, target: string): Promis
   return typeof t === "string" && t.trim() ? t.trim() : null;
 }
 
-// Rough emoji for a skill (best-effort; not critical).
-function guessEmoji(en: string): string {
-  const map: [RegExp, string][] = [
-    [/stitch|tailor|sew|garment|embroider/, "🧵"],
-    [/cut/, "✂️"],
-    [/pack|box|wrap/, "📦"],
-    [/cook|cater|food|bak|pickle/, "🍲"],
-    [/craft|art|paint|pottery|clay|weav/, "🎨"],
-    [/tutor|teach|coach/, "📚"],
-    [/bee|honey|farm|garden|agri/, "🐝"],
-    [/clean|wash/, "🧹"],
-    [/beaut|salon|hair|mehendi|henna/, "💅"],
-  ];
-  for (const [re, e] of map) if (re.test(en)) return e;
-  return "🛠️";
-}
-
 export async function translateSkill(phrase: string): Promise<Translation> {
   const clean = phrase.trim();
   const lower = clean.toLowerCase();
@@ -130,7 +113,7 @@ export async function translateSkill(phrase: string): Promise<Translation> {
   const anthropic = process.env.ANTHROPIC_API_KEY;
   const gemini = process.env.GEMINI_API_KEY;
   try {
-    // 1. LLM providers (also produce an emoji) — used only if a key is set.
+    // 1. LLM providers — used only if a key is set.
     if (nvidia) {
       const t = await viaNvidia(clean, nvidia);
       if (t) return t;
@@ -150,11 +133,11 @@ export async function translateSkill(phrase: string): Promise<Translation> {
     if (translated) {
       const en = src === "en" ? lower : translated.toLowerCase();
       const ml = src === "ml" ? clean : translated;
-      return { en, ml, emoji: guessEmoji(en) };
+      return { en, ml };
     }
   } catch (e) {
     console.error(`[translate] ${String(e)}`);
   }
   // 3. Offline fallback: keep the phrase as-is.
-  return { en: lower, ml: clean, emoji: guessEmoji(lower) };
+  return { en: lower, ml: clean };
 }

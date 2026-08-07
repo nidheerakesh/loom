@@ -4,9 +4,10 @@ import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
+import { RoleSwitch } from "../shared/RoleSwitch";
 
 type Readback = { raw: string; canonicalName: string | null; canonicalNameMl: string | null; matchedVia: string };
-type SkillRow = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string; proficiency: number };
+type SkillRow = { _id: string; canonicalName: string; canonicalNameMl: string | null; proficiency: number };
 type PortfolioItem = { _id: string; url: string | null; caption: string | null };
 type GrievanceRow = { _id: string; subject: string; body: string; status: string };
 
@@ -98,12 +99,12 @@ export function ProviderProfile() {
         <div className="flex flex-wrap gap-1 mb-2">
           {skills?.map((s) => (
             <span key={s._id} className="bg-loom-indigo text-loom-cotton rounded-full px-3 py-1 text-sm">
-              {s.iconKey} {s.canonicalNameMl ?? s.canonicalName}
+              {s.canonicalNameMl ?? s.canonicalName}
             </span>
           ))}
         </div>
         <Field placeholder={t("skillsPlaceholder")} value={skillText} onChange={(e) => setSkillText(e.target.value)} />
-        <Button className="w-full" onClick={addSkills}>🎤 {t("save")}</Button>
+        <Button className="w-full" onClick={addSkills}>{t("save")}</Button>
         {readback && (
           <div className="mt-3 text-sm space-y-1">
             <div className="font-semibold text-loom-indigo">{t("confirmSkills")}:</div>
@@ -155,6 +156,7 @@ export function ProviderProfile() {
           </div>
         )}
       </Card>
+      <RoleSwitch />
     </Screen>
   );
 }
