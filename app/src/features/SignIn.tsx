@@ -88,7 +88,7 @@ export function SignIn() {
     <div className="max-w-[520px] mx-auto min-h-screen bg-loom-cotton p-6 flex flex-col justify-center">
       <div className="text-center mb-6">
         <div className="text-4xl font-bold text-loom-indigo">{t("appName")}</div>
-        <div className="text-loom-indigoSoft">Weaving skills into income</div>
+        <div className="text-loom-indigoSoft">{t("tagline")}</div>
         <button
           className="mt-2 text-sm underline text-loom-indigoSoft"
           onClick={() => setLang(lang === "ml" ? "en" : "ml")}
@@ -118,7 +118,7 @@ export function SignIn() {
           <>
             {devCode && (
               <div className="mb-3 text-sm bg-loom-cotton rounded-[14px] p-2 text-loom-indigo">
-                (demo) OTP: <b className="text-lg">{devCode}</b>
+                {t("demoOtp")} <b className="text-lg">{devCode}</b>
               </div>
             )}
             <Field

@@ -28,7 +28,7 @@ export function CustomerProfile() {
     <Screen title={t("profile")} right={<SignOut />}>
       <Card>
         <Field label={t("name")} defaultValue={customer.name} onBlur={(e) => update.mutate({ name: e.target.value })} />
-        <Field label="Company" defaultValue={customer.company ?? ""} onBlur={(e) => update.mutate({ company: e.target.value })} />
+        <Field label={t("company")} defaultValue={customer.company ?? ""} onBlur={(e) => update.mutate({ company: e.target.value })} />
       </Card>
       <Card>
         <h2 className="font-semibold text-loom-indigo mb-2">{t("history")}</h2>

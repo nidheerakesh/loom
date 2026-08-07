@@ -1,11 +1,19 @@
-// LLM translation for NEW skills only (en↔ml). Ported from
-// convex/lib/translate.ts — logic unchanged, only the env-var source moves from Convex
-// env to Vercel env. Preference order:
-//   npx vercel env add NVIDIA_API_KEY      (NVIDIA NIM, preferred)
-//   npx vercel env add ANTHROPIC_API_KEY
-//   npx vercel env add GEMINI_API_KEY
-// Optional: NVIDIA_MODEL (default meta/llama-3.3-70b-instruct).
-// If no key is set, falls back to a deterministic echo so the app still works offline.
+// Translation for NEW skills only (en↔ml). Preference order:
+//   BHASHINI_API_KEY + BHASHINI_USER_ID   (preferred — see below)
+//   NVIDIA_API_KEY                        (NVIDIA NIM)
+//   ANTHROPIC_API_KEY
+//   GEMINI_API_KEY
+// Optional: NVIDIA_MODEL (default meta/llama-3.3-70b-instruct), BHASHINI_PIPELINE_ID.
+// With no key at all, falls back to a deterministic echo so the app still works offline.
+//
+// Bhashini leads because it is the Government of India's translation service, built and
+// tuned for Indic languages; general-purpose LLMs are noticeably weaker at Malayalam,
+// especially on domain vocabulary like garment and craft terms. docs/TDD.md §4 names it.
+//
+// The previous keyless step, MyMemory, was removed: its Malayalam output was poor enough
+// that a wrong canonical name could enter the shared skill taxonomy, which then silently
+// mis-groups every provider who types that phrase. Echoing the phrase unchanged is a better
+// failure than confidently translating it wrong.
 
 export type Translation = { en: string; ml: string };
 
@@ -93,17 +101,43 @@ function hasMalayalam(s: string): boolean {
   return /[ഀ-ൿ]/.test(s);
 }
 
-// Keyless en↔ml translation via MyMemory (free, rate-limited).
-async function viaMyMemory(text: string, source: string, target: string): Promise<string | null> {
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error(`[mymemory] ${res.status}`);
+// Bhashini NMT (Government of India / AI4Bharat). Translates one direction; the caller
+// pairs the result with the original to produce both halves.
+async function viaBhashini(text: string, source: string, target: string): Promise<string | null> {
+  const key = process.env.BHASHINI_API_KEY;
+  const userId = process.env.BHASHINI_USER_ID;
+  if (!key || !userId) return null;
+
+  try {
+    const res = await fetch("https://dhruva-api.bhashini.gov.in/services/inference/pipeline", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: key, userID: userId },
+      body: JSON.stringify({
+        pipelineTasks: [
+          {
+            taskType: "translation",
+            config: {
+              language: { sourceLanguage: source, targetLanguage: target },
+              ...(process.env.BHASHINI_PIPELINE_ID
+                ? { serviceId: process.env.BHASHINI_PIPELINE_ID }
+                : {}),
+            },
+          },
+        ],
+        inputData: { input: [{ source: text }] },
+      }),
+    });
+    if (!res.ok) {
+      console.error(`[bhashini] ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const out = data?.pipelineResponse?.[0]?.output?.[0]?.target;
+    return typeof out === "string" && out.trim() ? out.trim() : null;
+  } catch (e) {
+    console.error(`[bhashini] ${String(e)}`);
     return null;
   }
-  const data = await res.json();
-  const t = data?.responseData?.translatedText;
-  return typeof t === "string" && t.trim() ? t.trim() : null;
 }
 
 export async function translateSkill(phrase: string): Promise<Translation> {
@@ -112,8 +146,19 @@ export async function translateSkill(phrase: string): Promise<Translation> {
   const nvidia = process.env.NVIDIA_API_KEY;
   const anthropic = process.env.ANTHROPIC_API_KEY;
   const gemini = process.env.GEMINI_API_KEY;
+  const src = hasMalayalam(clean) ? "ml" : "en";
+  const tgt = src === "ml" ? "en" : "ml";
+
   try {
-    // 1. LLM providers — used only if a key is set.
+    // 1. Bhashini — Indic-specialised, best Malayalam quality.
+    const viaGov = await viaBhashini(clean, src, tgt);
+    if (viaGov) {
+      return src === "en"
+        ? { en: lower, ml: viaGov }
+        : { en: viaGov.toLowerCase(), ml: clean };
+    }
+
+    // 2. LLM providers — used only if a key is set.
     if (nvidia) {
       const t = await viaNvidia(clean, nvidia);
       if (t) return t;
@@ -126,18 +171,9 @@ export async function translateSkill(phrase: string): Promise<Translation> {
       const t = await viaGemini(clean, gemini);
       if (t) return t;
     }
-    // 2. Keyless translation API (no LLM, no key).
-    const src = hasMalayalam(clean) ? "ml" : "en";
-    const tgt = src === "ml" ? "en" : "ml";
-    const translated = await viaMyMemory(clean, src, tgt);
-    if (translated) {
-      const en = src === "en" ? lower : translated.toLowerCase();
-      const ml = src === "ml" ? clean : translated;
-      return { en, ml };
-    }
   } catch (e) {
     console.error(`[translate] ${String(e)}`);
   }
-  // 3. Offline fallback: keep the phrase as-is.
+  // 3. Offline fallback: keep the phrase as-is rather than guess.
   return { en: lower, ml: clean };
 }

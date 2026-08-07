@@ -64,7 +64,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
           <div className="text-loom-leaf font-semibold mb-2">{title}</div>
           {created.group ? (
             <>
-              <div className="text-sm text-loom-indigoSoft mb-2">This is a team order.</div>
+              <div className="text-sm text-loom-indigoSoft mb-2">{t("teamOrderNotice")}</div>
               <Button
                 variant="gold"
                 className="w-full"
@@ -77,7 +77,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               </Button>
             </>
           ) : (
-            <Button className="w-full" onClick={onDone}>OK</Button>
+            <Button className="w-full" onClick={onDone}>{t("ok")}</Button>
           )}
         </Card>
       </Screen>

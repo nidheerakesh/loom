@@ -68,6 +68,28 @@
   }
 }
 
+/* The Malayalam face was named in `font-family` below but never actually loaded, so every
+   Malayalam string rendered in whatever the device happened to have — or as tofu boxes on a
+   device with no Malayalam font at all. UI_UX §3 treats this typography as a hard constraint,
+   not a preference.
+
+   Self-hosted rather than linked from a CDN: the app is built for patchy connections, and a
+   webfont that fails to load is precisely the failure a CDN was meant to avoid. This is the
+   Malayalam subset only (~89KB); Latin still uses the system stack, so an English-only user
+   downloads nothing extra.
+
+   One file covers every weight because it is a variable font. `swap` so text is legible
+   immediately and reflows when the face arrives, rather than being invisible while it loads. */
+@font-face {
+  font-family: "Noto Sans Malayalam";
+  src: url("/fonts/noto-sans-malayalam.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0307, U+0323, U+0951-0952, U+0964-0965, U+0D00-0D7F, U+1CDA, U+1CF2,
+    U+200C-200D, U+20B9, U+25CC, U+A830-A832;
+}
+
 @layer base {
   * {
     @apply border-border;
