@@ -40,6 +40,11 @@ export function ProviderProfile() {
     mutationFn: (patch: Record<string, unknown>) => apiPost("/api/providers/update-profile", { token, ...patch }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me", token] }),
   });
+  const deletePortfolioItem = useMutation({
+    mutationFn: (itemId: string) =>
+      apiPost("/api/providers/portfolio/delete", { token, itemId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portfolio", token] }),
+  });
   const addPortfolioItem = useMutation({
     mutationFn: (body: { path: string; caption: string }) =>
       apiPost("/api/providers/portfolio", { token, ...body }),
@@ -74,7 +79,10 @@ export function ProviderProfile() {
       { token, fileName: file.name },
     );
     await fetch(signedUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
-    addPortfolioItem.mutate({ path, caption: file.name });
+    // The caption is what a customer reads on the work sample, so ask for it rather than
+    // storing "IMG_20240113.jpg". Blank is fine — better than a filename.
+    const caption = window.prompt(t("captionPrompt")) ?? "";
+    addPortfolioItem.mutate({ path, caption });
   };
 
   return (
@@ -121,8 +129,18 @@ export function ProviderProfile() {
         <h2 className="font-semibold text-loom-indigo mb-2">{t("portfolio")}</h2>
         <div className="grid grid-cols-3 gap-2 mb-2">
           {portfolio?.map((p) => (
-            <div key={p._id} className="aspect-square bg-loom-cotton rounded-[14px] overflow-hidden">
+            <div key={p._id} className="relative aspect-square bg-loom-cotton rounded-[14px] overflow-hidden">
               {p.url && <img src={p.url} alt={p.caption ?? ""} className="w-full h-full object-cover" />}
+              {/* Confirmed before removing: deleting the image is irreversible. */}
+              <button
+                aria-label={t("deleteImage")}
+                className="absolute top-1 right-1 bg-loom-madder text-white rounded-full w-8 h-8 text-sm leading-none"
+                onClick={() => {
+                  if (window.confirm(t("confirmDeleteImage"))) deletePortfolioItem.mutate(p._id);
+                }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>

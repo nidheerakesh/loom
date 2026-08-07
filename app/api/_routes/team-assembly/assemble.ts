@@ -151,6 +151,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const memberRows: { team_id: string; provider_id: string; assigned_skill_id: string; covered_units: number; state: string }[] = [];
   for (const [pid, skillMap] of assignments) {
     for (const [skillId, units] of skillMap) {
+      // Rows are written now, but the team itself stays `status: "proposed"` and providers
+      // are not shown it until the customer confirms — see my-teams.ts and
+      // respond-invite.ts. team_member_state_enum has no "proposed" member state, so the
+      // team's own status is what gates visibility.
       memberRows.push({ team_id: team.id, provider_id: pid, assigned_skill_id: skillId, covered_units: units, state: "invited" });
     }
   }

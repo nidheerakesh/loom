@@ -31,6 +31,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const out = [];
   for (const m of (rows ?? []) as unknown as Row[]) {
     if (!m.teams) continue;
+    // A proposed team is still the customer's draft — they may re-assemble or abandon it.
+    // Showing it would let a provider accept a slot on work that was never committed, the
+    // silent commitment USER_FLOWS §5 rules out.
+    if (m.teams.status !== "confirmed") continue;
     out.push({
       teamId: m.teams.id,
       teamStatus: m.teams.status,
