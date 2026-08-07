@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { sessionByToken } from "../../_lib/auth.js";
-import { distanceKm } from "../../_lib/geo.js";
+import { distanceMap } from "../../_lib/geo.js";
 
 // Provider "Requests" tab — open individual requests matching this provider's skills
 // that they have not yet responded to. Ported from convex/requests.ts's `myIncoming`.
@@ -54,18 +54,32 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
+  // status/mode filtered in SQL rather than discarded in JS after fetching.
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
     .select("id, title, units, pay, status, mode, location_id")
-    .in("id", requestIds);
+    .in("id", requestIds)
+    .eq("status", "open")
+    .eq("mode", "individual");
   if (reqErr) throw new HttpError(500, reqErr.message);
-
-  const out = [];
-  for (const r of requests ?? []) {
-    if (r.status !== "open" || r.mode !== "individual") continue;
-    const dist = await distanceKm(provider.home_location_id, r.location_id);
-    out.push({ _id: r.id, title: r.title, units: r.units, pay: r.pay ?? null, distanceKm: dist });
+  if (!requests || requests.length === 0) {
+    res.status(200).json([]);
+    return;
   }
+
+  // One batched distance lookup instead of one per request.
+  const distances = await distanceMap(
+    provider.home_location_id,
+    requests.map((r) => r.location_id),
+  );
+
+  const out = requests.map((r) => ({
+    _id: r.id,
+    title: r.title,
+    units: r.units,
+    pay: r.pay ?? null,
+    distanceKm: distances.get(r.location_id) ?? Number.POSITIVE_INFINITY,
+  }));
   out.sort((a, b) => a.distanceKm - b.distanceKm);
   res.status(200).json(out);
 });

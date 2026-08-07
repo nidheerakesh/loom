@@ -345,3 +345,19 @@ create index messages_thread_id_idx on messages (thread_id);
 
 alter table chat_threads enable row level security;
 alter table messages enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Performance indexes. Each corresponds to a filter/sort the API actually issues;
+-- see supabase/migrations/004_perf_indexes.sql for the rationale per index.
+-- Note `bigserial` does not create an index, so the deterministic `seq` tiebreaks
+-- need explicit ones.
+-- ---------------------------------------------------------------------------
+
+create index messages_thread_created_idx on messages (thread_id, created_at desc);
+create index chat_threads_created_at_idx on chat_threads (created_at desc);
+create index near_distances_pair_idx on near_distances (from_location_id, to_location_id);
+create index providers_seq_idx on providers (seq);
+create index team_members_seq_idx on team_members (seq);
+create index requests_customer_created_idx on requests (customer_id, created_at desc);
+create index ratings_provider_created_idx on ratings (provider_id, created_at desc);
+create index grievances_reporter_created_idx on grievances (reporter_id, created_at desc);

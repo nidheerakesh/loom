@@ -42,32 +42,25 @@ async function participantsOf(thread: ThreadRow): Promise<Participants> {
   }
 
   if (thread.context_type === "request") {
-    const { data: request, error } = await supabaseAdmin
-      .from("requests")
-      .select("customer_id")
-      .eq("id", thread.context_id)
-      .maybeSingle();
-    if (error) throw new HttpError(500, error.message);
-    if (request) p.customerIds.add(request.customer_id);
+    // Independent lookups, so issue them together rather than one after another.
+    const [requestRes, interestsRes, teamsRes] = await Promise.all([
+      supabaseAdmin.from("requests").select("customer_id").eq("id", thread.context_id).maybeSingle(),
+      supabaseAdmin.from("interests").select("provider_id").eq("request_id", thread.context_id),
+      supabaseAdmin.from("teams").select("id").eq("request_id", thread.context_id),
+    ]);
+    for (const r of [requestRes, interestsRes, teamsRes]) {
+      if (r.error) throw new HttpError(500, r.error.message);
+    }
+    if (requestRes.data) p.customerIds.add(requestRes.data.customer_id);
+    for (const i of interestsRes.data ?? []) p.providerIds.add(i.provider_id);
 
-    // Providers who put their hand up for this request, plus anyone placed on its team.
-    const { data: interests, error: iErr } = await supabaseAdmin
-      .from("interests")
-      .select("provider_id")
-      .eq("request_id", thread.context_id);
-    if (iErr) throw new HttpError(500, iErr.message);
-    for (const i of interests ?? []) p.providerIds.add(i.provider_id);
-
-    const { data: teams, error: tErr } = await supabaseAdmin
-      .from("teams")
-      .select("id")
-      .eq("request_id", thread.context_id);
-    if (tErr) throw new HttpError(500, tErr.message);
-    for (const team of teams ?? []) {
+    // Anyone placed on a team for this request, fetched in one query rather than per team.
+    const teamIds = (teamsRes.data ?? []).map((t) => t.id);
+    if (teamIds.length > 0) {
       const { data: members, error: mErr } = await supabaseAdmin
         .from("team_members")
         .select("provider_id")
-        .eq("team_id", team.id);
+        .in("team_id", teamIds);
       if (mErr) throw new HttpError(500, mErr.message);
       for (const m of members ?? []) p.providerIds.add(m.provider_id);
     }
@@ -75,20 +68,16 @@ async function participantsOf(thread: ThreadRow): Promise<Participants> {
   }
 
   if (thread.context_type === "team") {
-    const { data: members, error } = await supabaseAdmin
-      .from("team_members")
-      .select("provider_id")
-      .eq("team_id", thread.context_id);
-    if (error) throw new HttpError(500, error.message);
-    for (const m of members ?? []) p.providerIds.add(m.provider_id);
+    const [membersRes, teamRes] = await Promise.all([
+      supabaseAdmin.from("team_members").select("provider_id").eq("team_id", thread.context_id),
+      supabaseAdmin.from("teams").select("request_id").eq("id", thread.context_id).maybeSingle(),
+    ]);
+    if (membersRes.error) throw new HttpError(500, membersRes.error.message);
+    if (teamRes.error) throw new HttpError(500, teamRes.error.message);
+    for (const m of membersRes.data ?? []) p.providerIds.add(m.provider_id);
 
     // The customer whose request the team was assembled for belongs in it too.
-    const { data: team, error: tErr } = await supabaseAdmin
-      .from("teams")
-      .select("request_id")
-      .eq("id", thread.context_id)
-      .maybeSingle();
-    if (tErr) throw new HttpError(500, tErr.message);
+    const team = teamRes.data;
     if (team) {
       const { data: request, error: rErr } = await supabaseAdmin
         .from("requests")
@@ -133,19 +122,109 @@ export async function requireThreadAccess(session: Session, threadId: string): P
   return thread;
 }
 
-// Threads the session may see, filtered from the most recent candidates.
+// Threads the session may see.
+//
+// Batched deliberately. Testing each candidate with `canAccessThread` in a loop cost 3-5
+// queries per thread over 200 candidates — several hundred round trips on a screen that
+// polls every 7 seconds. This resolves the same membership with a fixed four queries,
+// regardless of how many threads there are.
 export async function visibleThreads(session: Session, limit = 50): Promise<ThreadRow[]> {
+  if (session.role === "admin") {
+    const { data, error } = await supabaseAdmin
+      .from("chat_threads")
+      .select("id, context_type, context_id, title")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new HttpError(500, error.message);
+    return data ?? [];
+  }
+
   const { data: threads, error } = await supabaseAdmin
     .from("chat_threads")
     .select("id, context_type, context_id, title")
     .order("created_at", { ascending: false })
     .limit(limit * 4);
   if (error) throw new HttpError(500, error.message);
+  if (!threads || threads.length === 0) return [];
 
-  const out: ThreadRow[] = [];
-  for (const thread of threads ?? []) {
-    if (out.length >= limit) break;
-    if (await canAccessThread(session, thread)) out.push(thread);
+  const requestIds = new Set<string>();
+  const teamIds = new Set<string>();
+  for (const t of threads) {
+    if (t.context_type === "request") requestIds.add(t.context_id);
+    if (t.context_type === "team") teamIds.add(t.context_id);
   }
-  return out;
+
+  const isProvider = session.role === "provider";
+
+  // Everything the candidate threads could depend on, in one round of parallel queries.
+  const [requestsRes, interestsRes, teamsRes, membersRes] = await Promise.all([
+    requestIds.size
+      ? supabaseAdmin.from("requests").select("id, customer_id").in("id", [...requestIds])
+      : Promise.resolve({ data: [], error: null }),
+    isProvider && requestIds.size
+      ? supabaseAdmin
+          .from("interests")
+          .select("request_id")
+          .eq("provider_id", session.userId)
+          .in("request_id", [...requestIds])
+      : Promise.resolve({ data: [], error: null }),
+    // Teams belonging to a candidate request, plus the requests behind candidate team threads.
+    requestIds.size || teamIds.size
+      ? supabaseAdmin
+          .from("teams")
+          .select("id, request_id")
+          .or(
+            [
+              requestIds.size ? `request_id.in.(${[...requestIds].join(",")})` : null,
+              teamIds.size ? `id.in.(${[...teamIds].join(",")})` : null,
+            ]
+              .filter(Boolean)
+              .join(","),
+          )
+      : Promise.resolve({ data: [], error: null }),
+    isProvider
+      ? supabaseAdmin.from("team_members").select("team_id").eq("provider_id", session.userId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  for (const r of [requestsRes, interestsRes, teamsRes, membersRes]) {
+    if (r.error) throw new HttpError(500, r.error.message);
+  }
+
+  const customerOfRequest = new Map<string, string>();
+  for (const r of (requestsRes.data ?? []) as { id: string; customer_id: string }[]) {
+    customerOfRequest.set(r.id, r.customer_id);
+  }
+  const myInterestRequests = new Set(
+    ((interestsRes.data ?? []) as { request_id: string }[]).map((i) => i.request_id),
+  );
+  const myTeams = new Set(((membersRes.data ?? []) as { team_id: string }[]).map((m) => m.team_id));
+
+  const teamsOfRequest = new Map<string, string[]>();
+  const requestOfTeam = new Map<string, string>();
+  for (const t of (teamsRes.data ?? []) as { id: string; request_id: string }[]) {
+    requestOfTeam.set(t.id, t.request_id);
+    const list = teamsOfRequest.get(t.request_id) ?? [];
+    list.push(t.id);
+    teamsOfRequest.set(t.request_id, list);
+  }
+
+  const visible = (t: ThreadRow): boolean => {
+    if (t.context_type === "provider") {
+      const { providerId, customerId } = parseProviderContext(t.context_id);
+      return isProvider ? providerId === session.userId : customerId === session.userId;
+    }
+    if (t.context_type === "request") {
+      if (!isProvider) return customerOfRequest.get(t.context_id) === session.userId;
+      if (myInterestRequests.has(t.context_id)) return true;
+      return (teamsOfRequest.get(t.context_id) ?? []).some((id) => myTeams.has(id));
+    }
+    if (t.context_type === "team") {
+      if (isProvider) return myTeams.has(t.context_id);
+      const requestId = requestOfTeam.get(t.context_id);
+      return !!requestId && customerOfRequest.get(requestId) === session.userId;
+    }
+    return t.context_id.split(":").includes(session.userId);
+  };
+
+  return threads.filter(visible).slice(0, limit);
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { requireRole } from "../../_lib/auth.js";
-import { distanceKm } from "../../_lib/geo.js";
+import { distanceMap } from "../../_lib/geo.js";
 
 const Body = z.object({ token: z.string().min(1), requestId: z.string().min(1) });
 
@@ -42,32 +42,41 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     prof: Map<string, number>;
   };
   const candMap = new Map<string, Cand>();
-  for (const rs of skills) {
-    const { data: rows, error: psErr } = await supabaseAdmin
-      .from("provider_skills")
-      .select("provider_id, proficiency")
-      .eq("skill_id", rs.skill_id);
-    if (psErr) throw new HttpError(500, psErr.message);
-    for (const row of rows ?? []) {
-      const key = row.provider_id;
-      if (!candMap.has(key)) {
-        const { data: p, error: pErr } = await supabaseAdmin
-          .from("providers")
-          .select("id, seq, capacity, available, home_location_id, group_id")
-          .eq("id", row.provider_id)
-          .maybeSingle();
-        if (pErr) throw new HttpError(500, pErr.message);
-        if (!p || !p.available) continue;
-        const dist = await distanceKm(p.home_location_id, request.location_id);
-        candMap.set(key, {
-          provider: { id: p.id, seq: p.seq, group_id: p.group_id },
-          distance: dist,
-          capLeft: p.capacity,
-          prof: new Map(),
-        });
-      }
-      const c = candMap.get(key);
-      if (c) c.prof.set(rs.skill_id, row.proficiency);
+
+  // Candidates for every required skill at once. This was a nested loop issuing one
+  // provider_skills query per skill and then a providers query plus a distance lookup per
+  // candidate — the assembly step alone could run to hundreds of round trips.
+  const skillIds = skills.map((rs) => rs.skill_id);
+  const { data: psRows, error: psErr } = await supabaseAdmin
+    .from("provider_skills")
+    .select("provider_id, skill_id, proficiency")
+    .in("skill_id", skillIds);
+  if (psErr) throw new HttpError(500, psErr.message);
+
+  const candidateIds = [...new Set((psRows ?? []).map((r) => r.provider_id))];
+  if (candidateIds.length > 0) {
+    const { data: provRows, error: pErr } = await supabaseAdmin
+      .from("providers")
+      .select("id, seq, capacity, available, home_location_id, group_id")
+      .in("id", candidateIds)
+      .eq("available", true);
+    if (pErr) throw new HttpError(500, pErr.message);
+
+    const distances = await distanceMap(
+      request.location_id,
+      (provRows ?? []).map((p) => p.home_location_id),
+    );
+
+    for (const p of provRows ?? []) {
+      candMap.set(p.id, {
+        provider: { id: p.id, seq: p.seq, group_id: p.group_id },
+        distance: distances.get(p.home_location_id) ?? Number.POSITIVE_INFINITY,
+        capLeft: p.capacity,
+        prof: new Map(),
+      });
+    }
+    for (const row of psRows ?? []) {
+      candMap.get(row.provider_id)?.prof.set(row.skill_id, row.proficiency);
     }
   }
 
@@ -108,12 +117,17 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     const c = candMap.get(pid);
     if (c?.provider.group_id) groupIds.add(c.provider.group_id);
   }
-  const skillNames: string[] = [];
-  for (const rs of skills) {
-    const { data: sk, error: skErr } = await supabaseAdmin.from("skills").select("canonical_name").eq("id", rs.skill_id).maybeSingle();
-    if (skErr) throw new HttpError(500, skErr.message);
-    if (sk) skillNames.push(sk.canonical_name);
-  }
+  const { data: skillRows, error: skErr } = await supabaseAdmin
+    .from("skills")
+    .select("id, canonical_name")
+    .in("id", skillIds);
+  if (skErr) throw new HttpError(500, skErr.message);
+  const nameById = new Map((skillRows ?? []).map((s) => [s.id, s.canonical_name] as const));
+  // Ordered by the request's own skill order, not the order Postgres returned them, so the
+  // rationale string stays deterministic.
+  const skillNames = skills
+    .map((rs) => nameById.get(rs.skill_id))
+    .filter((n): n is string => !!n);
   const rationale = `${chosenProviderIds.length} providers across ${groupIds.size} group(s) cover ${skillNames.join(", ")}.${complete ? " Coverage complete." : " Coverage INCOMPLETE."}`;
 
   // clear any prior team for this request (idempotent re-assembly)

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { sessionByToken } from "../../_lib/auth.js";
-import { hydrateCard, ProviderCard } from "../../_lib/providerCard.js";
+import { hydrateCards, ProviderCard } from "../../_lib/providerCard.js";
 import { skillFit } from "../../_lib/scoring.js";
 
 function qNum(v: unknown): number | undefined {
@@ -27,47 +27,57 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     fromLocationId = c?.location_id ?? null;
   }
 
-  // candidate providers by skill (or all if no skill given)
-  let providerIds: string[];
+  // Narrow to providers holding the requested skill. With no skill filter we query the
+  // providers table directly — fetching every id only to pass them straight back in an
+  // `.in()` was a wasted round trip.
+  let providerIds: string[] | null = null;
   if (skillId) {
     const { data: rows, error } = await supabaseAdmin.from("provider_skills").select("provider_id").eq("skill_id", skillId);
     if (error) throw new HttpError(500, error.message);
     providerIds = [...new Set((rows ?? []).map((r) => r.provider_id))];
-  } else {
-    const { data: all, error } = await supabaseAdmin.from("providers").select("id").order("seq", { ascending: true }).limit(500);
-    if (error) throw new HttpError(500, error.message);
-    providerIds = (all ?? []).map((p) => p.id);
-  }
-  if (providerIds.length === 0) {
-    res.status(200).json([]);
-    return;
+    if (providerIds.length === 0) {
+      res.status(200).json([]);
+      return;
+    }
   }
 
-  const { data: providers, error: provErr } = await supabaseAdmin
+  // Filters run in SQL, not in JS after the fetch — `available` in particular was never
+  // applied in the query, so every unavailable provider was fetched and hydrated first.
+  let q = supabaseAdmin
     .from("providers")
     .select(
       "id, seq, name, shop_name, available, capacity, rate, rate_unit, delivery_days, experience_years, rating, rating_count, languages, home_location_id",
     )
-    .in("id", providerIds);
+    .eq("available", true)
+    .order("seq", { ascending: true })
+    .limit(500);
+  if (providerIds) q = q.in("id", providerIds);
+  if (minExperience !== undefined) q = q.gte("experience_years", minExperience);
+  if (maxRate !== undefined) q = q.not("rate", "is", null).lte("rate", maxRate);
+
+  const { data: providers, error: provErr } = await q;
   if (provErr) throw new HttpError(500, provErr.message);
 
-  const cards: (ProviderCard & { seq: number })[] = [];
-  for (const p of providers ?? []) {
-    if (!p.available) continue;
-    if (minExperience !== undefined && p.experience_years < minExperience) continue;
-    if (maxRate !== undefined) {
-      if (p.rate === null || p.rate === undefined || p.rate > maxRate) continue;
-    }
-    const card = await hydrateCard(p, fromLocationId, skillId);
-    if (maxDistanceKm !== undefined && card.distanceKm !== null && card.distanceKm > maxDistanceKm) continue;
-    cards.push({ ...card, seq: p.seq });
-  }
+  // One batched hydration for the whole page instead of two queries per provider.
+  const hydrated = await hydrateCards(providers ?? [], fromLocationId, skillId);
+  const seqById = new Map((providers ?? []).map((p) => [p.id, p.seq]));
 
-  // rank: skillFit + proximity + normalized rating; deterministic tiebreak on seq
-  // (mirrors Convex's `_id asc` tiebreak — Postgres uuids are random, seq is creation-ordered).
+  const cards: (ProviderCard & { seq: number })[] = hydrated
+    .filter(
+      (card) =>
+        maxDistanceKm === undefined || card.distanceKm === null || card.distanceKm <= maxDistanceKm,
+    )
+    .map((card) => ({ ...card, seq: seqById.get(card._id) ?? 0 }));
+
+  // rank: skillFit + proximity; deterministic tiebreak on seq (mirrors Convex's `_id asc` —
+  // Postgres uuids are random, seq is creation-ordered).
+  //
+  // Rating is deliberately NOT a term here. PRD §6.2 and M15 make reputation display-first
+  // and keep it out of the match decision, so that a provider with no ratings yet is not
+  // ranked below an established one for the same work.
   cards.sort((a, b) => {
-    const ra = skillFit(a.matchedProficiency) + (a.distanceKm !== null ? 1 / (1 + a.distanceKm) : 0) + a.rating / 5;
-    const rb = skillFit(b.matchedProficiency) + (b.distanceKm !== null ? 1 / (1 + b.distanceKm) : 0) + b.rating / 5;
+    const ra = skillFit(a.matchedProficiency) + (a.distanceKm !== null ? 1 / (1 + a.distanceKm) : 0);
+    const rb = skillFit(b.matchedProficiency) + (b.distanceKm !== null ? 1 / (1 + b.distanceKm) : 0);
     if (rb !== ra) return rb - ra;
     return a.seq - b.seq;
   });
