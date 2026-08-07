@@ -1,4 +1,6 @@
-import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useState } from "react";
+import { useAuth } from "./auth";
+import { canSpeak, onVoicesReady, speak, stopSpeaking } from "./lib/speech";
 
 export function Button({
   variant = "primary",
@@ -8,7 +10,7 @@ export function Button({
   variant?: "primary" | "gold" | "ghost" | "danger" | "leaf";
 }) {
   const base =
-    "min-h-[48px] px-4 rounded-[14px] font-medium text-base transition active:scale-95 disabled:opacity-40";
+    "min-h-[56px] px-4 rounded-[14px] font-medium text-base transition active:scale-95 disabled:opacity-40";
   const styles: Record<string, string> = {
     primary: "bg-loom-indigo text-loom-cotton hover:bg-loom-indigoSoft",
     gold: "bg-loom-kasavu text-loom-ink hover:brightness-105",
@@ -34,7 +36,7 @@ export function Field({
     <label className="block mb-3">
       {label && <span className="block text-sm text-loom-indigoSoft mb-1">{label}</span>}
       <input
-        className={`w-full min-h-[48px] px-3 rounded-[14px] border border-loom-cottonDeep bg-white text-loom-ink text-base ${className}`}
+        className={`w-full min-h-[56px] px-3 rounded-[14px] border border-loom-cottonDeep bg-white text-loom-ink text-base ${className}`}
         {...props}
       />
     </label>
@@ -52,11 +54,49 @@ export function Stars({ value, count }: { value: number; count?: number }) {
   );
 }
 
-// Mock TTS — "reads aloud" by showing the string (real deployment swaps in Bhashini/TTS).
-export function ListenButton({ text, label = "Listen" }: { text: string; label?: string }) {
+// Speaks the text in whichever language the user is reading the app in.
+//
+// Falls back to showing the text only when the device has no voice for that language —
+// reading Malayalam aloud in an English voice would be worse than not speaking at all.
+export function ListenButton({ text }: { text: string }) {
+  const { lang, t } = useAuth();
+  const [available, setAvailable] = useState(() => canSpeak(lang));
+  const [speaking, setSpeaking] = useState(false);
+
+  // Chrome populates its voice list asynchronously, so the first render can wrongly
+  // conclude the language is unsupported.
+  useEffect(() => onVoicesReady(() => setAvailable(canSpeak(lang))), [lang]);
+  useEffect(() => () => stopSpeaking(), []);
+
+  const onClick = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+      return;
+    }
+    const result = speak(text, lang);
+    if (result === "spoken") {
+      setSpeaking(true);
+      // No reliable cross-browser "ended" event on cancel, so clear on the next tick of
+      // silence rather than tracking utterance lifecycle.
+      const poll = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          setSpeaking(false);
+          clearInterval(poll);
+        }
+      }, 400);
+    } else {
+      window.alert(text);
+    }
+  };
+
   return (
-    <button onClick={() => window.alert(text)} className="text-loom-indigo text-sm underline">
-      {label}
+    <button
+      onClick={onClick}
+      className="text-loom-indigo text-sm underline min-h-[44px] px-2"
+      aria-label={t("listen")}
+    >
+      {available ? (speaking ? t("stop") : t("listen")) : t("showText")}
     </button>
   );
 }

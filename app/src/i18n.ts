@@ -99,6 +99,8 @@ const DICT: Record<string, { ml: string; en: string }> = {
   km: { ml: "കി.മീ", en: "km" },
   yrs: { ml: "വർഷം", en: "yrs" },
   listen: { ml: "കേൾക്കുക", en: "Listen" },
+  stop: { ml: "നിർത്തുക", en: "Stop" },
+  showText: { ml: "വാചകം കാണിക്കുക", en: "Show text" },
   available: { ml: "ലഭ്യമാണ്", en: "Available" },
   all: { ml: "എല്ലാം", en: "All" },
   anySkill: { ml: "ഏത് വൈദഗ്ധ്യവും", en: "Any skill" },

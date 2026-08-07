@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiPost, ApiError } from "../../lib/api";
 import { useAuth } from "../../auth";
-import { Button, Card, Field } from "../../ui";
+import { Button, Card, Field, ListenButton } from "../../ui";
 
 type Readback = {
   raw: string;
@@ -101,6 +101,15 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
 
         {readback && (
           <div className="mb-4 space-y-1">
+            {/* USER_FLOWS §2: the canonical read-back is meant to be heard, not just shown. */}
+            <div className="flex justify-end">
+              <ListenButton
+                text={readback
+                  .filter((r) => r.canonicalName)
+                  .map((r) => r.canonicalNameMl ?? r.canonicalName)
+                  .join(", ")}
+              />
+            </div>
             {readback.map((r, i) => (
               <div key={i} className="text-sm">
                 {r.canonicalName ? (
