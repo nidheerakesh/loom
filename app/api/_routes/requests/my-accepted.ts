@@ -4,12 +4,13 @@ import { supabaseAdmin } from "../../_lib/supabase.js";
 import { sessionByToken } from "../../_lib/auth.js";
 import { distanceMap } from "../../_lib/geo.js";
 
-// Individual work this provider has accepted.
+// Individual work this provider has put their hand up for, in either state:
+//   interested — waiting for the customer to choose between the providers who applied
+//   accepted   — the customer awarded them the work
 //
 // The mirror image of my-incoming.ts, which lists requests the provider has NOT responded to
-// and only while they are still open. Accepting flips `interests.state` to 'accepted' and the
-// request to 'assigned', which every other provider-facing query filters out — so before this
-// endpoint existed a job simply vanished the moment it was accepted, with nowhere to see it.
+// and only while they are still open. Once a provider responds, the request drops out of
+// every other provider-facing query, so without this endpoint the job simply vanished.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const token = typeof req.query.token === "string" ? req.query.token : undefined;
   const s = token ? await sessionByToken(token) : null;
@@ -29,14 +30,15 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
-  const { data: accepted, error: intErr } = await supabaseAdmin
+  const { data: mine, error: intErr } = await supabaseAdmin
     .from("interests")
-    .select("request_id")
+    .select("request_id, state")
     .eq("provider_id", provider.id)
-    .eq("state", "accepted");
+    .in("state", ["interested", "accepted"]);
   if (intErr) throw new HttpError(500, intErr.message);
 
-  const requestIds = [...new Set((accepted ?? []).map((i) => i.request_id))];
+  const stateByRequest = new Map((mine ?? []).map((i) => [i.request_id, i.state] as const));
+  const requestIds = [...stateByRequest.keys()];
   if (requestIds.length === 0) {
     res.status(200).json([]);
     return;
@@ -80,6 +82,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       pay: r.pay ?? null,
       status: r.status,
       mode: r.mode,
+      // 'interested' means still competing for the job; 'accepted' means it is theirs.
+      interestState: stateByRequest.get(r.id) ?? null,
       customerName: r.customers?.name ?? null,
       distanceKm: distances.get(r.location_id) ?? null,
     })),

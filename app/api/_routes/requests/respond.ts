@@ -6,38 +6,55 @@ import { requireRole } from "../../_lib/auth.js";
 
 const Body = z.object({ token: z.string().min(1), requestId: z.string().min(1), accept: z.boolean() });
 
+// A provider putting their hand up for a request. This registers INTEREST — it does not win
+// the job.
+//
+// It used to: the first provider to tap was written straight to 'accepted' and the request
+// flipped to 'assigned', so the work went to whoever happened to tap first and every other
+// provider silently lost. The customer never got to choose, and the 'interested' state was
+// dead in production. requests/choose-provider.ts is where a job is actually awarded.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, requestId, accept } = Body.parse(req.body);
   const s = await requireRole(token, "provider");
-  const state = accept ? "accepted" : "declined";
+
+  const { data: request, error: reqErr } = await supabaseAdmin
+    .from("requests")
+    .select("id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (reqErr) throw new HttpError(500, reqErr.message);
+  if (!request) throw new HttpError(404, "Request not found");
+
+  // Once the customer has awarded the work there is nothing left to express interest in.
+  if (accept && request.status !== "open") {
+    throw new HttpError(409, "This work is no longer open");
+  }
+
+  const state = accept ? "interested" : "declined";
 
   const { data: existing, error: findErr } = await supabaseAdmin
     .from("interests")
-    .select("id")
+    .select("id, state")
     .eq("provider_id", s.userId)
     .eq("request_id", requestId)
     .maybeSingle();
   if (findErr) throw new HttpError(500, findErr.message);
 
+  // Withdrawing after being awarded the job is a different action with different
+  // consequences for the customer; not supported through this route.
+  if (existing?.state === "accepted") {
+    throw new HttpError(409, "You have already been assigned this work");
+  }
+
   if (existing) {
     const { error } = await supabaseAdmin.from("interests").update({ state }).eq("id", existing.id);
     if (error) throw new HttpError(500, error.message);
   } else {
-    const { error } = await supabaseAdmin.from("interests").insert({ provider_id: s.userId, request_id: requestId, state });
+    const { error } = await supabaseAdmin
+      .from("interests")
+      .insert({ provider_id: s.userId, request_id: requestId, state });
     if (error) throw new HttpError(500, error.message);
   }
 
-  if (accept) {
-    const { data: r, error: reqErr } = await supabaseAdmin
-      .from("requests")
-      .select("id, mode, status")
-      .eq("id", requestId)
-      .maybeSingle();
-    if (reqErr) throw new HttpError(500, reqErr.message);
-    if (r && r.mode === "individual" && r.status === "open") {
-      const { error } = await supabaseAdmin.from("requests").update({ status: "assigned" }).eq("id", requestId);
-      if (error) throw new HttpError(500, error.message);
-    }
-  }
-  res.status(200).json(null);
+  res.status(200).json({ state });
 });
