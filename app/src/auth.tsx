@@ -20,10 +20,22 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 const KEY = "loom.token";
+const LANG_KEY = "loom.lang";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem(KEY));
-  const [lang, setLang] = useState<Lang>("en");
+
+  // Malayalam by default, and remembered. This is a Malayalam-first product whose primary
+  // users are Malayalam-speaking SHG members, but it opened in English on every load —
+  // including for someone who had already switched, since the choice was never persisted.
+  const [lang, setLangState] = useState<Lang>(() => {
+    const saved = localStorage.getItem(LANG_KEY);
+    return saved === "en" || saved === "ml" ? saved : "ml";
+  });
+  const setLang = (l: Lang) => {
+    localStorage.setItem(LANG_KEY, l);
+    setLangState(l);
+  };
   const { data: me } = useQuery({
     queryKey: ["me", token],
     queryFn: () => apiGet<Me | null>("/api/auth/me", { token: token! }),

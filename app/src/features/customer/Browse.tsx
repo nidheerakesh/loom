@@ -121,6 +121,7 @@ function FilterRow({
   prefixUnit?: boolean;
   onChange: (v: number) => void;
 }) {
+  const { t } = useAuth();
   return (
     <div>
       <div className="text-sm text-loom-indigoSoft mb-1">{label}</div>
@@ -129,7 +130,7 @@ function FilterRow({
           <Chip
             key={o}
             active={value === o}
-            label={o === 0 ? "Any" : prefixUnit ? `${unit}${o}` : `${o}${unit}`}
+            label={o === 0 ? t("any") : prefixUnit ? `${unit}${o}` : `${o}${unit}`}
             onClick={() => onChange(o)}
           />
         ))}
@@ -164,7 +165,7 @@ function ProviderDetail({
   };
 
   return (
-    <Screen title={t("profile")} right={<button onClick={onBack} className="text-loom-indigo">‹ back</button>}>
+    <Screen title={t("profile")} right={<button onClick={onBack} className="text-loom-indigo">‹ {t("back")}</button>}>
       {!p ? (
         <div className="text-loom-indigoSoft">…</div>
       ) : (

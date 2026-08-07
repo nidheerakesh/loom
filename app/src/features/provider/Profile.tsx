@@ -110,7 +110,7 @@ export function ProviderProfile() {
             <div className="font-semibold text-loom-indigo">{t("confirmSkills")}:</div>
             {readback.map((r, i) => (
               <div key={i} className={r.canonicalName ? "text-loom-leaf" : "text-loom-madder"}>
-                "{r.raw}" → {r.canonicalName ? `${r.canonicalNameMl ?? r.canonicalName} (${r.matchedVia})` : "new skill — under review"}
+                "{r.raw}" → {r.canonicalName ? `${r.canonicalNameMl ?? r.canonicalName} (${r.matchedVia})` : t("newSkillAdded")}
               </div>
             ))}
           </div>
@@ -135,8 +135,8 @@ export function ProviderProfile() {
         </button>
         {showGrievance && (
           <div className="mt-2">
-            <Field placeholder="Subject" value={gSubject} onChange={(e) => setGSubject(e.target.value)} />
-            <Field placeholder="Details" value={gBody} onChange={(e) => setGBody(e.target.value)} />
+            <Field placeholder={t("subject")} value={gSubject} onChange={(e) => setGSubject(e.target.value)} />
+            <Field placeholder={t("details")} value={gBody} onChange={(e) => setGBody(e.target.value)} />
             <Button
               variant="ghost"
               className="w-full"
