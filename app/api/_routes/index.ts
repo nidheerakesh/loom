@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+import r_auth_complete_login from "./auth/complete-login.js";
 import r_auth_me from "./auth/me.js";
 import r_auth_request_otp from "./auth/request-otp.js";
 import r_auth_sign_out from "./auth/sign-out.js";
+import r_auth_switch_role from "./auth/switch-role.js";
 import r_auth_verify_otp from "./auth/verify-otp.js";
 import r_chat_messages from "./chat/messages.js";
 import r_chat_threads from "./chat/threads.js";
@@ -41,9 +43,11 @@ export type Handler = (req: VercelRequest, res: VercelResponse) => Promise<void>
 // Imports are static on purpose — Vercel's bundler traces dependencies at build time
 // and a dynamic `import(variable)` would leave the handlers out of the bundle.
 export const routes: Record<string, Handler> = {
+  "auth/complete-login": r_auth_complete_login,
   "auth/me": r_auth_me,
   "auth/request-otp": r_auth_request_otp,
   "auth/sign-out": r_auth_sign_out,
+  "auth/switch-role": r_auth_switch_role,
   "auth/verify-otp": r_auth_verify_otp,
   "chat/messages": r_chat_messages,
   "chat/threads": r_chat_threads,

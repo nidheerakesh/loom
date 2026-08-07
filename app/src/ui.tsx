@@ -53,14 +53,10 @@ export function Stars({ value, count }: { value: number; count?: number }) {
 }
 
 // Mock TTS — "reads aloud" by showing the string (real deployment swaps in Bhashini/TTS).
-export function ListenButton({ text }: { text: string }) {
+export function ListenButton({ text, label = "Listen" }: { text: string; label?: string }) {
   return (
-    <button
-      onClick={() => window.alert("🔊 " + text)}
-      className="text-loom-indigo text-lg"
-      aria-label="listen"
-    >
-      🔊
+    <button onClick={() => window.alert(text)} className="text-loom-indigo text-sm underline">
+      {label}
     </button>
   );
 }
@@ -70,7 +66,7 @@ export function TabBar({
   active,
   onChange,
 }: {
-  tabs: { key: string; label: string; icon: string }[];
+  tabs: { key: string; label: string }[];
   active: string;
   onChange: (k: string) => void;
 }) {
@@ -80,11 +76,15 @@ export function TabBar({
         <button
           key={tab.key}
           onClick={() => onChange(tab.key)}
-          className={`flex-1 py-2 min-h-[56px] flex flex-col items-center justify-center text-xs ${
-            active === tab.key ? "text-loom-indigo font-semibold" : "text-loom-indigoSoft"
+          aria-current={active === tab.key ? "page" : undefined}
+          // The active tab was carried by colour alone once the icons went; a top rule gives
+          // it a second, non-colour cue.
+          className={`flex-1 py-3 min-h-[56px] flex items-center justify-center text-sm border-t-2 ${
+            active === tab.key
+              ? "text-loom-indigo font-semibold border-loom-indigo"
+              : "text-loom-indigoSoft border-transparent"
           }`}
         >
-          <span className="text-xl">{tab.icon}</span>
           {tab.label}
         </button>
       ))}

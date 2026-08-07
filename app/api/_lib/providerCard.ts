@@ -34,7 +34,7 @@ export type ProviderCard = {
   ratingCount: number;
   languages: string[];
   distanceKm: number | null;
-  skills: { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string }[];
+  skills: { _id: string; canonicalName: string; canonicalNameMl: string | null }[];
   matchedProficiency: number;
 };
 
@@ -45,7 +45,7 @@ export async function hydrateCard(
 ): Promise<ProviderCard> {
   const { data: skillRows, error } = await supabaseAdmin
     .from("provider_skills")
-    .select("skill_id, proficiency, skills(id, canonical_name, canonical_name_ml, icon_key)")
+    .select("skill_id, proficiency, skills(id, canonical_name, canonical_name_ml)")
     .eq("provider_id", provider.id);
   if (error) throw new HttpError(500, error.message);
 
@@ -56,14 +56,12 @@ export async function hydrateCard(
       id: string;
       canonical_name: string;
       canonical_name_ml: string | null;
-      icon_key: string;
     } | null;
     if (sk) {
       skills.push({
         _id: sk.id,
         canonicalName: sk.canonical_name,
         canonicalNameMl: sk.canonical_name_ml ?? null,
-        iconKey: sk.icon_key,
       });
       if (matchedSkillId && row.skill_id === matchedSkillId) matchedProficiency = row.proficiency;
     }

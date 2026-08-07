@@ -62,12 +62,12 @@ export function Accepted() {
             <span className="text-xs bg-loom-cotton rounded-full px-2 py-1 text-loom-indigoSoft">{r.status}</span>
           </div>
           <div className="text-sm text-loom-indigoSoft">
-            {r.mode} · {r.units} {t("units")} · ✋{r.interestedCount} · ✓{r.acceptedCount}
+            {r.mode} · {r.units} {t("units")} · {r.interestedCount} {t("interestedCount")} · {r.acceptedCount} {t("acceptedCount")}
           </div>
           <div className="flex gap-2 mt-2">
             {r.mode === "group" && !r.teamId && token && (
               <Button variant="gold" onClick={() => assemble.mutate(r._id)}>
-                🧵 {t("assembleTeam")}
+                {t("assembleTeam")}
               </Button>
             )}
             {r.teamId && <Button onClick={() => setTeamId(r.teamId!)}>{t("teams")}</Button>}
@@ -102,7 +102,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
           <Card>
             <div className="font-bold text-loom-indigo">{team.requestTitle}</div>
             <div className={`text-sm ${team.complete ? "text-loom-leaf" : "text-loom-madder"}`}>
-              {team.complete ? "✓ coverage complete" : "coverage incomplete"} · {team.status}
+              {team.complete ? t("coverageComplete") : t("coverageIncomplete")} · {team.status}
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">{team.rationale}</div>
           </Card>
@@ -125,7 +125,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
           ))}
           {token && team.status === "proposed" && (
             <Button variant="leaf" className="w-full" onClick={() => confirm.mutate()}>
-              ✓ {t("confirmTeam")}
+              {t("confirmTeam")}
             </Button>
           )}
         </>

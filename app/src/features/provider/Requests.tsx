@@ -33,10 +33,10 @@ export function ProviderRequests() {
           {token && (
             <div className="flex gap-2 mt-2">
               <Button variant="leaf" onClick={() => respond.mutate({ requestId: r._id, accept: true })}>
-                ✓ {t("accept")}
+                {t("accept")}
               </Button>
               <Button variant="danger" onClick={() => respond.mutate({ requestId: r._id, accept: false })}>
-                ✗ {t("decline")}
+                {t("decline")}
               </Button>
             </div>
           )}

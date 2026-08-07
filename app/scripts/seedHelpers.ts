@@ -6,13 +6,13 @@ import { haversine } from "../api/_lib/geo.js";
 // User data (accounts, requests, teams, chat…) is separate and cleared on reset.
 // Ported from convex/lib/seedHelpers.ts.
 
-export const SKILLS: { name: string; ml: string; icon: string; aliases: string[] }[] = [
-  { name: "stitching", ml: "തയ്യൽ", icon: "🧵", aliases: ["tailoring", "sewing", "garment sewing", "garment finishing", "stitch", "needlework"] },
-  { name: "cutting", ml: "വെട്ട്", icon: "✂️", aliases: ["fabric cutting", "cloth cutting", "cutting work"] },
-  { name: "packaging", ml: "പാക്കിംഗ്", icon: "📦", aliases: ["packing", "boxing", "wrapping"] },
-  { name: "cooking", ml: "പാചകം", icon: "🍲", aliases: ["catering", "cook", "food preparation", "culinary"] },
-  { name: "craft", ml: "കരകൗശലം", icon: "🎨", aliases: ["handicraft", "handcraft", "artisan work"] },
-  { name: "tutoring", ml: "ട്യൂഷൻ", icon: "📚", aliases: ["teaching", "tuition", "coaching"] },
+export const SKILLS: { name: string; ml: string; aliases: string[] }[] = [
+  { name: "stitching", ml: "തയ്യൽ", aliases: ["tailoring", "sewing", "garment sewing", "garment finishing", "stitch", "needlework"] },
+  { name: "cutting", ml: "വെട്ട്", aliases: ["fabric cutting", "cloth cutting", "cutting work"] },
+  { name: "packaging", ml: "പാക്കിംഗ്", aliases: ["packing", "boxing", "wrapping"] },
+  { name: "cooking", ml: "പാചകം", aliases: ["catering", "cook", "food preparation", "culinary"] },
+  { name: "craft", ml: "കരകൗശലം", aliases: ["handicraft", "handcraft", "artisan work"] },
+  { name: "tutoring", ml: "ട്യൂഷൻ", aliases: ["teaching", "tuition", "coaching"] },
 ];
 
 export const LOCATION_LABELS = [
@@ -114,7 +114,7 @@ export async function seedReference(): Promise<Reference> {
   for (const sk of SKILLS) {
     const { data, error } = await supabaseAdmin
       .from("skills")
-      .insert({ canonical_name: sk.name, canonical_name_ml: sk.ml, icon_key: sk.icon })
+      .insert({ canonical_name: sk.name, canonical_name_ml: sk.ml, icon_key: "" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);

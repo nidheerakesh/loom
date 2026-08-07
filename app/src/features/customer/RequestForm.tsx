@@ -5,7 +5,7 @@ import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
 
-type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null; iconKey: string };
+type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null };
 
 export function RequestForm({ onDone }: { onDone: () => void }) {
   const { token, t } = useAuth();
@@ -61,7 +61,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
     return (
       <Screen title={t("request")} right={<SignOut />}>
         <Card>
-          <div className="text-loom-leaf font-semibold mb-2">✓ {title}</div>
+          <div className="text-loom-leaf font-semibold mb-2">{title}</div>
           {created.group ? (
             <>
               <div className="text-sm text-loom-indigoSoft mb-2">This is a team order.</div>
@@ -73,7 +73,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
                   onDone();
                 }}
               >
-                🧵 {t("assembleTeam")}
+                {t("assembleTeam")}
               </Button>
             </>
           ) : (
@@ -97,7 +97,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               onClick={() => toggle(s._id)}
               className={`rounded-full px-3 py-2 text-sm ${selected.has(s._id) ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-indigo"}`}
             >
-              {s.iconKey} {s.canonicalNameMl ?? s.canonicalName}
+              {s.canonicalNameMl ?? s.canonicalName}
             </button>
           ))}
         </div>

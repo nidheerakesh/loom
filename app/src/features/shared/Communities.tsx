@@ -99,7 +99,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
       </div>
       <div className="fixed bottom-0 left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep flex gap-2">
         <div className="flex-1">
-          <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder="🎤 …" />
+          <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>
         <Button variant="gold" onClick={submit}>{t("send")}</Button>
       </div>
