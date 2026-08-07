@@ -13,6 +13,7 @@ type AcceptedRequest = {
   mode: string;
   customerName: string | null;
   distanceKm: number | null;
+  interestState: "interested" | "accepted" | null;
 };
 
 type MyTeam = {
@@ -112,6 +113,15 @@ export function ProviderMyWork() {
           {accepted?.map((r) => (
             <Card key={r._id} className="mb-2">
               <div className="font-semibold text-loom-indigo">{r.title}</div>
+              {/* Applying no longer wins the job — the customer picks between everyone who
+                  applied — so say plainly which of the two states this is. */}
+              <div
+                className={`text-sm font-medium ${
+                  r.interestState === "accepted" ? "text-loom-leaf" : "text-loom-turmeric"
+                }`}
+              >
+                {r.interestState === "accepted" ? t("status_accepted") : t("waitingForCustomer")}
+              </div>
               <div className="text-sm text-loom-indigoSoft">
                 {statusLabel(r.status)}
                 {r.pay !== null && ` · ₹${r.pay}`}

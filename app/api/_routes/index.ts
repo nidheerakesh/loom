@@ -22,12 +22,14 @@ import r_providers_portfolio_upload_url from "./providers/portfolio/upload-url.j
 import r_providers_search from "./providers/search.js";
 import r_providers_update_profile from "./providers/update-profile.js";
 import r_ratings_rate from "./ratings/rate.js";
+import r_requests_choose_provider from "./requests/choose-provider.js";
 import r_requests_create from "./requests/create.js";
 import r_requests_get from "./requests/get.js";
 import r_requests_interested_providers from "./requests/interested-providers.js";
 import r_requests_my_accepted from "./requests/my-accepted.js";
 import r_requests_my_incoming from "./requests/my-incoming.js";
 import r_requests_respond from "./requests/respond.js";
+import r_requests_update from "./requests/update.js";
 import r_skills_list from "./skills/list.js";
 import r_skills_mine from "./skills/mine.js";
 import r_skills_resolve from "./skills/resolve.js";
@@ -67,12 +69,14 @@ export const routes: Record<string, Handler> = {
   "providers/search": r_providers_search,
   "providers/update-profile": r_providers_update_profile,
   "ratings/rate": r_ratings_rate,
+  "requests/choose-provider": r_requests_choose_provider,
   "requests/create": r_requests_create,
   "requests/get": r_requests_get,
   "requests/interested-providers": r_requests_interested_providers,
   "requests/my-accepted": r_requests_my_accepted,
   "requests/my-incoming": r_requests_my_incoming,
   "requests/respond": r_requests_respond,
+  "requests/update": r_requests_update,
   "skills/list": r_skills_list,
   "skills/mine": r_skills_mine,
   "skills/resolve": r_skills_resolve,

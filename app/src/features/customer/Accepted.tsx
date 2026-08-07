@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { useAuth } from "../../auth";
-import { Button, Card, Screen } from "../../ui";
+import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type MyRequest = {
@@ -14,6 +14,13 @@ type MyRequest = {
   interestedCount: number;
   acceptedCount: number;
   teamId: string | null;
+};
+type InterestedProvider = {
+  providerId: string;
+  name: string;
+  shopName: string | null;
+  rating: number;
+  state: string;
 };
 type TeamMember = {
   providerId: string;
@@ -48,8 +55,13 @@ export function Accepted() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
   });
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [applicantsFor, setApplicantsFor] = useState<string | null>(null);
+  const [editing, setEditing] = useState<MyRequest | null>(null);
 
   if (teamId) return <TeamDetail teamId={teamId} onBack={() => setTeamId(null)} />;
+  if (applicantsFor)
+    return <Applicants requestId={applicantsFor} onBack={() => setApplicantsFor(null)} />;
+  if (editing) return <EditRequest request={editing} onBack={() => setEditing(null)} />;
 
   return (
     <Screen title={t("accepted")} right={<SignOut />}>
@@ -64,13 +76,25 @@ export function Accepted() {
           <div className="text-sm text-loom-indigoSoft">
             {r.mode} · {r.units} {t("units")} · {r.interestedCount} {t("interestedCount")} · {r.acceptedCount} {t("acceptedCount")}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {r.mode === "group" && !r.teamId && token && (
               <Button variant="gold" onClick={() => assemble.mutate(r._id)}>
                 {t("assembleTeam")}
               </Button>
             )}
             {r.teamId && <Button onClick={() => setTeamId(r.teamId!)}>{t("teams")}</Button>}
+            {/* Individual work is awarded by the customer, not claimed by whoever taps
+                first — this is where they see who applied and pick one. */}
+            {r.mode === "individual" && r.interestedCount > 0 && (
+              <Button variant="gold" onClick={() => setApplicantsFor(r._id)}>
+                {t("chooseProvider")} ({r.interestedCount})
+              </Button>
+            )}
+            {r.status === "open" && (
+              <Button variant="ghost" onClick={() => setEditing(r)}>
+                {t("edit")}
+              </Button>
+            )}
           </div>
         </Card>
       ))}
@@ -130,6 +154,139 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
           )}
         </>
       )}
+    </Screen>
+  );
+}
+
+// Providers who put their hand up for an individual job. Several may apply; the customer
+// awards it to one, and choose-provider declines the rest so nobody is left waiting on work
+// that has already gone elsewhere.
+function Applicants({ requestId, onBack }: { requestId: string; onBack: () => void }) {
+  const { token, t } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: applicants } = useQuery({
+    queryKey: ["requests/interested-providers", requestId, token],
+    queryFn: () =>
+      apiGet<InterestedProvider[]>("/api/requests/interested-providers", {
+        token: token!,
+        requestId,
+      }),
+    enabled: !!token,
+  });
+
+  const choose = useMutation({
+    mutationFn: (providerId: string) =>
+      apiPost("/api/requests/choose-provider", { token, requestId, providerId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      onBack();
+    },
+  });
+
+  const waiting = (applicants ?? []).filter((a) => a.state === "interested");
+  const awarded = (applicants ?? []).find((a) => a.state === "accepted");
+
+  return (
+    <Screen
+      title={t("chooseProvider")}
+      right={
+        <button onClick={onBack} className="text-loom-indigo">
+          ‹ {t("back")}
+        </button>
+      }
+    >
+      {applicants === undefined && <div className="text-loom-indigoSoft">…</div>}
+
+      {awarded && (
+        <Card className="mb-2">
+          <div className="font-semibold text-loom-indigo">{awarded.shopName ?? awarded.name}</div>
+          <div className="text-sm text-loom-leaf">{t("status_accepted")}</div>
+        </Card>
+      )}
+
+      {!awarded && waiting.length === 0 && applicants !== undefined && (
+        <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
+      )}
+
+      {!awarded &&
+        waiting.map((a) => (
+          <Card key={a.providerId} className="mb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
+                <Stars value={a.rating} />
+              </div>
+              <Button
+                variant="gold"
+                disabled={choose.isPending}
+                onClick={() => choose.mutate(a.providerId)}
+              >
+                {t("choose")}
+              </Button>
+            </div>
+          </Card>
+        ))}
+
+      {choose.isError && (
+        <div className="text-loom-madder text-sm">{(choose.error as Error).message}</div>
+      )}
+    </Screen>
+  );
+}
+
+// Editing is only offered while the work is still open — see api/_routes/requests/update.ts
+// for why assigned work is fixed.
+function EditRequest({ request, onBack }: { request: MyRequest; onBack: () => void }) {
+  const { token, t } = useAuth();
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState(request.title);
+  const [units, setUnits] = useState(String(request.units));
+
+  const save = useMutation({
+    mutationFn: () =>
+      apiPost("/api/requests/update", {
+        token,
+        requestId: request._id,
+        title: title.trim(),
+        units: Number(units),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      onBack();
+    },
+  });
+
+  const unitsValid = Number.isFinite(Number(units)) && Number(units) > 0;
+
+  return (
+    <Screen
+      title={t("editRequest")}
+      right={
+        <button onClick={onBack} className="text-loom-indigo">
+          ‹ {t("back")}
+        </button>
+      }
+    >
+      <Card>
+        <Field label={t("newRequest")} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Field
+          label={t("units")}
+          value={units}
+          inputMode="numeric"
+          onChange={(e) => setUnits(e.target.value)}
+        />
+        <Button
+          className="w-full"
+          disabled={!title.trim() || !unitsValid || save.isPending}
+          onClick={() => save.mutate()}
+        >
+          {t("save")}
+        </Button>
+        {save.isError && (
+          <div className="mt-2 text-loom-madder text-sm">{(save.error as Error).message}</div>
+        )}
+      </Card>
     </Screen>
   );
 }
