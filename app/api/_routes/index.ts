@@ -24,6 +24,7 @@ import r_ratings_rate from "./ratings/rate.js";
 import r_requests_create from "./requests/create.js";
 import r_requests_get from "./requests/get.js";
 import r_requests_interested_providers from "./requests/interested-providers.js";
+import r_requests_my_accepted from "./requests/my-accepted.js";
 import r_requests_my_incoming from "./requests/my-incoming.js";
 import r_requests_respond from "./requests/respond.js";
 import r_skills_list from "./skills/list.js";
@@ -67,6 +68,7 @@ export const routes: Record<string, Handler> = {
   "requests/create": r_requests_create,
   "requests/get": r_requests_get,
   "requests/interested-providers": r_requests_interested_providers,
+  "requests/my-accepted": r_requests_my_accepted,
   "requests/my-incoming": r_requests_my_incoming,
   "requests/respond": r_requests_respond,
   "skills/list": r_skills_list,

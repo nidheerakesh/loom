@@ -7,6 +7,7 @@ import { ProviderCurrent } from "./Current";
 import { ProviderRequests } from "./Requests";
 import { ProviderProfile } from "./Profile";
 import { ProviderOnboarding } from "./Onboarding";
+import { ProviderMyWork } from "./MyWork";
 import { Communities } from "../shared/Communities";
 
 type SkillRow = { _id: string };
@@ -33,6 +34,7 @@ export function ProviderApp() {
     <>
       {tab === "current" && <ProviderCurrent />}
       {tab === "requests" && <ProviderRequests />}
+      {tab === "mywork" && <ProviderMyWork />}
       {tab === "communities" && <Communities />}
       {tab === "profile" && <ProviderProfile />}
       <TabBar
@@ -41,6 +43,7 @@ export function ProviderApp() {
         tabs={[
           { key: "current", label: t("current") },
           { key: "requests", label: t("requests") },
+          { key: "mywork", label: t("myWork") },
           { key: "communities", label: t("communities") },
           { key: "profile", label: t("profile") },
         ]}
