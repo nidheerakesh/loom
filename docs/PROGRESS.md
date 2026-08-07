@@ -6,7 +6,7 @@ networks in Kerala.
 **Live deployment:** https://loom-lovat-phi.vercel.app
 **Repository:** https://github.com/nidheerakesh/loom
 
-> Maintained doc — update as work lands. Last updated 7 Aug 2026 (chat privacy fix).
+> Maintained doc — update as work lands. Last updated 7 Aug 2026 (performance, voice, plan-conformance).
 
 ---
 
@@ -40,6 +40,10 @@ Two decisions shape the whole build:
 | Deployed and publicly reachable | Complete |
 | Realistic demo data | Complete |
 | Chat privacy | Fixed; one migration pending |
+| Text-to-speech (Malayalam + English) | Complete |
+| Provider "My work" view | Complete |
+| Performance — N+1 elimination | Complete; index migration pending |
+| Malayalam-first defaults + font | Complete |
 
 **Scale:** ~5,850 lines of TypeScript/TSX — 35 API handlers, 13 shared server modules,
 13 React screens, 24 Postgres tables.
@@ -184,6 +188,52 @@ Now written `/((?!api/).*)`.
 Without canonicalisation, "sewing", "tailoring" and "തയ്യൽ" become three unrelated skills and
 search silently misses providers. Solved with a curated alias table plus the LLM fallback
 chain in §5.
+
+---
+
+## 6a. Performance
+
+The app was slow enough to be unusable on its main screen. The cause was not the network: the
+API resolved relations in JS `for` loops rather than SQL joins, so latency scaled with row
+count — directory search issued roughly two queries per provider.
+
+Measured against production, before and after:
+
+| endpoint | before | after | change |
+|---|---|---|---|
+| `providers/search` (Browse) | 21,008 ms | 1,350 ms | **15.6× faster** |
+| `chat/threads` | 2,315 ms | 952 ms | 2.4× faster |
+
+Two things were done. First, the hot paths were batched to a fixed number of queries
+regardless of result size — `hydrateCards` for provider cards, one query for every thread's
+last message, `distanceMap` in place of a per-row distance lookup, and PostgREST embedded
+joins for the team routes. Second, the function was moved from `iad1` to `bom1`: requests were
+entering at the Mumbai edge and executing in Washington, adding a round trip on every leg.
+
+Honest caveat on the numbers: they were taken from a high-latency client, where a single
+query costs ~1 s. The *relative* improvement is the meaningful figure; a user on a normal
+connection sees smaller absolute times throughout.
+
+An index migration (`004_perf_indexes.sql`) is written but not applied — it needs Postgres
+credentials. Notably `bigserial` creates no index, so the `seq` columns the deterministic
+tiebreak sorts by were unindexed.
+
+## 6b. Accessibility and language
+
+Voice existed nowhere in the app: `ListenButton` popped a `window.alert` showing the text,
+which is precisely the wrong affordance for a user who may not read fluently. It now speaks,
+in whichever language the user is reading, via the browser speech engine behind the adapter
+shape `docs/TDD.md §4` specifies, so Bhashini or Sarvam can replace it with a key.
+
+It refuses rather than substitutes when a device has no voice for the language — Malayalam
+read in an English voice is unintelligible, and would look like a broken app rather than an
+unsupported one.
+
+Two Malayalam-first commitments were also unmet: the app defaulted to English on every load
+and never persisted the choice, and the Malayalam font was named in CSS but never actually
+loaded, so text rendered in whatever face the device happened to carry. Both fixed; the font
+is now self-hosted (Malayalam subset, ~89 KB) rather than CDN-linked, because the app targets
+patchy connections.
 
 ---
 
