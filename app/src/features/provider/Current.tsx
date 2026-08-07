@@ -15,15 +15,6 @@ type FeedCard = {
   matchedSkillMl: string | null;
   total: number;
 };
-type MyTeam = {
-  teamId: string;
-  teamStatus: string;
-  requestTitle: string;
-  skill: string;
-  skillMl: string | null;
-  coveredUnits: number;
-  state: string;
-};
 
 export function ProviderCurrent() {
   const { token, t } = useAuth();
@@ -33,17 +24,13 @@ export function ProviderCurrent() {
     queryFn: () => apiGet<FeedCard[]>("/api/matching/feed", { token: token! }),
     enabled: !!token,
   });
-  const { data: teams } = useQuery({
-    queryKey: ["team-assembly/my-teams", token],
-    queryFn: () => apiGet<MyTeam[]>("/api/team-assembly/my-teams", { token: token! }),
-    enabled: !!token,
-  });
-  const respondInvite = useMutation({
-    mutationFn: (body: { teamId: string; accept: boolean }) => apiPost("/api/team-assembly/respond-invite", { token, ...body }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/my-teams", token] }),
-  });
   const respond = useMutation({
     mutationFn: (body: { requestId: string; accept: boolean }) => apiPost("/api/requests/respond", { token, ...body }),
+    onSuccess: () => {
+      // Accepting moves the job out of this feed and into My work, so refresh both.
+      queryClient.invalidateQueries({ queryKey: ["matching/feed", token] });
+      queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] });
+    },
   });
   const getNarration = useMutation({
     mutationFn: (requestId: string) =>
@@ -60,30 +47,8 @@ export function ProviderCurrent() {
 
   return (
     <Screen title={t("findWork")} right={<SignOut />}>
-      {teams && teams.length > 0 && (
-        <section>
-          <h2 className="font-semibold text-loom-indigo mb-2">{t("teams")}</h2>
-          {teams.map((tm) => (
-            <Card key={tm.teamId} className="mb-2">
-              <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
-              <div className="text-sm text-loom-indigoSoft">
-                {tm.skillMl ?? tm.skill} · {tm.coveredUnits} {t("units")} · {tm.state}
-              </div>
-              {tm.state === "invited" && token && (
-                <div className="flex gap-2 mt-2">
-                  <Button variant="leaf" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: true })}>
-                    {t("accept")}
-                  </Button>
-                  <Button variant="danger" onClick={() => respondInvite.mutate({ teamId: tm.teamId, accept: false })}>
-                    {t("decline")}
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ))}
-        </section>
-      )}
-
+      {/* Teams and accepted work moved to the My work tab — this screen is only the feed of
+          work still available to take. */}
       <h2 className="font-semibold text-loom-indigo mb-2">{t("findWork")}</h2>
       {feed === undefined && <div className="text-loom-indigoSoft">…</div>}
       {feed && feed.length === 0 && <div className="text-loom-indigoSoft">{t("noResults")}</div>}
@@ -126,7 +91,7 @@ export function ProviderCurrent() {
                   setOpen(null);
                 }}
               >
-                {t("interested")}
+                {t("accept")}
               </Button>
             )}
           </div>
