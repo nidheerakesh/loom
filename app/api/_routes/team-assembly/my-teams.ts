@@ -11,31 +11,32 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
+  // One query with embedded joins, instead of three per membership row.
   const { data: rows, error } = await supabaseAdmin
     .from("team_members")
-    .select("team_id, assigned_skill_id, covered_units, state")
+    .select(
+      "team_id, covered_units, state, skills(canonical_name, canonical_name_ml), teams(id, status, requests(title))",
+    )
     .eq("provider_id", s.userId);
   if (error) throw new HttpError(500, error.message);
 
+  type Row = {
+    team_id: string;
+    covered_units: number;
+    state: string;
+    skills: { canonical_name: string; canonical_name_ml: string | null } | null;
+    teams: { id: string; status: string; requests: { title: string } | null } | null;
+  };
+
   const out = [];
-  for (const m of rows ?? []) {
-    const { data: team, error: teamErr } = await supabaseAdmin.from("teams").select("id, status, request_id").eq("id", m.team_id).maybeSingle();
-    if (teamErr) throw new HttpError(500, teamErr.message);
-    if (!team) continue;
-    const { data: request, error: reqErr } = await supabaseAdmin.from("requests").select("title").eq("id", team.request_id).maybeSingle();
-    if (reqErr) throw new HttpError(500, reqErr.message);
-    const { data: sk, error: skErr } = await supabaseAdmin
-      .from("skills")
-      .select("canonical_name, canonical_name_ml")
-      .eq("id", m.assigned_skill_id)
-      .maybeSingle();
-    if (skErr) throw new HttpError(500, skErr.message);
+  for (const m of (rows ?? []) as unknown as Row[]) {
+    if (!m.teams) continue;
     out.push({
-      teamId: team.id,
-      teamStatus: team.status,
-      requestTitle: request?.title ?? "",
-      skill: sk?.canonical_name ?? "",
-      skillMl: sk?.canonical_name_ml ?? null,
+      teamId: m.teams.id,
+      teamStatus: m.teams.status,
+      requestTitle: m.teams.requests?.title ?? "",
+      skill: m.skills?.canonical_name ?? "",
+      skillMl: m.skills?.canonical_name_ml ?? null,
       coveredUnits: m.covered_units,
       state: m.state,
     });

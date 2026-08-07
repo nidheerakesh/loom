@@ -26,6 +26,46 @@ export async function distanceKm(fromId: string, toId: string): Promise<number> 
   return haversine(a.lat, a.lng, b.lat, b.lng);
 }
 
+// Distances from one origin to many destinations, in two queries instead of one-to-two per
+// pair. `distanceKm` in a loop was the single biggest cost in the app: directory search over
+// 40 providers spent ~40s almost entirely on these round trips.
+export async function distanceMap(
+  fromId: string | null,
+  toIds: string[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!fromId || toIds.length === 0) return out;
+
+  const targets = [...new Set(toIds)];
+  out.set(fromId, 0);
+
+  const { data: edges, error: edgeErr } = await supabaseAdmin
+    .from("near_distances")
+    .select("to_location_id, distance_km")
+    .eq("from_location_id", fromId)
+    .in("to_location_id", targets);
+  if (edgeErr) throw new HttpError(500, edgeErr.message);
+  for (const e of edges ?? []) out.set(e.to_location_id, e.distance_km);
+
+  // Anything without a precomputed edge falls back to haversine over stored coordinates,
+  // fetched in one go rather than per pair.
+  const missing = targets.filter((id) => !out.has(id));
+  if (missing.length === 0) return out;
+
+  const { data: locs, error: locErr } = await supabaseAdmin
+    .from("locations")
+    .select("id, lat, lng")
+    .in("id", [fromId, ...missing]);
+  if (locErr) throw new HttpError(500, locErr.message);
+  const origin = locs?.find((l) => l.id === fromId);
+  if (!origin) return out;
+  for (const id of missing) {
+    const b = locs?.find((l) => l.id === id);
+    out.set(id, b ? haversine(origin.lat, origin.lng, b.lat, b.lng) : Number.POSITIVE_INFINITY);
+  }
+  return out;
+}
+
 export function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const toRad = (d: number) => (d * Math.PI) / 180;

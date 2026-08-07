@@ -69,18 +69,35 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   // Only threads this user is part of. Previously every signed-in user received the 50 most
   // recent threads in the system, each with its last message.
   const threads = await visibleThreads(session);
-
-  const out = [];
-  for (const t of threads) {
-    const { data: last, error: lastErr } = await supabaseAdmin
-      .from("messages")
-      .select("body")
-      .eq("thread_id", t.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lastErr) throw new HttpError(500, lastErr.message);
-    out.push({ _id: t.id, title: t.title, lastMessage: last?.body ?? null });
+  if (threads.length === 0) {
+    res.status(200).json([]);
+    return;
   }
-  res.status(200).json(out);
+
+  // One query for every thread's latest message, reduced in JS — this was a query per thread
+  // on a screen that polls every 7 seconds.
+  const { data: recent, error: recentErr } = await supabaseAdmin
+    .from("messages")
+    .select("thread_id, body, created_at")
+    .in(
+      "thread_id",
+      threads.map((t) => t.id),
+    )
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (recentErr) throw new HttpError(500, recentErr.message);
+
+  const lastByThread = new Map<string, string>();
+  for (const m of recent ?? []) {
+    // Rows arrive newest-first, so the first one seen per thread is the latest.
+    if (!lastByThread.has(m.thread_id)) lastByThread.set(m.thread_id, m.body);
+  }
+
+  res.status(200).json(
+    threads.map((t) => ({
+      _id: t.id,
+      title: t.title,
+      lastMessage: lastByThread.get(t.id) ?? null,
+    })),
+  );
 });
