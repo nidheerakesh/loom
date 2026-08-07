@@ -17,6 +17,7 @@ import r_matching_feed from "./matching/feed.js";
 import r_narration_get from "./narration/get.js";
 import r_providers_get from "./providers/get.js";
 import r_providers_portfolio from "./providers/portfolio/index.js";
+import r_providers_portfolio_delete from "./providers/portfolio/delete.js";
 import r_providers_portfolio_upload_url from "./providers/portfolio/upload-url.js";
 import r_providers_search from "./providers/search.js";
 import r_providers_update_profile from "./providers/update-profile.js";
@@ -61,6 +62,7 @@ export const routes: Record<string, Handler> = {
   "narration/get": r_narration_get,
   "providers/get": r_providers_get,
   "providers/portfolio": r_providers_portfolio,
+  "providers/portfolio/delete": r_providers_portfolio_delete,
   "providers/portfolio/upload-url": r_providers_portfolio_upload_url,
   "providers/search": r_providers_search,
   "providers/update-profile": r_providers_update_profile,
