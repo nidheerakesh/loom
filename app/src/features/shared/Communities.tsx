@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost, POLL_MS } from "../../lib/api";
-import { supabaseRealtime } from "../../lib/realtime";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, ListenButton } from "../../ui";
 import { SignOut } from "../provider/Current";
@@ -38,47 +37,24 @@ export function Communities() {
 }
 
 export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () => void }) {
-  const { token, t, me } = useAuth();
-  const queryClient = useQueryClient();
-  const queryKey = ["chat/messages", threadId];
+  const { token, t } = useAuth();
   const { data: messages } = useQuery({
-    queryKey,
+    queryKey: ["chat/messages", threadId],
     queryFn: () => apiGet<MessageRow[]>("/api/chat/messages", { token: token!, threadId }),
     enabled: !!token,
+    // Polled rather than pushed. Live updates used to come from a browser-side Supabase
+    // client, which needed a public-read RLS policy on `messages` — and that policy let
+    // anyone holding the anon key (it ships in the JS bundle) read every conversation in
+    // the app. Privacy beats latency here: reads now go through /api/chat/messages, which
+    // can check who is asking.
+    refetchInterval: POLL_MS,
   });
   const send = useMutation({
     mutationFn: (body: string) => apiPost("/api/chat/messages", { token, threadId, body }),
   });
   const [text, setText] = useState("");
 
-  // Realtime, not polling: the ONE place a Supabase client ships to the browser (anon key,
-  // public-read RLS — see supabase/schema.sql). Only ever subscribes; writes go through
-  // /api/chat/messages with the service-role key.
-  useEffect(() => {
-    const myUserId = me?.userId;
-    const channel = supabaseRealtime
-      .channel(`messages:${threadId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
-        (payload) => {
-          const row = payload.new as { id: string; body: string; sender_id: string; sender_role: string };
-          const msg: MessageRow = {
-            _id: row.id,
-            body: row.body,
-            senderId: row.sender_id,
-            senderRole: row.sender_role,
-            mine: row.sender_id === myUserId,
-          };
-          queryClient.setQueryData<MessageRow[]>(queryKey, (prev) => (prev ? [...prev, msg] : [msg]));
-        },
-      )
-      .subscribe();
-    return () => {
-      supabaseRealtime.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, me?.userId]);
+
 
   const submit = async () => {
     if (!token || !text.trim()) return;

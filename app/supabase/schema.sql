@@ -324,22 +324,24 @@ create table messages (
 create index messages_thread_id_idx on messages (thread_id);
 
 -- ---------------------------------------------------------------------------
--- Chat Realtime: Communities.tsx is the one screen with a browser-facing
--- Supabase client (anon key), used only for
--- .channel().on('postgres_changes',...).subscribe() — never .from().select()
--- directly, writes still go through api/chat/messages.ts with the service
--- role key. Every other table stays server-only (no RLS policies, service
--- role bypasses RLS anyway); these two need RLS explicitly enabled with a
--- public-read policy so anon-key Realtime subscribers can receive rows.
--- Matches today's actual behavior: chat.listThreads already returns every
--- thread unscoped, not per-caller — this is a public community board, not
--- gated per-user, including `direct`-type threads.
+-- Chat privacy. Conversations are private to their participants, and that check
+-- happens in api/_lib/chatAccess.ts, NOT here.
+--
+-- It cannot happen here: this app does not use Supabase Auth, so to Postgres every
+-- browser caller is the same anonymous role. RLS has no identity to filter on and
+-- therefore cannot express "only participants". These tables previously carried
+-- `for select using (true)` so a browser-side Supabase client could receive Realtime
+-- updates — but that client authenticates with the anon key, which ships in the public
+-- JS bundle, so the policy made every message in the app world-readable.
+--
+-- RLS is enabled with NO policy: anon and authenticated read nothing. Reads and writes
+-- go through /api/chat/*, which uses the service-role key (RLS does not apply to it)
+-- and checks participation against the `sessions` table. No Supabase client ships to
+-- the browser any more; the chat screen polls /api/chat/messages.
+--
+-- Existing databases need supabase/migrations/003_private_chat_rls.sql to drop the old
+-- policies; creating a fresh database from this file is already correct.
 -- ---------------------------------------------------------------------------
 
 alter table chat_threads enable row level security;
 alter table messages enable row level security;
-
-create policy chat_threads_public_read on chat_threads for select using (true);
-create policy messages_public_read on messages for select using (true);
-
-alter publication supabase_realtime add table messages;
