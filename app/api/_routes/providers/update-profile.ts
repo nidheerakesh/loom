@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler } from "../../_lib/http.js";
+import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { requireRole } from "../../_lib/auth.js";
 
@@ -38,7 +38,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     if (v !== undefined) patch[COLUMN[k]] = v;
   }
   if (Object.keys(patch).length > 0) {
-    await supabaseAdmin.from("providers").update(patch).eq("id", s.userId);
+    const { error } = await supabaseAdmin.from("providers").update(patch).eq("id", s.userId);
+  if (error) throw new HttpError(500, error.message);
   }
   res.status(200).json(null);
 });

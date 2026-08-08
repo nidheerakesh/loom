@@ -28,7 +28,9 @@ async function verifyMockOtp(phoneHash: string, code: string): Promise<void> {
   if (!otp) throw new HttpError(401, "Request a code first");
   if (new Date(otp.expires_at).getTime() < Date.now()) throw new HttpError(401, "Code expired");
   if (otp.code_hash !== fnv1a("code:" + code)) throw new HttpError(401, "Wrong code");
-  await supabaseAdmin.from("otps").delete().eq("id", otp.id);
+  const { error: consumeErr } = await supabaseAdmin.from("otps").delete().eq("id", otp.id);
+  // A code that cannot be consumed is a code that can be replayed.
+  if (consumeErr) throw new HttpError(500, consumeErr.message);
 }
 
 // Three outcomes, because a verified phone does not always determine an account:

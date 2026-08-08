@@ -65,7 +65,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   // Belt and braces: the creator must end up able to read what they just made.
   if (!(await canAccessThread(s, created))) {
-    await supabaseAdmin.from("chat_threads").delete().eq("id", created.id);
+    const { error: rollbackErr } = await supabaseAdmin.from("chat_threads").delete().eq("id", created.id);
+    if (rollbackErr) throw new HttpError(500, rollbackErr.message);
     throw new HttpError(500, "Could not create that conversation");
   }
 
