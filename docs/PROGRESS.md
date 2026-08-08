@@ -6,7 +6,7 @@ networks in Kerala.
 **Live deployment:** https://loom-lovat-phi.vercel.app
 **Repository:** https://github.com/nidheerakesh/loom
 
-> Maintained doc — update as work lands. Last updated 7 Aug 2026 (performance, voice, plan-conformance).
+> Maintained doc — update as work lands. Last updated 8 Aug 2026 (auth fix, skill matching, doc accuracy).
 
 ---
 
@@ -96,13 +96,20 @@ is never addressed directly by an untrusted caller.
 
 **Skill canonicalisation** (`api/_routes/skills/resolve.ts`) — free text becomes one canonical
 skill. A curated alias table resolves known synonyms; anything unrecognised goes through a
-translation fallback chain (NVIDIA → Anthropic → Gemini → keyless MyMemory → offline echo) so
+translation fallback chain (Bhashini NMT → NVIDIA → Anthropic → Gemini → offline echo) so
 the feature degrades instead of failing when no API key is set.
 
 ```
-"sewing"    → തയ്യൽ  (stitching)   matched via alias
-"catering"  → പാചകം  (cooking)     matched via alias
+"sewing"            → തയ്യൽ  (stitching)   matched via alias
+"garment finishing" → തയ്യൽ  (stitching)   matched via alias
+"thayyal"           → തയ്യൽ  (stitching)   matched via alias  (Manglish)
+"stiching"          → തയ്യൽ  (stitching)   matched via typo
 ```
+
+Meaning lives in the curated alias table (~110 phrases over six skills, in English, Malayalam
+and Manglish); fuzzy matching is restricted to typos. That split matters: character similarity
+once resolved "covering" to *cooking*, having scored 0.56 against the alias "catering" — two
+words differing by two letters. Lookalikes are not synonyms.
 
 **Deterministic matching** (`api/_lib/scoring.ts`, `geo.ts`) — ranked on skill proficiency,
 haversine distance, rate and rating, with explicit tiebreak columns (`providers.seq`,
@@ -269,7 +276,8 @@ browser also **halved the bundle, 438 KB → 221 KB**.
 - **Auth is demo-grade.** Sessions are bearer tokens in `localStorage` against our own
   `sessions` table, not Supabase Auth. OTP delivery is real when Twilio is configured;
   without it the code is shown on screen.
-- **Externals are mocked.** Speech-to-text, text-to-speech and embeddings are stubs. Matching
+- **Externals.** Text-to-speech is real (browser Web Speech, ml-IN/en-IN) but depends on the
+  device having a Malayalam voice. Speech-to-text and embeddings are not implemented. Matching
   is fully deterministic by design and does not depend on them.
 - **Admin surface** is not built.
 - **Lint debt.** A number of `no-misused-promises` warnings in `src/`; not in the deploy path.
