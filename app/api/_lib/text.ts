@@ -26,7 +26,6 @@ function trigrams(s: string): Set<string> {
 }
 
 // Sørensen–Dice coefficient over character trigrams → [0,1].
-// Deterministic stand-in for LaBSE cosine similarity (swappable interface).
 export function similarity(a: string, b: string): number {
   const na = normalize(a);
   const nb = normalize(b);
@@ -39,4 +38,48 @@ export function similarity(a: string, b: string): number {
   return (2 * overlap) / (ta.size + tb.size);
 }
 
-export const SKILL_MERGE_THRESHOLD = 0.5;
+// Levenshtein edit distance, two rows so memory is O(min(a,b)) rather than O(a*b).
+export function editDistance(a: string, b: string): number {
+  const s = normalize(a);
+  const t = normalize(b);
+  if (s === t) return 0;
+  if (s.length === 0) return t.length;
+  if (t.length === 0) return s.length;
+
+  let prev = Array.from({ length: t.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= s.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= t.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (s[i - 1] === t[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[t.length];
+}
+
+// Is `input` a MISSPELLING of `candidate` — not "does it mean something similar".
+//
+// Character similarity cannot express meaning, and treating it as if it could produced real
+// nonsense: "covering" scored 0.56 on trigrams against the alias "catering" and was filed
+// under cooking. Two words differing by two letters are not related, they merely look alike.
+//
+// Meaning lives in the curated alias table instead, which is why "garment finishing" resolves
+// to stitching despite sharing almost no characters with it.
+//
+// So this tier does one narrow job: absorb typos. Both tests must pass — high trigram overlap
+// AND a small edit distance relative to word length. On real cases genuine typos land around
+// 0.11 normalised edit distance ("stiching"/"stitching") while unrelated lookalikes sit at
+// 0.25 ("covering"/"catering"), so the two are cleanly separable.
+export function isProbableTypo(input: string, candidate: string): boolean {
+  const a = normalize(input);
+  const b = normalize(candidate);
+  if (a === b) return true;
+  // Too short to correct safely — at four characters one edit is a quarter of the word, and
+  // "cook", "book" and "look" are all a single edit apart.
+  if (a.length < 5 || b.length < 5) return false;
+  if (similarity(a, b) < TYPO_TRIGRAM_MIN) return false;
+  return editDistance(a, b) / Math.max(a.length, b.length) <= TYPO_EDIT_MAX;
+}
+
+export const TYPO_TRIGRAM_MIN = 0.7;
+export const TYPO_EDIT_MAX = 0.15;
