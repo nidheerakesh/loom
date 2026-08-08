@@ -51,11 +51,18 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   // `status` filtered in SQL rather than skipped in JS after fetching every candidate.
+  //
+  // Individual work only. Group orders are staffed by team assembly, which selects providers
+  // itself and never reads `interests` — so a provider who applied to one waited on a customer
+  // who had no way to answer: choose-provider rejects group requests, and the customer's
+  // "choose who does it" control does not render for them. The job sat in My work as "waiting"
+  // permanently. my-incoming already filtered this way; this feed did not.
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
     .select("id, title, mode, units, pay, status, location_id")
     .in("id", requestIds)
-    .eq("status", "open");
+    .eq("status", "open")
+    .eq("mode", "individual");
   if (reqErr) throw new HttpError(500, reqErr.message);
   if (!requests || requests.length === 0) {
     res.status(200).json([]);
