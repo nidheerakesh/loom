@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
+import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { Button, Card, Screen, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
@@ -31,7 +32,7 @@ type ProviderProfile = ProviderCard & {
 };
 
 export function Browse() {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const { data: skills } = useQuery({ queryKey: ["skills"], queryFn: () => apiGet<SkillOption[]>("/api/skills/list") });
   const [skillId, setSkillId] = useState<string | undefined>(undefined);
   const [maxDistanceKm, setMaxDistanceKm] = useState(0);
@@ -62,7 +63,7 @@ export function Browse() {
       <div className="flex gap-1 overflow-x-auto pb-2">
         <Chip active={!skillId} label={t("anySkill")} onClick={() => setSkillId(undefined)} />
         {skills?.map((s) => (
-          <Chip key={s._id} active={skillId === s._id} label={s.canonicalNameMl ?? s.canonicalName} onClick={() => setSkillId(s._id)} />
+          <Chip key={s._id} active={skillId === s._id} label={pickLang(lang, s.canonicalName, s.canonicalNameMl)} onClick={() => setSkillId(s._id)} />
         ))}
       </div>
       <div className="space-y-2">
@@ -86,7 +87,7 @@ export function Browse() {
                 {t("yrs")}
                 {p.distanceKm !== null ? ` · ${p.distanceKm} ${t("km")}` : ""} · {p.capacity} {t("people")}
               </div>
-              <div className="text-sm mt-1 text-loom-indigoSoft">{p.skills.map((s) => s.canonicalNameMl ?? s.canonicalName).join(" · ")}</div>
+              <div className="text-sm mt-1 text-loom-indigoSoft">{p.skills.map((s) => pickLang(lang, s.canonicalName, s.canonicalNameMl)).join(" · ")}</div>
             </button>
           </Card>
         ))}
@@ -148,7 +149,7 @@ function ProviderDetail({
   onBack: () => void;
   onChat: (id: string) => void;
 }) {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const { data: p } = useQuery({
     queryKey: ["providers/get", providerId],
     queryFn: () => apiGet<ProviderProfile>("/api/providers/get", { providerId }),
@@ -182,7 +183,7 @@ function ProviderDetail({
             <div className="mt-2 flex flex-wrap gap-1">
               {p.skills.map((s) => (
                 <span key={s._id} className="bg-loom-indigo text-loom-cotton rounded-full px-3 py-1 text-sm">
-                  {s.canonicalNameMl ?? s.canonicalName}
+                  {pickLang(lang, s.canonicalName, s.canonicalNameMl)}
                 </span>
               ))}
             </div>

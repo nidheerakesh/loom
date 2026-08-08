@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
+import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
@@ -8,7 +9,7 @@ import { SignOut } from "../provider/Current";
 type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null };
 
 export function RequestForm({ onDone }: { onDone: () => void }) {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const { data: skills } = useQuery({ queryKey: ["skills"], queryFn: () => apiGet<SkillOption[]>("/api/skills/list") });
   const create = useMutation({
     mutationFn: (body: {
@@ -97,7 +98,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               onClick={() => toggle(s._id)}
               className={`rounded-full px-3 py-2 text-sm ${selected.has(s._id) ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-indigo"}`}
             >
-              {s.canonicalNameMl ?? s.canonicalName}
+              {pickLang(lang, s.canonicalName, s.canonicalNameMl)}
             </button>
           ))}
         </div>

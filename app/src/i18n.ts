@@ -121,6 +121,9 @@ const DICT: Record<string, { ml: string; en: string }> = {
   edit: { ml: "മാറ്റുക", en: "Edit" },
   editRequest: { ml: "അഭ്യർത്ഥന മാറ്റുക", en: "Edit request" },
   waitingForCustomer: { ml: "ഉപഭോക്താവിന്റെ മറുപടി കാത്തിരിക്കുന്നു", en: "Waiting for the customer to choose" },
+  ratingCommentPlaceholder: { ml: "ഒരു അഭിപ്രായം (വേണമെങ്കിൽ)", en: "Add a comment (optional)" },
+  cancel: { ml: "വേണ്ട", en: "Cancel" },
+  markFinished: { ml: "ജോലി പൂർത്തിയായി", en: "Mark finished" },
   available: { ml: "ലഭ്യമാണ്", en: "Available" },
   all: { ml: "എല്ലാം", en: "All" },
   anySkill: { ml: "ഏത് വൈദഗ്ധ്യവും", en: "Any skill" },
@@ -128,4 +131,13 @@ const DICT: Record<string, { ml: string; en: string }> = {
 
 export function makeT(lang: Lang) {
   return (key: keyof typeof DICT): string => DICT[key]?.[lang] ?? String(key);
+}
+
+// Picks the right side of a bilingual value that comes from the DATABASE rather than DICT —
+// skill names, mostly. Call sites used to do `canonicalNameMl ?? canonicalName`, which always
+// preferred Malayalam, so an English reader saw വെട്ട് where they expected "cutting".
+// Falls back to the other language rather than showing nothing when one side is missing.
+export function pickLang(lang: Lang, en: string | null | undefined, ml: string | null | undefined): string {
+  const primary = lang === "ml" ? ml : en;
+  return primary?.trim() || (lang === "ml" ? en : ml)?.trim() || "";
 }
