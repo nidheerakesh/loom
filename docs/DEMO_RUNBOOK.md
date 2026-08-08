@@ -13,11 +13,27 @@ know whether an unexpected result is a bug or your own variation.
 
 ## 0 · Preconditions
 
+**Counts in this runbook assume a fresh `npm run seed`.** If you have created test accounts
+since, absolute numbers drift — check behaviour and ratios rather than exact figures. Seeding
+also clears `sessions`, so everyone is signed out, and it deletes any real data created through
+the app.
+
+**The OTP expires in 5 minutes.** If a demo stalls between requesting the code and entering it,
+you get `Code expired` — which is correct behaviour, not a fault. Request a fresh one.
+
 | Check | How | If wrong |
 |---|---|---|
 | Migrations applied | `curl "$SUPABASE_URL/rest/v1/sessions?select=*&limit=1" -H "apikey: $VITE_SUPABASE_ANON_KEY"` returns `[]` | Run `005` then `003` from `app/supabase/migrations/`. Until then chat is world-readable |
 | Known data state | `cd app && npm run seed` | — |
 | Signed out | Seeding clears `sessions`, so everyone is logged out | Expected; sign in again |
+
+```bash
+# B2 without depending on seed state — these two must be equal
+cd app && set -a && . .env.local && set +a
+curl -s "$SUPABASE_URL/rest/v1/providers?select=id&available=eq.true" \
+  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  | python3 -c 'import sys,json;print("available:",len(json.load(sys.stdin)))'
+```
 
 **The OTP prints on screen.** Twilio is unconfigured, so any phone number works and the code is
 shown in the box above the input. That is the demo path, not a bug — say so before someone asks.
@@ -58,7 +74,7 @@ hang.
 | # | Action | Expect |
 |---|---|---|
 | B1 | Private window, `9876522002`, sign in as **Customer** `Meera Nair` | Lands on Browse |
-| B2 | Count the cards | **36**, not 40 — four providers are seeded unavailable, so the availability filter is doing something |
+| B2 | Count the cards | Equal to the number of **available** providers, not the total. On a fresh seed that is 36 of 40. If you have signed up test accounts since seeding the numbers differ — check the ratio, not the count (query below) |
 | B3 | Tap `🧵 തയ്യൽ` (stitching) | List narrows; every remaining card lists stitching |
 | B4 | Apply Distance `5km`, then Price `≤₹400` | Narrows further; cards obey both |
 | B5 | Clear filters, open a provider | Rate, delivery, capacity, rating, portfolio |
@@ -161,9 +177,19 @@ From `docs/SUBMISSION.md` §11, and all visible during a demo:
 
 | Section | Pass | Notes |
 |---|---|---|
-| A Provider | | |
-| B Customer | | |
-| C Collective | | |
-| D Communities | | |
-| E Cross-cutting | | |
-| F Negative | | |
+| A Provider | ✅ 8 Aug | Found and fixed: group orders were appearing in the individual feed |
+| B Customer | ✅ 8 Aug | Availability filter verified by ratio (44 total, 4 unavailable, 40 returned) |
+| C Collective | ✅ 8 Aug | 18 members across **6 SHGs**, coverage complete; invitation correctly withheld until confirm |
+| D Communities | ✅ 8 Aug | Members read it, outsider gets 404 and an empty list |
+| E Cross-cutting | ✅ 8 Aug | Found and fixed: text controls were 20px against a 56px floor |
+| F Negative | ✅ 8 Aug | 18 team audit rows written; swap-after-confirm 409; unauthenticated request detail now 401 |
+
+### Two traps when running this yourself
+
+Both cost me a false result on the first pass:
+
+- **Do not swap a member out and then check whether that member sees the invitation.** They
+  correctly see nothing. Use a member who stays on the team.
+- **Swapping a provider for themselves** returns *"That is the same provider"*, not the
+  confirmed-team error, because that guard fires first. Use a genuinely different provider to
+  test the confirm lock.
