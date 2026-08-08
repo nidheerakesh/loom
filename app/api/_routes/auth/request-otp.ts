@@ -1,18 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { withHandler } from "../../_lib/http.js";
+import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { fnv1a } from "../../_lib/text.js";
 import { toE164, testCodeFor, twilioConfigured, startVerification } from "../../_lib/sms.js";
 
-// Sign-in is phone + OTP only. Role is deliberately NOT required here: at this point nobody
-// knows whether the number belongs to a provider, a customer, both, or neither — that is
-// resolved after the code is verified. Still parsed and ignored so an older client sending
-// it does not get a 400.
-const Body = z.object({
-  phone: z.string().min(1),
-  role: z.enum(["provider", "customer", "admin"]).optional(),
-});
+// Sign-in is phone + OTP only. No role: at this point nobody knows whether the number belongs
+// to a provider, a customer, both, or neither — that is resolved after the code is verified.
+const Body = z.object({ phone: z.string().min(1) });
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 
@@ -28,17 +23,20 @@ function genCode(): string {
 // "multiple rows returned" error. Upsert is atomic at the DB level, no race window.
 async function storeMockOtp(phoneHash: string): Promise<string> {
   const code = genCode();
-  await supabaseAdmin.from("otps").upsert(
+  // The error MUST be checked. This write used to be fire-and-forget, and when migration 001
+  // dropped the `otps.role` column that this once wrote, the insert began failing with
+  // PGRST204 while the handler carried on and returned the code anyway. The user saw an OTP
+  // on screen that had never been stored, and verify-otp then told them to request one — an
+  // unsignin-able app whose only symptom was a misleading error message.
+  const { error } = await supabaseAdmin.from("otps").upsert(
     {
       phone_hash: phoneHash,
       code_hash: fnv1a("code:" + code),
-      // Vestigial. `otps.role` is NOT NULL, but sign-in has no role at this stage and
-      // verify-otp no longer reads it. See supabase/migrations/001_drop_otps_role.sql.
-      role: "customer",
       expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
     },
     { onConflict: "phone_hash" },
   );
+  if (error) throw new HttpError(500, error.message);
   return code;
 }
 

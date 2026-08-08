@@ -52,7 +52,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
     // Guards against opening a thread on someone else's request or team.
     if (!(await canAccessThread(session, created))) {
-      await supabaseAdmin.from("chat_threads").delete().eq("id", created.id);
+      // Rollback of a thread the caller turned out not to be part of; if the delete fails
+      // the orphan is worth surfacing rather than leaving silently behind.
+      const { error: rollbackErr } = await supabaseAdmin.from("chat_threads").delete().eq("id", created.id);
+      if (rollbackErr) throw new HttpError(500, rollbackErr.message);
       throw new HttpError(403, "You are not part of that conversation");
     }
     res.status(200).json(created.id);
