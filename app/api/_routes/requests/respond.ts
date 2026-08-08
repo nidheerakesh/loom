@@ -19,11 +19,18 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, status")
+    .select("id, status, mode")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
   if (!request) throw new HttpError(404, "Request not found");
+
+  // Group orders are staffed by team assembly and never consult `interests`, so an
+  // application to one could never be answered by anybody. Refused rather than accepted into
+  // a state with no exit.
+  if (accept && request.mode !== "individual") {
+    throw new HttpError(400, "Group work is staffed by assembling a team");
+  }
 
   // Once the customer has awarded the work there is nothing left to express interest in.
   if (accept && request.status !== "open") {
