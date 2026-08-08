@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { requireRole } from "../../_lib/auth.js";
-import { normalize, similarity, SKILL_MERGE_THRESHOLD } from "../../_lib/text.js";
+import { isProbableTypo, normalize } from "../../_lib/text.js";
 import { translateSkill } from "../../_lib/translate.js";
 
 // Add skills for a provider. Deterministic merge to existing skills; genuinely-new skills
@@ -25,7 +25,7 @@ type ResolveExisting =
       skillId: string;
       canonicalName: string;
       canonicalNameMl: string | null;
-      matchedVia: "exact" | "alias" | "similarity";
+      matchedVia: "exact" | "alias" | "typo";
     }
   | { status: "new" };
 
@@ -77,20 +77,22 @@ async function resolveExisting(phrase: string): Promise<ResolveExisting> {
   if (allAliasErr) throw new HttpError(500, allAliasErr.message);
   const aliasRows = (allAliases ?? []) as AliasRow[];
 
-  let best: { skill: SkillRow; score: number } | null = null;
+  // Typo tier — deliberately NOT a meaning tier. It only rescues misspellings of something
+  // already in the catalogue. Meaning is the alias table's job above; anything genuinely new
+  // goes on to translation and becomes its own skill rather than being force-fitted to
+  // whatever it happens to resemble.
   for (const s of skillRows) {
-    let score = Math.max(similarity(norm, s.canonical_name), s.canonical_name_ml ? similarity(norm, s.canonical_name_ml) : 0);
-    for (const a of aliasRows) if (a.skill_id === s.id) score = Math.max(score, similarity(norm, a.alias_text));
-    if (!best || score > best.score) best = { skill: s, score };
-  }
-  if (best && best.score >= SKILL_MERGE_THRESHOLD) {
-    return {
-      status: "resolved",
-      skillId: best.skill.id,
-      canonicalName: best.skill.canonical_name,
-      canonicalNameMl: best.skill.canonical_name_ml ?? null,
-      matchedVia: "similarity",
-    };
+    const surfaces = [s.canonical_name, s.canonical_name_ml ?? ""].filter(Boolean);
+    for (const a of aliasRows) if (a.skill_id === s.id) surfaces.push(a.alias_text);
+    if (surfaces.some((surface) => isProbableTypo(norm, surface))) {
+      return {
+        status: "resolved",
+        skillId: s.id,
+        canonicalName: s.canonical_name,
+        canonicalNameMl: s.canonical_name_ml ?? null,
+        matchedVia: "typo",
+      };
+    }
   }
   return { status: "new" };
 }
@@ -117,7 +119,7 @@ async function createSkillNode(
   }
   const { data: created, error: insErr } = await supabaseAdmin
     .from("skills")
-    .insert({ canonical_name: canonicalName, canonical_name_ml: canonicalNameMl, icon_key: "" })
+    .insert({ canonical_name: canonicalName, canonical_name_ml: canonicalNameMl })
     .select("id")
     .single();
   if (insErr) throw new HttpError(500, insErr.message);
@@ -156,7 +158,7 @@ type Readback = {
   skillId: string | null;
   canonicalName: string | null;
   canonicalNameMl: string | null;
-  matchedVia: "exact" | "alias" | "similarity" | "created";
+  matchedVia: "exact" | "alias" | "typo" | "created";
 };
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {

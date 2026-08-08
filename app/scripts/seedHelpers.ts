@@ -6,13 +6,76 @@ import { haversine } from "../api/_lib/geo.js";
 // User data (accounts, requests, teams, chat…) is separate and cleared on reset.
 // Ported from convex/lib/seedHelpers.ts.
 
+// Aliases are where MEANING lives.
+//
+// Character similarity cannot tell that "garment finishing" is stitching — the two share
+// almost no letters — and it wrongly insists that "covering" is "catering", which differ by
+// two. So resolve.ts matches meaning here, against this curated list, and uses fuzzy matching
+// only to absorb typos. Every phrase a user is likely to type therefore has to be listed.
+//
+// Three registers are covered, because all three get typed in Kerala:
+//   English         "tailoring"
+//   Malayalam       "തയ്യൽ"
+//   Manglish        "thayyal"   (romanised Malayalam — extremely common on phone keyboards)
 export const SKILLS: { name: string; ml: string; aliases: string[] }[] = [
-  { name: "stitching", ml: "തയ്യൽ", aliases: ["tailoring", "sewing", "garment sewing", "garment finishing", "stitch", "needlework"] },
-  { name: "cutting", ml: "വെട്ട്", aliases: ["fabric cutting", "cloth cutting", "cutting work"] },
-  { name: "packaging", ml: "പാക്കിംഗ്", aliases: ["packing", "boxing", "wrapping"] },
-  { name: "cooking", ml: "പാചകം", aliases: ["catering", "cook", "food preparation", "culinary"] },
-  { name: "craft", ml: "കരകൗശലം", aliases: ["handicraft", "handcraft", "artisan work"] },
-  { name: "tutoring", ml: "ട്യൂഷൻ", aliases: ["teaching", "tuition", "coaching"] },
+  {
+    name: "stitching",
+    ml: "തയ്യൽ",
+    aliases: [
+      "tailoring", "sewing", "garment sewing", "garment finishing", "stitch", "needlework",
+      "tailor", "tailor work", "dress making", "dressmaking", "dress stitching",
+      "blouse stitching", "churidar stitching", "saree blouse", "alteration", "alterations",
+      "embroidery", "aari work", "hemming", "sewing machine work", "boutique work",
+      "thayyal", "thaiyal", "thayal", "തയ്യൽ ജോലി", "തുന്നൽ",
+    ],
+  },
+  {
+    name: "cutting",
+    ml: "വെട്ട്",
+    aliases: [
+      "fabric cutting", "cloth cutting", "cutting work", "cloth cut", "pattern cutting",
+      "pattern making", "fabric cut", "material cutting", "cutting master",
+      "vettu", "vett", "തുണി വെട്ട്",
+    ],
+  },
+  {
+    name: "packaging",
+    ml: "പാക്കിംഗ്",
+    aliases: [
+      "packing", "boxing", "wrapping", "pack", "parcel packing", "gift wrapping",
+      "labelling", "labeling", "bottling", "sealing", "bagging", "packing work",
+      "packing job", "പാക്കിംഗ് ജോലി",
+    ],
+  },
+  {
+    name: "cooking",
+    ml: "പാചകം",
+    aliases: [
+      "catering", "cook", "food preparation", "culinary", "chef", "cooking work",
+      "sadya", "sadhya", "onam sadya", "meals", "tiffin", "snacks making",
+      "pickle making", "achar", "bakery", "baking", "curry making", "food making",
+      "kitchen work", "paachakam", "pachakam", "പാചക ജോലി", "ഭക്ഷണം",
+    ],
+  },
+  {
+    name: "craft",
+    ml: "കരകൗശലം",
+    aliases: [
+      "handicraft", "handcraft", "artisan work", "crafts", "handmade", "handwork",
+      "jute bags", "jute work", "paper bags", "coir work", "mat weaving", "weaving",
+      "basket making", "candle making", "soap making", "painting", "pottery",
+      "karakaushalam", "കൈത്തൊഴിൽ",
+    ],
+  },
+  {
+    name: "tutoring",
+    ml: "ട്യൂഷൻ",
+    aliases: [
+      "teaching", "tuition", "coaching", "tutor", "home tuition", "private tuition",
+      "teacher", "classes", "taking classes", "exam coaching", "spoken english",
+      "tution", "tyooshan", "ട്യൂഷൻ ക്ലാസ്", "പഠിപ്പിക്കൽ",
+    ],
+  },
 ];
 
 export const LOCATION_LABELS = [
@@ -114,7 +177,7 @@ export async function seedReference(): Promise<Reference> {
   for (const sk of SKILLS) {
     const { data, error } = await supabaseAdmin
       .from("skills")
-      .insert({ canonical_name: sk.name, canonical_name_ml: sk.ml, icon_key: "" })
+      .insert({ canonical_name: sk.name, canonical_name_ml: sk.ml })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
