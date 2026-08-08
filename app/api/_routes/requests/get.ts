@@ -1,8 +1,21 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
+import { requireSession } from "../../_lib/auth.js";
 
+// Full detail for one request: description, pay, deadline, and the customer's name.
+//
+// This had NO authentication of any kind — anyone holding a request id could read all of it,
+// customer name included, with no token. It was also the only route in the map with no UI
+// caller, which is why it went unnoticed: nothing exercised it, so nothing revealed it.
+//
+// A signed-in user is the right bar rather than the owning customer alone: a provider deciding
+// whether to apply needs the description and pay, and the work is offered to them. It is not
+// public.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
+  const token = typeof req.query.token === "string" ? req.query.token : undefined;
+  await requireSession(token);
+
   const requestId = typeof req.query.requestId === "string" ? req.query.requestId : undefined;
   if (!requestId) throw new HttpError(400, "requestId required");
 
