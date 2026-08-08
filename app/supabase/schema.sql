@@ -343,8 +343,46 @@ create index messages_thread_id_idx on messages (thread_id);
 -- policies; creating a fresh database from this file is already correct.
 -- ---------------------------------------------------------------------------
 
-alter table chat_threads enable row level security;
-alter table messages enable row level security;
+-- RLS is enabled on EVERY table, with no policies at all.
+--
+-- This is the important part: in Supabase, PostgREST exposes every table in the `public`
+-- schema and the `anon` role holds SELECT on them, so a table without RLS enabled is readable
+-- by anyone holding the publishable key — which ships in the browser bundle. A policy only
+-- ADDS access; the absence of policies is not a restriction. An earlier version of this file
+-- enabled RLS on the two chat tables only and described the rest as "server-only", which left
+-- `sessions.token` — the credential the API authenticates with — publicly readable.
+--
+-- Nothing here needs a policy: the application reaches the database exclusively through
+-- api/_lib/supabase.ts's service-role client, which bypasses RLS. Authorisation lives in the
+-- API layer (see api/_lib/chatAccess.ts for the chat rules), because this app does not use
+-- Supabase Auth and Postgres therefore has no identity to filter on.
+--
+-- Existing databases need supabase/migrations/005_enable_rls_everywhere.sql.
+
+alter table otps              enable row level security;
+alter table sessions          enable row level security;
+alter table cds               enable row level security;
+alter table groups            enable row level security;
+alter table locations         enable row level security;
+alter table near_distances    enable row level security;
+alter table skills            enable row level security;
+alter table skill_aliases     enable row level security;
+alter table skill_candidates  enable row level security;
+alter table providers         enable row level security;
+alter table provider_skills   enable row level security;
+alter table portfolio_items   enable row level security;
+alter table customers         enable row level security;
+alter table requests          enable row level security;
+alter table request_skills    enable row level security;
+alter table interests         enable row level security;
+alter table matches           enable row level security;
+alter table teams             enable row level security;
+alter table team_members      enable row level security;
+alter table narrations        enable row level security;
+alter table ratings           enable row level security;
+alter table grievances        enable row level security;
+alter table chat_threads      enable row level security;
+alter table messages          enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Performance indexes. Each corresponds to a filter/sort the API actually issues;
