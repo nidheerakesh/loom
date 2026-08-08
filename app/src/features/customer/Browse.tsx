@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
-import { Button, Card, Screen, Stars } from "../../ui";
+import { Button, Card, Screen, Stars, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 import { ChatThread } from "../shared/Communities";
 
@@ -166,7 +166,7 @@ function ProviderDetail({
   };
 
   return (
-    <Screen title={t("profile")} right={<button onClick={onBack} className="text-loom-indigo">‹ {t("back")}</button>}>
+    <Screen title={t("profile")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
       {!p ? (
         <div className="text-loom-indigoSoft">…</div>
       ) : (

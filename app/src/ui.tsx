@@ -21,6 +21,24 @@ export function Button({
   return <button className={`${base} ${styles[variant]} ${className}`} {...props} />;
 }
 
+// Text-style control — a back link, a language toggle, "skip for now".
+//
+// Visually a link, but still a tap target, and these were rendering as little as 20px tall:
+// the language toggle, which is the single most important control for a Malayalam speaker who
+// has landed in English, was 20x46px. UI_UX §6 puts the floor at 56px and does not exempt
+// controls for looking like text.
+export function TextButton({
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      className={`min-h-[56px] px-2 inline-flex items-center justify-center text-sm underline text-loom-indigoSoft ${className}`}
+      {...props}
+    />
+  );
+}
+
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div className={`bg-loom-cottonDeep rounded-[14px] p-4 shadow-sm ${className}`}>{children}</div>
@@ -93,7 +111,7 @@ export function ListenButton({ text }: { text: string }) {
   return (
     <button
       onClick={onClick}
-      className="text-loom-indigo text-sm underline min-h-[44px] px-2"
+      className="text-loom-indigo text-sm underline min-h-[56px] px-3 inline-flex items-center"
       aria-label={t("listen")}
     >
       {available ? (speaking ? t("stop") : t("listen")) : t("showText")}
@@ -119,7 +137,7 @@ export function StarPicker({
           aria-checked={value === n}
           aria-label={`${n}`}
           onClick={() => onChange(n)}
-          className={`min-h-[44px] w-11 text-2xl leading-none ${
+          className={`min-h-[56px] w-14 text-2xl leading-none ${
             n <= value ? "text-loom-kasavu" : "text-loom-cottonDeep"
           }`}
         >

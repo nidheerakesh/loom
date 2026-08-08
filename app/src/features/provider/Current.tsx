@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth";
 import { pickLang } from "../../i18n";
-import { Button, Card, Screen, ListenButton } from "../../ui";
+import { Button, Card, Screen, ListenButton, TextButton } from "../../ui";
 import { apiGet, apiPost } from "../../lib/api";
 
 type FeedCard = {
@@ -106,18 +106,18 @@ export function SignOut() {
   const { token, setToken, lang, setLang, t } = useAuth();
   return (
     <div className="flex items-center gap-2">
-      <button className="text-sm underline text-loom-indigoSoft" onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
-        {lang === "ml" ? "EN" : " മ"}
-      </button>
-      <button
-        className="text-sm text-loom-madder"
+      <TextButton onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
+        {lang === "ml" ? "EN" : "മ"}
+      </TextButton>
+      <TextButton
+        className="text-loom-madder no-underline"
         onClick={async () => {
           if (token) await apiPost("/api/auth/sign-out", { token });
           setToken(null);
         }}
       >
         {t("signOut")}
-      </button>
+      </TextButton>
     </div>
   );
 }

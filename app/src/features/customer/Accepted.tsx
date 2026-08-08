@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
-import { Button, Card, Field, Screen, StarPicker, Stars } from "../../ui";
+import { Button, Card, Field, Screen, StarPicker, Stars, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type MyRequest = {
@@ -167,7 +167,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
   const [rating, setRating] = useState<{ providerId: string; stars: number; comment: string } | null>(null);
 
   return (
-    <Screen title={t("teams")} right={<button onClick={onBack} className="text-loom-indigo">‹ back</button>}>
+    <Screen title={t("teams")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
       {!team ? (
         <div className="text-loom-indigoSoft">…</div>
       ) : (
@@ -187,9 +187,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                 <div className="font-semibold text-loom-indigo">
                   {t("swapMember")}: {swapping.shopName ?? swapping.name}
                 </div>
-                <button onClick={() => setSwapping(null)} className="text-loom-indigo text-sm underline">
-                  {t("cancel")}
-                </button>
+                <TextButton onClick={() => setSwapping(null)}>{t("cancel")}</TextButton>
               </div>
               {candidates === undefined && <div className="text-loom-indigoSoft">…</div>}
               {candidates?.length === 0 && (
@@ -318,9 +316,7 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
     <Screen
       title={t("chooseProvider")}
       right={
-        <button onClick={onBack} className="text-loom-indigo">
-          ‹ {t("back")}
-        </button>
+        <TextButton onClick={onBack}>‹ {t("back")}</TextButton>
       }
     >
       {applicants === undefined && <div className="text-loom-indigoSoft">…</div>}
@@ -390,9 +386,7 @@ function EditRequest({ request, onBack }: { request: MyRequest; onBack: () => vo
     <Screen
       title={t("editRequest")}
       right={
-        <button onClick={onBack} className="text-loom-indigo">
-          ‹ {t("back")}
-        </button>
+        <TextButton onClick={onBack}>‹ {t("back")}</TextButton>
       }
     >
       <Card>
