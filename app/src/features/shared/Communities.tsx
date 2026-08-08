@@ -8,8 +8,10 @@ import { SignOut } from "../provider/Current";
 type ThreadRow = { _id: string; title: string; lastMessage: string | null };
 type MessageRow = { _id: string; body: string; senderId: string; senderRole: string; mine: boolean };
 
+type ProviderOption = { _id: string; name: string; shopName: string | null };
+
 export function Communities() {
-  const { token, t } = useAuth();
+  const { token, t, me } = useAuth();
   const { data: threads } = useQuery({
     queryKey: ["chat/threads", token],
     queryFn: () => apiGet<ThreadRow[]>("/api/chat/threads", { token: token! }),
@@ -17,11 +19,29 @@ export function Communities() {
     refetchInterval: POLL_MS,
   });
   const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
 
   if (openThreadId) return <ChatThread threadId={openThreadId} onBack={() => setOpenThreadId(null)} />;
+  if (composing)
+    return (
+      <NewConversation
+        onBack={() => setComposing(false)}
+        onCreated={(id) => {
+          setComposing(false);
+          setOpenThreadId(id);
+        }}
+      />
+    );
 
   return (
     <Screen title={t("communities")} right={<SignOut />}>
+      {/* Only customers start conversations: a provider messaging arbitrary customers
+          unprompted is a different product with different consent questions. */}
+      {me?.role === "customer" && (
+        <Button variant="gold" className="w-full mb-3" onClick={() => setComposing(true)}>
+          {t("newConversation")}
+        </Button>
+      )}
       {threads === undefined && <div className="text-loom-indigoSoft">…</div>}
       {threads && threads.length === 0 && <div className="text-loom-indigoSoft">{t("noResults")}</div>}
       {threads?.map((th) => (
@@ -81,6 +101,85 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
           <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>
         <Button variant="gold" onClick={submit}>{t("send")}</Button>
+      </div>
+    </Screen>
+  );
+}
+
+// Pick one provider for a one-to-one chat, or several for a group. One provider reuses the
+// existing thread for that pair rather than starting a parallel conversation.
+function NewConversation({
+  onBack,
+  onCreated,
+}: {
+  onBack: () => void;
+  onCreated: (threadId: string) => void;
+}) {
+  const { token, t } = useAuth();
+  const [selected, setSelected] = useState<string[]>([]);
+  const [title, setTitle] = useState("");
+
+  const { data: providers } = useQuery({
+    queryKey: ["providers/search", token, "chat-picker"],
+    queryFn: () => apiGet<ProviderOption[]>("/api/providers/search", { token: token! }),
+    enabled: !!token,
+  });
+
+  const create = useMutation({
+    mutationFn: () =>
+      apiPost<string>("/api/chat/create", { token, providerIds: selected, title: title.trim() }),
+    onSuccess: (threadId) => onCreated(threadId),
+  });
+
+  const toggle = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  return (
+    <Screen
+      title={t("newConversation")}
+      right={
+        <button onClick={onBack} className="text-loom-indigo">
+          ‹ {t("back")}
+        </button>
+      }
+    >
+      <Field
+        label={t("conversationName")}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t("conversationNamePlaceholder")}
+      />
+
+      <div className="text-sm text-loom-indigoSoft mb-1">
+        {selected.length > 0 ? `${selected.length} ${t("selected")}` : t("choosePeople")}
+      </div>
+
+      {providers === undefined && <div className="text-loom-indigoSoft">…</div>}
+      {providers?.map((p) => (
+        <Card key={p._id} className="mb-2">
+          <button
+            className="text-left w-full flex items-center justify-between"
+            onClick={() => toggle(p._id)}
+          >
+            <span className="text-loom-indigo">{p.shopName ?? p.name}</span>
+            <span className={selected.includes(p._id) ? "text-loom-leaf" : "text-loom-cottonDeep"}>
+              ✓
+            </span>
+          </button>
+        </Card>
+      ))}
+
+      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep z-20">
+        <Button
+          className="w-full"
+          disabled={selected.length === 0 || !title.trim() || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          {t("startConversation")}
+        </Button>
+        {create.isError && (
+          <div className="mt-2 text-loom-madder text-sm">{(create.error as Error).message}</div>
+        )}
       </div>
     </Screen>
   );

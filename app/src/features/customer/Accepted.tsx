@@ -23,8 +23,18 @@ type InterestedProvider = {
   rating: number;
   state: string;
 };
+type Candidate = {
+  providerId: string;
+  name: string;
+  shopName: string | null;
+  capacity: number;
+  rating: number;
+  proficiency: number;
+  distanceKm: number | null;
+};
 type TeamMember = {
   providerId: string;
+  skillId: string;
   name: string;
   shopName: string | null;
   group: string | null;
@@ -123,6 +133,31 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
     mutationFn: () => apiPost("/api/team-assembly/confirm", { token, teamId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] }),
   });
+  // Which slot the customer is choosing a replacement for.
+  const [swapping, setSwapping] = useState<TeamMember | null>(null);
+  const { data: candidates } = useQuery({
+    queryKey: ["team-assembly/candidates", teamId, swapping?.skillId],
+    queryFn: () =>
+      apiGet<Candidate[]>("/api/team-assembly/candidates", {
+        token: token!,
+        teamId,
+        skillId: swapping!.skillId,
+      }),
+    enabled: !!token && !!swapping,
+  });
+  const swap = useMutation({
+    mutationFn: (replacementId: string) =>
+      apiPost("/api/team-assembly/swap-member", {
+        token,
+        teamId,
+        providerId: swapping!.providerId,
+        replacementId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
+      setSwapping(null);
+    },
+  });
   const rate = useMutation({
     mutationFn: (body: { providerId: string; stars: number; comment: string }) =>
       apiPost("/api/ratings/rate", { token, ...body }),
@@ -144,6 +179,46 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">{team.rationale}</div>
           </Card>
+          {/* Choosing a replacement for one slot. Ranked the way assembly ranks, so the list
+              reads as "who it would have picked next". */}
+          {swapping && (
+            <Card className="mb-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-loom-indigo">
+                  {t("swapMember")}: {swapping.shopName ?? swapping.name}
+                </div>
+                <button onClick={() => setSwapping(null)} className="text-loom-indigo text-sm underline">
+                  {t("cancel")}
+                </button>
+              </div>
+              {candidates === undefined && <div className="text-loom-indigoSoft">…</div>}
+              {candidates?.length === 0 && (
+                <div className="text-loom-indigoSoft text-sm">{t("noAlternatives")}</div>
+              )}
+              {candidates?.map((c) => (
+                <div key={c.providerId} className="flex items-center justify-between py-1">
+                  <div>
+                    <div className="text-loom-indigo">{c.shopName ?? c.name}</div>
+                    <div className="text-xs text-loom-indigoSoft">
+                      {c.distanceKm !== null && `${c.distanceKm} ${t("km")} · `}
+                      {c.capacity} {t("people")}
+                    </div>
+                  </div>
+                  <Button
+                    variant="gold"
+                    disabled={swap.isPending}
+                    onClick={() => swap.mutate(c.providerId)}
+                  >
+                    {t("choose")}
+                  </Button>
+                </div>
+              ))}
+              {swap.isError && (
+                <div className="mt-2 text-loom-madder text-sm">{(swap.error as Error).message}</div>
+              )}
+            </Card>
+          )}
+
           {team.members.map((m, i) => (
             <Card key={`${m.providerId}-${m.skill}-${i}`} className="mb-2">
               <div className="flex items-center justify-between">
@@ -153,14 +228,21 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                     {m.group ?? "—"} · {pickLang(lang, m.skill, m.skillMl)} · {m.coveredUnits} {t("units")} · {m.state}
                   </div>
                 </div>
-                {token && rating?.providerId !== m.providerId && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setRating({ providerId: m.providerId, stars: 5, comment: "" })}
-                  >
-                    {t("rateProvider")}
-                  </Button>
-                )}
+                <div className="flex flex-col gap-2">
+                  {token && team.status === "proposed" && (
+                    <Button variant="ghost" onClick={() => setSwapping(m)}>
+                      {t("swapMember")}
+                    </Button>
+                  )}
+                  {token && team.status === "confirmed" && rating?.providerId !== m.providerId && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setRating({ providerId: m.providerId, stars: 5, comment: "" })}
+                    >
+                      {t("rateProvider")}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Star and comment, rather than a button that silently posted five stars. */}

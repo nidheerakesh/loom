@@ -6,6 +6,7 @@ import r_auth_request_otp from "./auth/request-otp.js";
 import r_auth_sign_out from "./auth/sign-out.js";
 import r_auth_switch_role from "./auth/switch-role.js";
 import r_auth_verify_otp from "./auth/verify-otp.js";
+import r_chat_create from "./chat/create.js";
 import r_chat_messages from "./chat/messages.js";
 import r_chat_threads from "./chat/threads.js";
 import r_customers_history from "./customers/history.js";
@@ -35,10 +36,12 @@ import r_skills_list from "./skills/list.js";
 import r_skills_mine from "./skills/mine.js";
 import r_skills_resolve from "./skills/resolve.js";
 import r_team_assembly_assemble from "./team-assembly/assemble.js";
+import r_team_assembly_candidates from "./team-assembly/candidates.js";
 import r_team_assembly_confirm from "./team-assembly/confirm.js";
 import r_team_assembly_get from "./team-assembly/get.js";
 import r_team_assembly_my_teams from "./team-assembly/my-teams.js";
 import r_team_assembly_respond_invite from "./team-assembly/respond-invite.js";
+import r_team_assembly_swap_member from "./team-assembly/swap-member.js";
 
 export type Handler = (req: VercelRequest, res: VercelResponse) => Promise<void>;
 
@@ -54,6 +57,7 @@ export const routes: Record<string, Handler> = {
   "auth/sign-out": r_auth_sign_out,
   "auth/switch-role": r_auth_switch_role,
   "auth/verify-otp": r_auth_verify_otp,
+  "chat/create": r_chat_create,
   "chat/messages": r_chat_messages,
   "chat/threads": r_chat_threads,
   "customers/history": r_customers_history,
@@ -83,8 +87,10 @@ export const routes: Record<string, Handler> = {
   "skills/mine": r_skills_mine,
   "skills/resolve": r_skills_resolve,
   "team-assembly/assemble": r_team_assembly_assemble,
+  "team-assembly/candidates": r_team_assembly_candidates,
   "team-assembly/confirm": r_team_assembly_confirm,
   "team-assembly/get": r_team_assembly_get,
   "team-assembly/my-teams": r_team_assembly_my_teams,
   "team-assembly/respond-invite": r_team_assembly_respond_invite,
+  "team-assembly/swap-member": r_team_assembly_swap_member,
 };
