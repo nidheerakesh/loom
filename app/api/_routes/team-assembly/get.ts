@@ -30,7 +30,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { data: memberRows, error: memErr } = await supabaseAdmin
     .from("team_members")
     .select(
-      "provider_id, covered_units, state, seq, providers(name, shop_name, groups(name)), skills(canonical_name, canonical_name_ml)",
+      "provider_id, assigned_skill_id, covered_units, state, seq, providers(name, shop_name, groups(name)), skills(canonical_name, canonical_name_ml)",
     )
     .eq("team_id", teamId)
     .order("seq", { ascending: true });
@@ -38,6 +38,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   type MemberRow = {
     provider_id: string;
+    assigned_skill_id: string;
     covered_units: number;
     state: string;
     providers: { name: string; shop_name: string | null; groups: { name: string } | null } | null;
@@ -46,6 +47,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const members = ((memberRows ?? []) as unknown as MemberRow[]).map((m) => ({
     providerId: m.provider_id,
+    // Needed by the swap UI to look up alternatives for this specific slot.
+    skillId: m.assigned_skill_id,
     name: m.providers?.name ?? "",
     shopName: m.providers?.shop_name ?? null,
     group: m.providers?.groups?.name ?? null,
