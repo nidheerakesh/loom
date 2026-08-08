@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { apiPost, ApiError } from "../lib/api";
 import { useAuth } from "../auth";
-import { Button, Card, Field } from "../ui";
+import { Button, Card, Field, TextButton } from "../ui";
 
 type Role = "provider" | "customer";
 
@@ -89,12 +89,9 @@ export function SignIn() {
       <div className="text-center mb-6">
         <div className="text-4xl font-bold text-loom-indigo">{t("appName")}</div>
         <div className="text-loom-indigoSoft">{t("tagline")}</div>
-        <button
-          className="mt-2 text-sm underline text-loom-indigoSoft"
-          onClick={() => setLang(lang === "ml" ? "en" : "ml")}
-        >
+        <TextButton className="mt-2" onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
           {lang === "ml" ? "English" : "മലയാളം"}
-        </button>
+        </TextButton>
       </div>
 
       <Card>
@@ -131,9 +128,9 @@ export function SignIn() {
             <Button className="w-full" onClick={verify} disabled={code.length < 4 || busy}>
               {t("verify")}
             </Button>
-            <button className="mt-3 w-full text-sm underline text-loom-indigoSoft" onClick={restart}>
+            <TextButton className="mt-3 w-full" onClick={restart}>
               {t("changeNumber")}
-            </button>
+            </TextButton>
           </>
         )}
 

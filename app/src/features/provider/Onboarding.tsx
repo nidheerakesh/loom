@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiPost, ApiError } from "../../lib/api";
 import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
-import { Button, Card, Field, ListenButton } from "../../ui";
+import { Button, Card, Field, ListenButton, TextButton } from "../../ui";
 
 type Readback = {
   raw: string;
@@ -146,13 +146,9 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
             <Button className="w-full" onClick={save} disabled={busy || !confirmed}>
               {t("finish")}
             </Button>
-            <button
-              className="mt-3 w-full text-sm underline text-loom-indigoSoft"
-              onClick={onDone}
-              disabled={busy}
-            >
+            <TextButton className="mt-3 w-full" onClick={onDone} disabled={busy}>
               {t("skipForNow")}
-            </button>
+            </TextButton>
           </>
         )}
 

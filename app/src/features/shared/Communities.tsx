@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost, POLL_MS } from "../../lib/api";
 import { useAuth } from "../../auth";
-import { Button, Card, Field, Screen, ListenButton } from "../../ui";
+import { Button, Card, Field, Screen, ListenButton, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type ThreadRow = { _id: string; title: string; lastMessage: string | null };
@@ -83,7 +83,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
   };
 
   return (
-    <Screen title={t("chat")} right={<button onClick={onBack} className="text-loom-indigo">‹ {t("back")}</button>}>
+    <Screen title={t("chat")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
       <div className="space-y-2 mb-4">
         {messages?.map((m) => (
           <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
@@ -138,9 +138,7 @@ function NewConversation({
     <Screen
       title={t("newConversation")}
       right={
-        <button onClick={onBack} className="text-loom-indigo">
-          ‹ {t("back")}
-        </button>
+        <TextButton onClick={onBack}>‹ {t("back")}</TextButton>
       }
     >
       <Field
