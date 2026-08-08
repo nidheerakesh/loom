@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiPost, ApiError } from "../../lib/api";
+import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, ListenButton } from "../../ui";
 
@@ -18,7 +19,7 @@ type Readback = {
 // Deliberately reuses the same endpoints the Profile screen uses (skills/resolve,
 // skills/mine, providers/update-profile) rather than adding onboarding-only routes.
 export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const queryClient = useQueryClient();
 
   const [skillText, setSkillText] = useState("");
@@ -106,7 +107,7 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
               <ListenButton
                 text={readback
                   .filter((r) => r.canonicalName)
-                  .map((r) => r.canonicalNameMl ?? r.canonicalName)
+                  .map((r) => pickLang(lang, r.canonicalName, r.canonicalNameMl))
                   .join(", ")}
               />
             </div>
@@ -114,7 +115,7 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
               <div key={i} className="text-sm">
                 {r.canonicalName ? (
                   <span className="text-loom-indigo">
-                    {r.raw} → <b>{r.canonicalNameMl ?? r.canonicalName}</b>
+                    {r.raw} → <b>{pickLang(lang, r.canonicalName, r.canonicalNameMl)}</b>
                   </span>
                 ) : (
                   <span className="text-loom-madder">

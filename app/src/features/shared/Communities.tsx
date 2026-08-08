@@ -63,7 +63,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
   };
 
   return (
-    <Screen title={t("chat")} right={<button onClick={onBack} className="text-loom-indigo">‹ back</button>}>
+    <Screen title={t("chat")} right={<button onClick={onBack} className="text-loom-indigo">‹ {t("back")}</button>}>
       <div className="space-y-2 mb-4">
         {messages?.map((m) => (
           <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
@@ -73,7 +73,10 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
           </div>
         ))}
       </div>
-      <div className="fixed bottom-0 left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep flex gap-2">
+      {/* Sat at `bottom-0`, the same as the tab bar, so it rendered underneath it and the
+          message box could not be reached. The tab bar is 56px plus safe-area inset; this
+          clears it and matches the pb-24 the Screen already reserves. */}
+      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep flex gap-2 z-20">
         <div className="flex-1">
           <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>

@@ -23,6 +23,7 @@ import r_providers_search from "./providers/search.js";
 import r_providers_update_profile from "./providers/update-profile.js";
 import r_ratings_rate from "./ratings/rate.js";
 import r_requests_choose_provider from "./requests/choose-provider.js";
+import r_requests_complete from "./requests/complete.js";
 import r_requests_create from "./requests/create.js";
 import r_requests_get from "./requests/get.js";
 import r_requests_interested_providers from "./requests/interested-providers.js";
@@ -70,6 +71,7 @@ export const routes: Record<string, Handler> = {
   "providers/update-profile": r_providers_update_profile,
   "ratings/rate": r_ratings_rate,
   "requests/choose-provider": r_requests_choose_provider,
+  "requests/complete": r_requests_complete,
   "requests/create": r_requests_create,
   "requests/get": r_requests_get,
   "requests/interested-providers": r_requests_interested_providers,

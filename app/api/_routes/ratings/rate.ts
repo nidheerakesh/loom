@@ -18,10 +18,29 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const s = await requireRole(token, "customer");
   const clamped = Math.max(1, Math.min(5, Math.round(stars)));
 
-  const { error: insErr } = await supabaseAdmin
+  // One rating per customer per provider: rating again revises the earlier one rather than
+  // adding another. Without this a single customer could tap repeatedly and run a provider's
+  // average and rating_count anywhere they liked.
+  const { data: existing, error: findErr } = await supabaseAdmin
     .from("ratings")
-    .insert({ provider_id: providerId, customer_id: s.userId, stars: clamped, comment });
-  if (insErr) throw new HttpError(500, insErr.message);
+    .select("id")
+    .eq("provider_id", providerId)
+    .eq("customer_id", s.userId)
+    .maybeSingle();
+  if (findErr) throw new HttpError(500, findErr.message);
+
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from("ratings")
+      .update({ stars: clamped, comment })
+      .eq("id", existing.id);
+    if (error) throw new HttpError(500, error.message);
+  } else {
+    const { error } = await supabaseAdmin
+      .from("ratings")
+      .insert({ provider_id: providerId, customer_id: s.userId, stars: clamped, comment });
+    if (error) throw new HttpError(500, error.message);
+  }
 
   const { data: all, error: allErr } = await supabaseAdmin.from("ratings").select("stars").eq("provider_id", providerId);
   if (allErr) throw new HttpError(500, allErr.message);

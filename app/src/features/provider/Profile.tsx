@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
+import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
@@ -12,7 +13,7 @@ type PortfolioItem = { _id: string; url: string | null; caption: string | null }
 type GrievanceRow = { _id: string; subject: string; body: string; status: string };
 
 export function ProviderProfile() {
-  const { token, t, me } = useAuth();
+  const { token, t, me, lang } = useAuth();
   const queryClient = useQueryClient();
   const provider = me && me.role === "provider" ? me.provider : null;
 
@@ -107,7 +108,7 @@ export function ProviderProfile() {
         <div className="flex flex-wrap gap-1 mb-2">
           {skills?.map((s) => (
             <span key={s._id} className="bg-loom-indigo text-loom-cotton rounded-full px-3 py-1 text-sm">
-              {s.canonicalNameMl ?? s.canonicalName}
+              {pickLang(lang, s.canonicalName, s.canonicalNameMl)}
             </span>
           ))}
         </div>
@@ -118,7 +119,7 @@ export function ProviderProfile() {
             <div className="font-semibold text-loom-indigo">{t("confirmSkills")}:</div>
             {readback.map((r, i) => (
               <div key={i} className={r.canonicalName ? "text-loom-leaf" : "text-loom-madder"}>
-                "{r.raw}" → {r.canonicalName ? `${r.canonicalNameMl ?? r.canonicalName} (${r.matchedVia})` : t("newSkillAdded")}
+                "{r.raw}" → {r.canonicalName ? `${pickLang(lang, r.canonicalName, r.canonicalNameMl)} (${r.matchedVia})` : t("newSkillAdded")}
               </div>
             ))}
           </div>

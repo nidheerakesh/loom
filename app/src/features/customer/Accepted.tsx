@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
+import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
-import { Button, Card, Field, Screen, Stars } from "../../ui";
+import { Button, Card, Field, Screen, StarPicker, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type MyRequest = {
@@ -50,6 +51,10 @@ export function Accepted() {
     queryFn: () => apiGet<MyRequest[]>("/api/customers/my-requests", { token: token! }),
     enabled: !!token,
   });
+  const complete = useMutation({
+    mutationFn: (requestId: string) => apiPost("/api/requests/complete", { token, requestId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
+  });
   const assemble = useMutation({
     mutationFn: (requestId: string) => apiPost("/api/team-assembly/assemble", { token, requestId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
@@ -95,6 +100,11 @@ export function Accepted() {
                 {t("edit")}
               </Button>
             )}
+            {r.status === "assigned" && (
+              <Button variant="leaf" onClick={() => complete.mutate(r._id)}>
+                {t("markFinished")}
+              </Button>
+            )}
           </div>
         </Card>
       ))}
@@ -103,7 +113,7 @@ export function Accepted() {
 }
 
 function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const queryClient = useQueryClient();
   const { data: team } = useQuery({
     queryKey: ["team-assembly/get", teamId],
@@ -114,8 +124,12 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] }),
   });
   const rate = useMutation({
-    mutationFn: (body: { providerId: string; stars: number }) => apiPost("/api/ratings/rate", { token, ...body }),
+    mutationFn: (body: { providerId: string; stars: number; comment: string }) =>
+      apiPost("/api/ratings/rate", { token, ...body }),
+    onSuccess: () => setRating(null),
   });
+  // Which member is being rated, and the draft rating for them.
+  const [rating, setRating] = useState<{ providerId: string; stars: number; comment: string } | null>(null);
 
   return (
     <Screen title={t("teams")} right={<button onClick={onBack} className="text-loom-indigo">‹ back</button>}>
@@ -136,15 +150,46 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                 <div>
                   <div className="font-semibold text-loom-indigo">{m.shopName ?? m.name}</div>
                   <div className="text-sm text-loom-indigoSoft">
-                    {m.group ?? "—"} · {m.skillMl ?? m.skill} · {m.coveredUnits} {t("units")} · {m.state}
+                    {m.group ?? "—"} · {pickLang(lang, m.skill, m.skillMl)} · {m.coveredUnits} {t("units")} · {m.state}
                   </div>
                 </div>
-                {token && (
-                  <Button variant="ghost" onClick={() => rate.mutate({ providerId: m.providerId, stars: 5 })}>
-                    ★ {t("rateProvider")}
+                {token && rating?.providerId !== m.providerId && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setRating({ providerId: m.providerId, stars: 5, comment: "" })}
+                  >
+                    {t("rateProvider")}
                   </Button>
                 )}
               </div>
+
+              {/* Star and comment, rather than a button that silently posted five stars. */}
+              {rating?.providerId === m.providerId && (
+                <div className="mt-3">
+                  <StarPicker
+                    value={rating.stars}
+                    onChange={(stars) => setRating({ ...rating, stars })}
+                  />
+                  <Field
+                    className="mt-2"
+                    value={rating.comment}
+                    placeholder={t("ratingCommentPlaceholder")}
+                    onChange={(e) => setRating({ ...rating, comment: e.target.value })}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="gold"
+                      disabled={rate.isPending}
+                      onClick={() => rate.mutate(rating)}
+                    >
+                      {t("submit")}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setRating(null)}>
+                      {t("cancel")}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           ))}
           {token && team.status === "proposed" && (

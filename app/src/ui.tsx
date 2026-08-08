@@ -101,6 +101,35 @@ export function ListenButton({ text }: { text: string }) {
   );
 }
 
+// Pick a rating. Replaces a single button hardcoded to five stars, which meant every rating
+// in the system was a five and the score carried no information.
+export function StarPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex gap-1" role="radiogroup">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          role="radio"
+          aria-checked={value === n}
+          aria-label={`${n}`}
+          onClick={() => onChange(n)}
+          className={`min-h-[44px] w-11 text-2xl leading-none ${
+            n <= value ? "text-loom-kasavu" : "text-loom-cottonDeep"
+          }`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function TabBar({
   tabs,
   active,

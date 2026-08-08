@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth";
+import { pickLang } from "../../i18n";
 import { Button, Card, Screen, ListenButton } from "../../ui";
 import { apiGet, apiPost } from "../../lib/api";
 
@@ -17,7 +18,7 @@ type FeedCard = {
 };
 
 export function ProviderCurrent() {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const queryClient = useQueryClient();
   const { data: feed } = useQuery({
     queryKey: ["matching/feed", token],
@@ -58,7 +59,7 @@ export function ProviderCurrent() {
             <div>
               <div className="font-semibold text-loom-indigo">{m.title}</div>
               <div className="text-sm text-loom-indigoSoft">
-                {m.matchedSkillMl ?? m.matchedSkill} · {m.distanceKm} {t("km")}
+                {pickLang(lang, m.matchedSkill, m.matchedSkillMl)} · {m.distanceKm} {t("km")}
                 {m.pay ? ` · ₹${m.pay}` : ""}
               </div>
             </div>

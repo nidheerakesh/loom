@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth";
+import { pickLang } from "../../i18n";
 import { Button, Card, Screen } from "../../ui";
 import { apiGet, apiPost } from "../../lib/api";
 import { SignOut } from "./Current";
@@ -32,7 +33,7 @@ type MyTeam = {
 // list filters to 'open', so an accepted job disappeared entirely; team memberships were only
 // visible as an unlabelled block above the "Find work" feed, mixed in with declined ones.
 export function ProviderMyWork() {
-  const { token, t } = useAuth();
+  const { token, t, lang } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: accepted } = useQuery({
@@ -71,7 +72,7 @@ export function ProviderMyWork() {
             <Card key={tm.teamId} className="mb-2">
               <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
               <div className="text-sm text-loom-indigoSoft">
-                {tm.skillMl ?? tm.skill} · {tm.coveredUnits} {t("units")}
+                {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")}
               </div>
               <div className="flex gap-2 mt-2">
                 <Button
@@ -99,7 +100,7 @@ export function ProviderMyWork() {
             <Card key={tm.teamId} className="mb-2">
               <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
               <div className="text-sm text-loom-indigoSoft">
-                {tm.skillMl ?? tm.skill} · {tm.coveredUnits} {t("units")} ·{" "}
+                {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")} ·{" "}
                 {t(`status_${tm.teamStatus}`)}
               </div>
             </Card>
