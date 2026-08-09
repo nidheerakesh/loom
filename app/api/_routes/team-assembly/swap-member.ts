@@ -11,10 +11,17 @@ const Body = z.object({
   replacementId: z.string().min(1),
 });
 
-// Replace one member of a proposed team, keeping their skill and unit allocation.
+// Replace one member of a team, keeping their skill and unit allocation.
 //
-// Only before confirmation: after that, providers have been invited and may have accepted, so
-// swapping someone out silently would revoke work they had already agreed to.
+// Two cases are allowed, and the distinction is the point:
+//
+//   team still 'proposed'  — swap anyone. Nothing has been committed yet.
+//   team 'confirmed'       — swap ONLY a member who has declined. Their slot is already
+//                            vacant, so filling it revokes nothing; but swapping out someone
+//                            who accepted would cancel work they had agreed to do.
+//
+// Without the second case a decline left a permanently empty slot: the customer could see the
+// refusal and had no way to act on it, and the order silently lost that coverage.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, teamId, providerId, replacementId } = Body.parse(req.body);
   const s = await requireRole(token, "customer");
@@ -28,9 +35,6 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     .maybeSingle();
   if (teamErr) throw new HttpError(500, teamErr.message);
   if (!team) throw new HttpError(404, "Team not found");
-  if (team.status !== "proposed") {
-    throw new HttpError(409, "This team is already confirmed and cannot be changed");
-  }
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
@@ -42,12 +46,19 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: member, error: memErr } = await supabaseAdmin
     .from("team_members")
-    .select("id, assigned_skill_id, covered_units")
+    .select("id, assigned_skill_id, covered_units, state")
     .eq("team_id", teamId)
     .eq("provider_id", providerId)
     .maybeSingle();
   if (memErr) throw new HttpError(500, memErr.message);
   if (!member) throw new HttpError(404, "That provider is not on this team");
+
+  if (team.status === "confirmed" && member.state !== "declined") {
+    throw new HttpError(
+      409,
+      "This team is confirmed — only a provider who declined can be replaced",
+    );
+  }
 
   // The replacement must actually be able to do the work, and be free to take it — the
   // customer is choosing from a list, but the list is not the authority here.
@@ -81,9 +92,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     throw new HttpError(400, "That provider cannot cover this many units");
   }
 
+  // Reset the slot's state as well as its occupant: otherwise the replacement inherits the
+  // 'declined' of the person they replaced and is never actually asked.
   const { error } = await supabaseAdmin
     .from("team_members")
-    .update({ provider_id: replacementId })
+    .update({ provider_id: replacementId, state: "invited" })
     .eq("id", member.id);
   if (error) throw new HttpError(500, error.message);
 

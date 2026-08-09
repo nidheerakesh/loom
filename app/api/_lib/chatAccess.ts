@@ -69,7 +69,12 @@ async function participantsOf(thread: ThreadRow): Promise<Participants> {
 
   if (thread.context_type === "team") {
     const [membersRes, teamRes] = await Promise.all([
-      supabaseAdmin.from("team_members").select("provider_id").eq("team_id", thread.context_id),
+      // Anyone who declined is not on this job, so they are not in its conversation either.
+      supabaseAdmin
+        .from("team_members")
+        .select("provider_id")
+        .eq("team_id", thread.context_id)
+        .neq("state", "declined"),
       supabaseAdmin.from("teams").select("request_id").eq("id", thread.context_id).maybeSingle(),
     ]);
     if (membersRes.error) throw new HttpError(500, membersRes.error.message);
@@ -183,7 +188,11 @@ export async function visibleThreads(session: Session, limit = 50): Promise<Thre
           )
       : Promise.resolve({ data: [], error: null }),
     isProvider
-      ? supabaseAdmin.from("team_members").select("team_id").eq("provider_id", session.userId)
+      ? supabaseAdmin
+          .from("team_members")
+          .select("team_id")
+          .eq("provider_id", session.userId)
+          .neq("state", "declined")
       : Promise.resolve({ data: [], error: null }),
   ]);
   for (const r of [requestsRes, interestsRes, teamsRes, membersRes]) {
