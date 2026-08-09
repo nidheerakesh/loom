@@ -20,6 +20,7 @@ type AcceptedRequest = {
 type MyTeam = {
   teamId: string;
   teamStatus: string;
+  requestStatus: string | null;
   requestTitle: string;
   skill: string;
   skillMl: string | null;
@@ -54,9 +55,17 @@ export function ProviderMyWork() {
 
   const statusLabel = (status: string) => t(`status_${status}`);
 
-  // Grouped so an invitation awaiting a reply is not shown next to one already declined.
+  // Grouped so an invitation awaiting a reply is not shown next to one already declined,
+  // and so finished work reads as finished rather than sitting forever among active jobs.
   const invited = (teams ?? []).filter((tm) => tm.state === "invited");
-  const joined = (teams ?? []).filter((tm) => tm.state === "accepted");
+  const joined = (teams ?? []).filter(
+    (tm) => tm.state === "accepted" && tm.requestStatus !== "completed",
+  );
+  const doneTeam = (teams ?? []).filter(
+    (tm) => tm.state === "accepted" && tm.requestStatus === "completed",
+  );
+  const activeSolo = (accepted ?? []).filter((r) => r.status !== "completed");
+  const doneSolo = (accepted ?? []).filter((r) => r.status === "completed");
   const loading = accepted === undefined || teams === undefined;
   const empty = !loading && (accepted?.length ?? 0) === 0 && (teams?.length ?? 0) === 0;
 
@@ -101,17 +110,17 @@ export function ProviderMyWork() {
               <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
               <div className="text-sm text-loom-indigoSoft">
                 {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")} ·{" "}
-                {t(`status_${tm.teamStatus}`)}
+                {t(`status_${tm.requestStatus ?? tm.teamStatus}`)}
               </div>
             </Card>
           ))}
         </section>
       )}
 
-      {(accepted?.length ?? 0) > 0 && (
+      {activeSolo.length > 0 && (
         <section>
           <h2 className="font-semibold text-loom-indigo mb-2">{t("individualWork")}</h2>
-          {accepted?.map((r) => (
+          {activeSolo.map((r) => (
             <Card key={r._id} className="mb-2">
               <div className="font-semibold text-loom-indigo">{r.title}</div>
               {/* Applying no longer wins the job — the customer picks between everyone who
@@ -132,6 +141,34 @@ export function ProviderMyWork() {
               {r.customerName && (
                 <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
               )}
+            </Card>
+          ))}
+        </section>
+      )}
+      {/* Finished work. Nothing told a provider their job had ended: completion sets
+          requests.status only, and the team card read the TEAM's status, which stays
+          'confirmed' forever. */}
+      {(doneTeam.length > 0 || doneSolo.length > 0) && (
+        <section>
+          <h2 className="font-semibold text-loom-leaf mb-2">{t("completedWork")}</h2>
+          {doneTeam.map((tm) => (
+            <Card key={tm.teamId} className="mb-2">
+              <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
+              <div className="text-sm text-loom-leaf font-medium">{t("workFinished")}</div>
+              <div className="text-sm text-loom-indigoSoft">
+                {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")}
+              </div>
+            </Card>
+          ))}
+          {doneSolo.map((r) => (
+            <Card key={r._id} className="mb-2">
+              <div className="font-semibold text-loom-indigo">{r.title}</div>
+              <div className="text-sm text-loom-leaf font-medium">{t("workFinished")}</div>
+              <div className="text-sm text-loom-indigoSoft">
+                {r.pay !== null && `₹${r.pay} · `}
+                {r.units} {t("units")}
+                {r.customerName && ` · ${r.customerName}`}
+              </div>
             </Card>
           ))}
         </section>

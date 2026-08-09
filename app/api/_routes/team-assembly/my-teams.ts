@@ -15,7 +15,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { data: rows, error } = await supabaseAdmin
     .from("team_members")
     .select(
-      "team_id, covered_units, state, skills(canonical_name, canonical_name_ml), teams(id, status, requests(title))",
+      "team_id, covered_units, state, skills(canonical_name, canonical_name_ml), teams(id, status, requests(title, status))",
     )
     .eq("provider_id", s.userId);
   if (error) throw new HttpError(500, error.message);
@@ -25,7 +25,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     covered_units: number;
     state: string;
     skills: { canonical_name: string; canonical_name_ml: string | null } | null;
-    teams: { id: string; status: string; requests: { title: string } | null } | null;
+    teams: { id: string; status: string; requests: { title: string; status: string } | null } | null;
   };
 
   const out = [];
@@ -38,6 +38,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     out.push({
       teamId: m.teams.id,
       teamStatus: m.teams.status,
+      // The REQUEST's status, not the team's. Marking work finished sets requests.status to
+      // 'completed' and never touches teams.status, so a team member saw "Confirmed" forever
+      // and was never told the job had ended.
+      requestStatus: m.teams.requests?.status ?? null,
       requestTitle: m.teams.requests?.title ?? "",
       skill: m.skills?.canonical_name ?? "",
       skillMl: m.skills?.canonical_name_ml ?? null,

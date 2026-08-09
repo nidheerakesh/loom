@@ -65,5 +65,38 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     .eq("id", team.request_id);
   if (reqUpdErr) throw new HttpError(500, reqUpdErr.message);
 
+  // A conversation for the people actually doing this job. The `team` context has existed in
+  // the schema and in chatAccess since the beginning, but nothing ever created a thread for
+  // it — so an assembled team had no way to coordinate, which is most of the point of
+  // assembling one. Membership resolves from the team, so it follows accepts, declines and
+  // replacements without any bookkeeping here.
+  //
+  // Idempotent: re-confirming must not produce a second thread.
+  const { data: existingThread, error: findThreadErr } = await supabaseAdmin
+    .from("chat_threads")
+    .select("id")
+    .eq("context_type", "team")
+    .eq("context_id", teamId)
+    .maybeSingle();
+  if (findThreadErr) throw new HttpError(500, findThreadErr.message);
+
+  if (!existingThread) {
+    const { data: request, error: titleErr } = await supabaseAdmin
+      .from("requests")
+      .select("title")
+      .eq("id", team.request_id)
+      .maybeSingle();
+    if (titleErr) throw new HttpError(500, titleErr.message);
+
+    const { error: threadErr } = await supabaseAdmin
+      .from("chat_threads")
+      .insert({
+        context_type: "team",
+        context_id: teamId,
+        title: request?.title ?? "Team",
+      });
+    if (threadErr) throw new HttpError(500, threadErr.message);
+  }
+
   res.status(200).json(null);
 });

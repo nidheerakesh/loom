@@ -223,12 +223,30 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                 <div>
                   <div className="font-semibold text-loom-indigo">{m.shopName ?? m.name}</div>
                   <div className="text-sm text-loom-indigoSoft">
-                    {m.group ?? "—"} · {pickLang(lang, m.skill, m.skillMl)} · {m.coveredUnits} {t("units")} · {m.state}
+                    {m.group ?? "—"} · {pickLang(lang, m.skill, m.skillMl)} · {m.coveredUnits}{" "}
+                    {t("units")}
+                  </div>
+                  <div
+                    className={`text-sm font-medium ${
+                      m.state === "declined"
+                        ? "text-loom-madder"
+                        : m.state === "accepted"
+                          ? "text-loom-leaf"
+                          : "text-loom-indigoSoft"
+                    }`}
+                  >
+                    {t(`status_${m.state}`)}
+                    {m.state === "declined" && ` — ${t("slotNeedsFilling")}`}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {token && team.status === "proposed" && (
-                    <Button variant="ghost" onClick={() => setSwapping(m)}>
+                  {/* Replaceable while the team is a draft, and afterwards only if this
+                      person declined — their slot is vacant, so filling it revokes nothing. */}
+                  {token && (team.status === "proposed" || m.state === "declined") && (
+                    <Button
+                      variant={m.state === "declined" ? "gold" : "ghost"}
+                      onClick={() => setSwapping(m)}
+                    >
                       {t("swapMember")}
                     </Button>
                   )}

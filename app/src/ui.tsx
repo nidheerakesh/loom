@@ -103,10 +103,14 @@ export function ListenButton({ text }: { text: string }) {
           clearInterval(poll);
         }
       }, 400);
-    } else {
-      window.alert(text);
     }
   };
+
+  // Render nothing when the device cannot speak this language. The old fallback offered
+  // "Show text", which popped an alert containing the very text already displayed beside it —
+  // every chat message carried a pointless link. A control that cannot do anything useful is
+  // better absent than present and inert.
+  if (!available) return null;
 
   return (
     <button
@@ -114,7 +118,7 @@ export function ListenButton({ text }: { text: string }) {
       className="text-loom-indigo text-sm underline min-h-[56px] px-3 inline-flex items-center"
       aria-label={t("listen")}
     >
-      {available ? (speaking ? t("stop") : t("listen")) : t("showText")}
+      {speaking ? t("stop") : t("listen")}
     </button>
   );
 }
