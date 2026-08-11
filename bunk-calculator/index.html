@@ -1,0 +1,1289 @@
+<title>Bunk Ledger — how many classes can I actually skip?</title>
+
+<style>
+  /* ---------- tokens: light is the base, both dark paths override ---------- */
+  :root {
+    --paper:      #eef1f7;
+    --surface:    #ffffff;
+    --surface-2:  #f6f8fc;
+    --ink:        #141a2e;
+    --ink-soft:   #3d4761;
+    --muted:      #6a7391;
+    --line:       #d8dee9;
+    --line-soft:  #e6eaf2;
+    --accent:     #2b4bd6;
+    --accent-ink: #ffffff;
+    --accent-wash:#e3e8fb;
+    --safe:       #157a52;
+    --safe-wash:  #d9f0e4;
+    --tight:      #9c6206;
+    --tight-wash: #fbeccd;
+    --over:       #b93526;
+    --over-wash:  #fadfda;
+    --shadow:     0 1px 2px rgba(20,26,46,.06), 0 8px 24px -16px rgba(20,26,46,.35);
+    --cell-bg:    hsl(var(--h,222) 60% 94%);
+    --cell-ink:   hsl(var(--h,222) 48% 30%);
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0d1120;
+      --surface:    #151b2c;
+      --surface-2:  #1b2237;
+      --ink:        #e7eaf3;
+      --ink-soft:   #c2c8db;
+      --muted:      #8d96b4;
+      --line:       #2a3350;
+      --line-soft:  #222a43;
+      --accent:     #8098ff;
+      --accent-ink: #0d1120;
+      --accent-wash:#1e2748;
+      --safe:       #4cc490;
+      --safe-wash:  #143427;
+      --tight:      #e0a544;
+      --tight-wash: #3a2c11;
+      --over:       #f4776a;
+      --over-wash:  #3d1b17;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+      --cell-bg:    hsl(var(--h,222) 32% 22%);
+      --cell-ink:   hsl(var(--h,222) 60% 80%);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #0d1120;
+    --surface:    #151b2c;
+    --surface-2:  #1b2237;
+    --ink:        #e7eaf3;
+    --ink-soft:   #c2c8db;
+    --muted:      #8d96b4;
+    --line:       #2a3350;
+    --line-soft:  #222a43;
+    --accent:     #8098ff;
+    --accent-ink: #0d1120;
+    --accent-wash:#1e2748;
+    --safe:       #4cc490;
+    --safe-wash:  #143427;
+    --tight:      #e0a544;
+    --tight-wash: #3a2c11;
+    --over:       #f4776a;
+    --over-wash:  #3d1b17;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+    --cell-bg:    hsl(var(--h,222) 32% 22%);
+    --cell-ink:   hsl(var(--h,222) 60% 80%);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1, h2, h3 { font-family: var(--mono); font-weight: 600; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+  a { color: var(--accent); }
+
+  .bar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px clamp(14px, 4vw, 34px);
+    background: var(--paper);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .bar b { font-weight: 600; }
+  .bar .tally { color: var(--muted); display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+  .bar .tally strong { color: var(--ink); font-weight: 600; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: clamp(20px, 4vw, 40px) clamp(14px, 4vw, 34px) 96px; }
+
+  header.masthead { display: grid; gap: 10px; margin-bottom: 26px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  header.masthead h1 { font-size: clamp(26px, 4.4vw, 40px); line-height: 1.12; }
+  header.masthead p { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+
+  section.card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    padding: clamp(16px, 2.6vw, 22px);
+  }
+  .stack { display: grid; gap: 20px; }
+  .cols { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .card-head h2 { font-size: 15px; }
+  .card-head .hint, .hint { color: var(--muted); font-size: 12.5px; }
+
+  /* ---------- verdict ---------- */
+  .verdict { display: grid; gap: 18px; grid-template-columns: minmax(240px, 1fr) minmax(0, 1.35fr); align-items: center; }
+  @media (max-width: 720px) { .verdict { grid-template-columns: minmax(0, 1fr); } }
+  .headline { display: grid; gap: 4px; }
+  .headline .num {
+    font-family: var(--mono); font-weight: 600; font-size: clamp(56px, 12vw, 92px); line-height: .9;
+    letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  }
+  .headline .num.zero { color: var(--over); }
+  .headline .cap { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+  .headline .sub { color: var(--muted); font-size: 12.5px; }
+
+  .tiles { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 8px; padding: 11px 12px; display: grid; gap: 3px; }
+  .tile .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-family: var(--mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+  .tile .n { font-size: 11.5px; color: var(--muted); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; padding: 3px 8px; border-radius: 999px;
+    background: var(--accent-wash); color: var(--accent); border: 1px solid transparent;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.safe  { background: var(--safe-wash);  color: var(--safe); }
+  .pill.tight { background: var(--tight-wash); color: var(--tight); }
+  .pill.over  { background: var(--over-wash);  color: var(--over); }
+
+  .alert { display: flex; gap: 10px; align-items: flex-start; border-left: 3px solid var(--over); background: var(--over-wash); color: var(--over); padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 13px; }
+  .alert.info { border-left-color: var(--accent); background: var(--accent-wash); color: var(--accent); }
+
+  /* ---------- forms ---------- */
+  label.field { display: grid; gap: 5px; font-size: 12.5px; color: var(--ink-soft); }
+  label.field > span { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea, button { font: inherit; color: inherit; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; background: var(--surface-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px;
+  }
+  input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; min-height: 68px; }
+  :is(input, select, textarea, button, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  button {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px;
+    padding: 6px 11px; cursor: pointer; font-family: var(--mono); font-size: 12.5px;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary:hover { filter: brightness(1.08); color: var(--accent-ink); }
+  button.ghost { background: transparent; }
+  button.icon { padding: 4px 8px; line-height: 1; color: var(--muted); }
+  button.icon:hover { color: var(--over); border-color: var(--over); }
+
+  .daytoggles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .daytoggles label {
+    font-family: var(--mono); font-size: 12px; padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; user-select: none;
+  }
+  .daytoggles input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .daytoggles label:has(input:checked) { background: var(--accent-wash); border-color: var(--accent); color: var(--accent); }
+  .daytoggles label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; }
+  .seg button[aria-pressed="true"] { background: var(--accent-wash); color: var(--accent); }
+
+  /* ---------- timetable ---------- */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line-soft); }
+  thead th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  .num-col, td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  table.grid { min-width: 520px; }
+  table.grid th.period { width: 62px; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  table.grid td { padding: 4px; }
+  table.grid td.slot { background: var(--cell-bg); border-radius: 6px; }
+  table.grid td.slot.empty { background: transparent; }
+  table.grid select {
+    border: 0; background: transparent; color: var(--cell-ink); font-family: var(--mono); font-size: 12px;
+    padding: 5px 4px; border-radius: 6px; min-width: 92px;
+  }
+  table.grid td.slot.empty select { color: var(--muted); }
+  table.grid select option { color: var(--ink); background: var(--surface); }
+
+  .swatch { width: 9px; height: 9px; border-radius: 2px; background: hsl(var(--h,222) 60% 55%); display: inline-block; flex: none; }
+  .subject-name { display: flex; align-items: center; gap: 8px; }
+  .subject-name input { min-width: 120px; }
+
+  table.ledger { min-width: 660px; }
+  table.ledger tbody td { font-size: 13.5px; }
+  table.ledger tr.total td { border-top: 1px solid var(--line); font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); }
+  .bunkcell { font-family: var(--mono); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .meter { height: 4px; border-radius: 2px; background: var(--line-soft); overflow: hidden; margin-top: 5px; }
+  .meter > i { display: block; height: 100%; background: var(--safe); }
+  .meter.tight > i { background: var(--tight); }
+  .meter.over > i { background: var(--over); }
+
+  .footnote { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 13px; }
+  ul.plain li { margin: 3px 0; }
+</style>
+
+<div class="bar">
+  <b>Bunk Ledger</b>
+  <span class="tally"><strong id="barDays">—</strong> full days spare<span aria-hidden="true">·</span><span id="barThr">80%</span></span>
+</div>
+
+<div class="wrap stack">
+
+  <header class="masthead">
+    <div class="eyebrow">Attendance arithmetic</div>
+    <h1>How many classes can I skip and still clear 80%?</h1>
+    <p>Enter your weekly timetable and the term dates. This works out the exact number of classes you may still miss in each subject &mdash; and how many whole days off that adds up to.</p>
+  </header>
+
+  <section class="card" id="verdictCard">
+    <div class="verdict">
+      <div class="headline">
+        <div class="num" id="vDays">—</div>
+        <div class="cap" id="vCap">whole days you can still skip</div>
+        <div class="sub" id="vSub"></div>
+      </div>
+      <div>
+        <div class="tiles">
+          <div class="tile"><span class="k">Class days left</span><span class="v" id="tDays">—</span><span class="n" id="tDaysNote"></span></div>
+          <div class="tile"><span class="k">Spare classes</span><span class="v" id="tSpare">—</span><span class="n">across all subjects</span></div>
+          <div class="tile"><span class="k">Tightest subject</span><span class="v" id="tTight">—</span><span class="n" id="tTightNote"></span></div>
+        </div>
+        <div class="chips" id="vChips"></div>
+      </div>
+    </div>
+    <div id="vAlert" style="margin-top:16px"></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <div class="card-head">
+        <h2>Weekly timetable</h2>
+        <span class="hint">One period per cell. Repeat a subject for back-to-back labs.</span>
+      </div>
+      <div class="scroll"><table class="grid" id="grid"></table></div>
+      <div class="actions" style="margin-top:14px">
+        <label class="field" style="max-width:150px">
+          <span>Periods per day</span>
+          <input type="number" id="periods" min="1" max="12" step="1">
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Term &amp; rule</h2></div>
+      <div class="stack" style="gap:14px">
+        <label class="field">
+          <span>Minimum attendance</span>
+          <div class="actions">
+            <input type="number" id="threshold" min="1" max="100" step="0.5" style="max-width:96px">
+            <div class="seg" role="group" aria-label="Common thresholds">
+              <button type="button" data-thr="75">75</button>
+              <button type="button" data-thr="80">80</button>
+              <button type="button" data-thr="85">85</button>
+            </div>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Working days</span>
+          <div class="daytoggles" id="dayToggles"></div>
+        </label>
+
+        <div class="seg" role="group" aria-label="How to count the term">
+          <button type="button" id="modeDates">Term dates</button>
+          <button type="button" id="modeWeeks">Weeks left</button>
+        </div>
+
+        <div id="datesMode" class="stack" style="gap:12px">
+          <div class="row">
+            <label class="field"><span>Term starts</span><input type="date" id="start"></label>
+            <label class="field"><span>Term ends</span><input type="date" id="end"></label>
+          </div>
+          <label class="field">
+            <span>Holidays &amp; breaks</span>
+            <textarea id="holidays" placeholder="2026-08-15&#10;2026-10-19 to 2026-10-23&#10;one date or range per line"></textarea>
+          </label>
+        </div>
+
+        <div id="weeksMode" class="stack" style="gap:12px" hidden>
+          <label class="field"><span>Full weeks left</span><input type="number" id="weeks" min="0" max="60" step="1"></label>
+          <p class="hint" style="margin:0">Counts every working day in each remaining week. Use term dates instead if you want holidays taken out.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Subjects &amp; attendance so far</h2>
+      <div class="actions">
+        <button type="button" id="estimate">Estimate held so far</button>
+        <button type="button" id="addSubject" class="primary">Add subject</button>
+      </div>
+    </div>
+    <div class="scroll"><table id="subjects"></table></div>
+    <p class="footnote">Leave both counts at 0 to plan the whole term from scratch. &ldquo;Estimate&rdquo; counts the classes your timetable has already run between the term start and today, and assumes you attended them all &mdash; correct the numbers from your portal.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Import from the attendance portal</h2>
+      <span class="hint">attendance.iiitkottayam.ac.in &mdash; select the attendance table, copy, paste below.</span>
+    </div>
+    <div class="stack" style="gap:12px">
+      <textarea id="paste" style="min-height:104px" placeholder="Course&#9;Total&#9;Attended&#9;%&#10;CS2001 Data Structures&#9;32&#9;28&#9;87.5&#10;CS2002 Database Systems&#9;30&#9;22&#9;73.3"></textarea>
+      <div id="pastePreview"></div>
+      <div class="actions">
+        <button type="button" id="importMerge" class="primary">Update my subjects</button>
+        <button type="button" id="importReplace">Replace all subjects</button>
+        <span class="hint" id="importNote"></span>
+      </div>
+      <details>
+        <summary class="hint" style="cursor:pointer">Grab the table without retyping it</summary>
+        <div class="stack" style="gap:10px; margin-top:10px">
+          <ul class="plain">
+            <li>Easiest: drag over the attendance table in the portal, copy, and paste here &mdash; columns arrive as tabs and are read automatically.</li>
+            <li>Or save the snippet below as a bookmark, open your attendance page, and click it. It copies every table on the page to your clipboard.</li>
+          </ul>
+          <textarea id="bookmarklet" readonly rows="3" aria-label="Bookmarklet code"></textarea>
+          <div class="actions"><button type="button" id="copyBm">Copy snippet</button><span class="hint" id="copyBmNote"></span></div>
+          <p class="hint" style="margin:0">Nothing is sent anywhere &mdash; the snippet reads the page you already have open, and this calculator never talks to the portal.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>The ledger</h2>
+      <span class="hint" id="ledgerThr"></span>
+    </div>
+    <div class="scroll"><table class="ledger" id="ledger"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Cost of a day off</h2>
+      <span class="hint">What one absence on each weekday spends, checked against what you have left.</span>
+    </div>
+    <div class="scroll"><table id="daycost"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>How the numbers are worked out</h2></div>
+    <ul class="plain">
+      <li>A subject&rsquo;s total for the term = classes already held + every remaining slot in your timetable.</li>
+      <li>You must attend <code>ceil(total &times; threshold)</code> of them, so you may miss the rest &mdash; already-missed classes are deducted first.</li>
+      <li>The headline figure picks real days off one at a time, always taking the day that costs the least in your tightest subject, and stops before any subject would drop under the line. It is one safe plan, not the only one.</li>
+      <li>Nothing leaves your device; entries are saved in this browser.</li>
+    </ul>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" id="reset" class="ghost">Reset to a blank term</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "bunk-ledger.v1";
+  var HUES = [222, 168, 24, 292, 344, 96, 196, 46, 268, 130];
+  var DAYS = [
+    { i: 1, s: "Mon" }, { i: 2, s: "Tue" }, { i: 3, s: "Wed" }, { i: 4, s: "Thu" },
+    { i: 5, s: "Fri" }, { i: 6, s: "Sat" }, { i: 0, s: "Sun" }
+  ];
+
+  /* ---------------- state ---------------- */
+
+  function blankState() {
+    return {
+      threshold: 80,
+      mode: "dates",
+      start: isoToday(),
+      end: addDays(isoToday(), 112),
+      weeks: 12,
+      workingDays: [1, 2, 3, 4, 5],
+      periods: 5,
+      holidays: "",
+      subjects: [],
+      grid: {}
+    };
+  }
+
+  function sampleState() {
+    var st = blankState();
+    var names = ["Data Structures", "Database Systems", "Operating Systems",
+                 "Discrete Maths", "Digital Systems", "DS Lab"];
+    st.subjects = names.map(function (n, k) {
+      return { id: "s" + (k + 1), name: n, held: 0, att: 0 };
+    });
+    var plan = {
+      1: ["s1", "s2", "s3", "s4", "s5"],
+      2: ["s2", "s3", "s1", "s5", "s4"],
+      3: ["s6", "s6", "s4", "s3", "s2"],
+      4: ["s3", "s4", "s5", "s1", "s2"],
+      5: ["s5", "s1", "s2", "s4", "s3"]
+    };
+    st.grid = plan;
+    return st;
+  }
+
+  var state = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.subjects) return normalise(parsed);
+      }
+    } catch (e) { /* fall through to the sample */ }
+    return sampleState();
+  }
+
+  function normalise(st) {
+    var base = blankState();
+    Object.keys(base).forEach(function (k) {
+      if (st[k] === undefined || st[k] === null) st[k] = base[k];
+    });
+    st.periods = clamp(Math.round(st.periods), 1, 12);
+    st.subjects.forEach(function (s) {
+      s.held = Math.max(0, Math.round(s.held) || 0);
+      s.att = clamp(Math.round(s.att) || 0, 0, s.held);
+    });
+    return st;
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+  }
+
+  /* ---------------- date helpers ---------------- */
+
+  function isoToday() {
+    var d = new Date();
+    return [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join("-");
+  }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function parseISO(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s || "").trim());
+    if (!m) return null;
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function toISO(d) {
+    return [d.getUTCFullYear(), pad(d.getUTCMonth() + 1), pad(d.getUTCDate())].join("-");
+  }
+  function addDays(iso, n) {
+    var d = parseISO(iso);
+    if (!d) return iso;
+    d.setUTCDate(d.getUTCDate() + n);
+    return toISO(d);
+  }
+  function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, isFinite(n) ? n : lo)); }
+
+  function holidaySet() {
+    var out = {};
+    (state.holidays || "").split("\n").forEach(function (line) {
+      var text = line.split("#")[0].trim();
+      if (!text) return;
+      var parts = text.split(/\s*(?:to|--|—|\.\.)\s*/i);
+      var a = parseISO(parts[0]);
+      var b = parts.length > 1 ? parseISO(parts[1]) : a;
+      if (!a || !b) return;
+      if (b < a) { var t = a; a = b; b = t; }
+      var guard = 0;
+      var cur = new Date(a.getTime());
+      while (cur <= b && guard++ < 400) {
+        out[toISO(cur)] = true;
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    });
+    return out;
+  }
+
+  /* ---------------- timetable helpers ---------------- */
+
+  function slots(day) {
+    var row = state.grid[day] || [];
+    var out = [];
+    for (var p = 0; p < state.periods; p++) out.push(row[p] || "");
+    return out;
+  }
+  function periodsOn(day, id) {
+    return slots(day).filter(function (x) { return x === id; }).length;
+  }
+  function classesOn(day) {
+    return slots(day).filter(Boolean).length;
+  }
+
+  /* Remaining class days, as [{iso|null, day}] in chronological order. */
+  function remainingDays() {
+    var days = [];
+    var working = {};
+    state.workingDays.forEach(function (d) { working[d] = true; });
+
+    if (state.mode === "weeks") {
+      var weeks = clamp(Math.round(state.weeks) || 0, 0, 60);
+      for (var w = 0; w < weeks; w++) {
+        DAYS.forEach(function (d) {
+          if (working[d.i] && classesOn(d.i) > 0) days.push({ iso: null, day: d.i });
+        });
+      }
+      return days;
+    }
+
+    var from = parseISO(state.start);
+    var to = parseISO(state.end);
+    var today = parseISO(isoToday());
+    if (!from || !to || to < from) return days;
+    if (from < today) from = today;
+    var hol = holidaySet();
+    var cur = new Date(from.getTime());
+    var guard = 0;
+    while (cur <= to && guard++ < 800) {
+      var iso = toISO(cur);
+      var wd = cur.getUTCDay();
+      if (working[wd] && !hol[iso] && classesOn(wd) > 0) days.push({ iso: iso, day: wd });
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return days;
+  }
+
+  /* ---------------- the maths ---------------- */
+
+  function compute() {
+    var thr = clamp(state.threshold, 1, 100) / 100;
+    var days = remainingDays();
+    var perDay = {};
+    days.forEach(function (d) { perDay[d.day] = (perDay[d.day] || 0) + 1; });
+
+    var rows = state.subjects.map(function (s) {
+      var future = 0;
+      Object.keys(perDay).forEach(function (day) {
+        future += periodsOn(+day, s.id) * perDay[day];
+      });
+      var total = s.held + future;
+      var missedSoFar = Math.max(0, s.held - s.att);
+      var required = total > 0 ? Math.ceil(total * thr - 1e-9) : 0;
+      var allowed = total - required;
+      var spare = allowed - missedSoFar;
+      var best = total > 0 ? (s.att + future) / total : 1;
+      return {
+        id: s.id, name: s.name, hue: hueFor(s.id),
+        future: future, total: total, held: s.held, att: s.att,
+        missed: missedSoFar, allowed: allowed, spare: spare,
+        now: s.held > 0 ? s.att / s.held : null,
+        best: best,
+        doomed: total > 0 && best < thr - 1e-9,
+        perWeekday: DAYS.reduce(function (acc, d) { acc[d.i] = periodsOn(d.i, s.id); return acc; }, {})
+      };
+    });
+
+    var live = rows.filter(function (r) { return r.total > 0; });
+    var totals = live.reduce(function (a, r) {
+      a.total += r.total; a.future += r.future; a.missed += r.missed; a.att += r.att; a.held += r.held;
+      return a;
+    }, { total: 0, future: 0, missed: 0, att: 0, held: 0 });
+    totals.required = totals.total > 0 ? Math.ceil(totals.total * thr - 1e-9) : 0;
+    totals.allowed = totals.total - totals.required;
+    totals.spare = totals.allowed - totals.missed;
+
+    var plan = planDaysOff(days, rows);
+    var tightest = null;
+    live.forEach(function (r) {
+      if (!tightest || r.spare < tightest.spare) tightest = r;
+    });
+
+    return { thr: thr, days: days, perDay: perDay, rows: rows, live: live, totals: totals, plan: plan, tightest: tightest };
+  }
+
+  /* Greedy: repeatedly take the affordable day that costs least, relative to
+     how little room each subject has left. Deterministic — ties go to the
+     earliest day. */
+  function planDaysOff(days, rows) {
+    var slack = {};
+    rows.forEach(function (r) { slack[r.id] = r.spare; });
+    var pool = days.map(function (d, k) { return { iso: d.iso, day: d.day, k: k }; });
+    var taken = [];
+    var guard = 0;
+
+    while (guard++ < 500) {
+      var best = null, bestCost = Infinity;
+      for (var i = 0; i < pool.length; i++) {
+        var cost = dayCost(pool[i].day, rows, slack);
+        if (cost < bestCost - 1e-9) { best = i; bestCost = cost; }
+      }
+      if (best === null || bestCost === Infinity) break;
+      var day = pool[best].day;
+      rows.forEach(function (r) { slack[r.id] -= r.perWeekday[day]; });
+      taken.push(pool[best]);
+      pool.splice(best, 1);
+    }
+
+    var byDay = {};
+    taken.forEach(function (t) { byDay[t.day] = (byDay[t.day] || 0) + 1; });
+    return { count: taken.length, days: taken, byDay: byDay, slackAfter: slack };
+  }
+
+  function dayCost(day, rows, slack) {
+    var cost = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var n = rows[i].perWeekday[day];
+      if (!n) continue;
+      if (n > slack[rows[i].id]) return Infinity;
+      cost += n / (slack[rows[i].id] + 0.5);
+    }
+    return cost;
+  }
+
+  function hueFor(id) {
+    var k = state.subjects.findIndex(function (s) { return s.id === id; });
+    return HUES[(k < 0 ? 0 : k) % HUES.length];
+  }
+
+  /* ---------------- rendering ---------------- */
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function pct(x) { return x === null ? "—" : (Math.round(x * 1000) / 10).toFixed(1) + "%"; }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function dayName(i) {
+    var d = DAYS.filter(function (x) { return x.i === i; })[0];
+    return d ? d.s : "?";
+  }
+  function statusOf(r) {
+    if (r.doomed || r.spare < 0) return "over";
+    if (r.spare <= 1) return "tight";
+    return "safe";
+  }
+
+  function renderControls() {
+    $("threshold").value = state.threshold;
+    $("periods").value = state.periods;
+    $("start").value = state.start;
+    $("end").value = state.end;
+    $("weeks").value = state.weeks;
+    $("holidays").value = state.holidays;
+    $("datesMode").hidden = state.mode !== "dates";
+    $("weeksMode").hidden = state.mode !== "weeks";
+    $("modeDates").setAttribute("aria-pressed", String(state.mode === "dates"));
+    $("modeWeeks").setAttribute("aria-pressed", String(state.mode === "weeks"));
+    document.querySelectorAll("[data-thr]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(+b.dataset.thr === +state.threshold));
+    });
+
+    $("dayToggles").innerHTML = DAYS.map(function (d) {
+      var on = state.workingDays.indexOf(d.i) >= 0;
+      return '<label><input type="checkbox" data-day="' + d.i + '"' + (on ? " checked" : "") + ">" + d.s + "</label>";
+    }).join("");
+  }
+
+  function renderGrid() {
+    var days = DAYS.filter(function (d) { return state.workingDays.indexOf(d.i) >= 0; });
+    if (!days.length) {
+      $("grid").innerHTML = '<tbody><tr><td class="hint">Pick at least one working day.</td></tr></tbody>';
+      return;
+    }
+    var opts = function (sel) {
+      return '<option value=""' + (sel ? "" : " selected") + ">—</option>" +
+        state.subjects.map(function (s) {
+          return '<option value="' + esc(s.id) + '"' + (s.id === sel ? " selected" : "") + ">" + esc(s.name) + "</option>";
+        }).join("");
+    };
+    var head = "<thead><tr><th class=\"period\"></th>" +
+      days.map(function (d) { return "<th>" + d.s + "</th>"; }).join("") + "</tr></thead>";
+    var body = "";
+    for (var p = 0; p < state.periods; p++) {
+      body += '<tr><th class="period" scope="row">P' + (p + 1) + "</th>";
+      body += days.map(function (d) {
+        var id = slots(d.i)[p];
+        var hue = id ? hueFor(id) : 222;
+        return '<td class="slot' + (id ? "" : " empty") + '" style="--h:' + hue + '">' +
+          '<select data-day="' + d.i + '" data-period="' + p + '" aria-label="' + d.s + " period " + (p + 1) + '">' +
+          opts(id) + "</select></td>";
+      }).join("");
+      body += "</tr>";
+    }
+    $("grid").innerHTML = head + "<tbody>" + body + "</tbody>";
+  }
+
+  function renderSubjects() {
+    if (!state.subjects.length) {
+      $("subjects").innerHTML = '<tbody><tr><td class="hint">No subjects yet — add one to start.</td></tr></tbody>';
+      return;
+    }
+    var head = '<thead><tr><th>Subject</th><th class="num">Classes held</th><th class="num">Attended</th><th class="num">So far</th><th></th></tr></thead>';
+    var body = state.subjects.map(function (s) {
+      var now = s.held > 0 ? s.att / s.held : null;
+      return '<tr data-id="' + esc(s.id) + '">' +
+        '<td><span class="subject-name"><i class="swatch" style="--h:' + hueFor(s.id) + '"></i>' +
+          '<input type="text" data-f="name" value="' + esc(s.name) + '" aria-label="Subject name"></span></td>' +
+        '<td class="num"><input type="number" data-f="held" min="0" step="1" value="' + s.held + '" aria-label="Classes held"></td>' +
+        '<td class="num"><input type="number" data-f="att" min="0" step="1" value="' + s.att + '" aria-label="Classes attended"></td>' +
+        '<td class="num">' + pct(now) + "</td>" +
+        '<td><button type="button" class="icon" data-remove="' + esc(s.id) + '" aria-label="Remove ' + esc(s.name) + '">&times;</button></td>' +
+        "</tr>";
+    }).join("");
+    $("subjects").innerHTML = head + "<tbody>" + body + "</tbody>";
+  }
+
+  function renderResults(c) {
+    var thrLabel = (Math.round(state.threshold * 10) / 10) + "%";
+    $("barThr").textContent = thrLabel;
+    $("ledgerThr").textContent = "Every figure holds you at or above " + thrLabel + ".";
+
+    /* headline */
+    var count = c.live.length ? c.plan.count : 0;
+    $("vDays").textContent = c.live.length ? count : "—";
+    $("vDays").className = "num" + (c.live.length && count === 0 ? " zero" : "");
+    $("barDays").textContent = c.live.length ? count : "—";
+    $("vCap").textContent = count === 1 ? "whole day you can still skip" : "whole days you can still skip";
+    $("vSub").textContent = c.live.length
+      ? "out of " + plural(c.days.length, "class day", "class days") + " left in the term"
+      : "Fill in the timetable to see your figures.";
+
+    $("tDays").textContent = c.days.length;
+    $("tDaysNote").textContent = state.mode === "weeks"
+      ? plural(clamp(Math.round(state.weeks) || 0, 0, 60), "week", "weeks") + " ahead"
+      : "from today to " + (state.end || "term end");
+    $("tSpare").textContent = c.live.length ? c.totals.spare : "—";
+    $("tTight").textContent = c.tightest ? Math.max(0, c.tightest.spare) : "—";
+    $("tTightNote").textContent = c.tightest ? c.tightest.name + " · classes left to spare" : "";
+
+    var chips = Object.keys(c.plan.byDay).sort(function (a, b) {
+      return c.plan.byDay[b] - c.plan.byDay[a] || a - b;
+    }).map(function (d) {
+      return '<span class="chip">' + c.plan.byDay[d] + " × " + dayName(+d) + "</span>";
+    });
+    $("vChips").innerHTML = chips.length
+      ? '<span class="hint" style="align-self:center">One safe plan:</span>' + chips.join("")
+      : "";
+
+    /* alerts */
+    var doomed = c.rows.filter(function (r) { return r.doomed; });
+    var alerts = "";
+    if (doomed.length) {
+      alerts += '<div class="alert"><span>&#9888;</span><span><strong>' +
+        doomed.map(function (r) { return esc(r.name); }).join(", ") +
+        "</strong> can no longer reach " + thrLabel + ", even attending every remaining class — the best you can finish on is " +
+        doomed.map(function (r) { return pct(r.best); }).join(", ") + ". Ask about a condonation or medical certificate.</span></div>";
+    }
+    var short = c.rows.filter(function (r) { return !r.doomed && r.spare < 0; });
+    if (short.length) {
+      alerts += '<div class="alert" style="margin-top:8px"><span>&#9888;</span><span>You are already under the line in <strong>' +
+        short.map(function (r) { return esc(r.name); }).join(", ") +
+        "</strong>. Attend everything from here and you will climb back over " + thrLabel + ".</span></div>";
+    }
+    if (!c.live.length) {
+      alerts = '<div class="alert info"><span>&#8594;</span><span>Add subjects, drop them into the timetable, then set your term dates — the ledger fills in as you type.</span></div>';
+    }
+    $("vAlert").innerHTML = alerts;
+
+    /* ledger */
+    if (!c.live.length) {
+      $("ledger").innerHTML = '<tbody><tr><td class="hint">Nothing scheduled yet.</td></tr></tbody>';
+    } else {
+      var head = "<thead><tr><th>Subject</th><th class=\"num\">Per week</th><th class=\"num\">Left</th>" +
+        "<th class=\"num\">Term total</th><th class=\"num\">Now</th><th class=\"num\">May miss</th>" +
+        "<th class=\"num\">Missed</th><th class=\"num\">Bunks left</th><th></th></tr></thead>";
+      var body = c.rows.map(function (r) {
+        var st = statusOf(r);
+        var perWeek = state.workingDays.reduce(function (a, d) { return a + r.perWeekday[d]; }, 0);
+        var used = r.allowed > 0 ? clamp(r.missed / r.allowed, 0, 1) : 1;
+        return "<tr>" +
+          '<td><span class="subject-name"><i class="swatch" style="--h:' + r.hue + '"></i>' + esc(r.name) + "</span>" +
+            '<div class="meter ' + st + '"><i style="width:' + (used * 100).toFixed(1) + '%"></i></div></td>' +
+          '<td class="num">' + perWeek + "</td>" +
+          '<td class="num">' + r.future + "</td>" +
+          '<td class="num">' + r.total + "</td>" +
+          '<td class="num">' + pct(r.now) + "</td>" +
+          '<td class="num">' + r.allowed + "</td>" +
+          '<td class="num">' + r.missed + "</td>" +
+          '<td class="num bunkcell" style="color:var(--' + st + ')">' + (r.spare > 0 ? r.spare : 0) + "</td>" +
+          '<td><span class="pill ' + st + '">' +
+            (r.doomed ? "unreachable" : r.spare < 0 ? "behind by " + (-r.spare) : r.spare === 0 ? "at the line" : st === "tight" ? "cutting it fine" : "clear") +
+          "</span></td></tr>";
+      }).join("");
+      var t = c.totals;
+      var foot = '<tr class="total"><td>All subjects</td><td class="num"></td><td class="num">' + t.future +
+        '</td><td class="num">' + t.total + '</td><td class="num">' + pct(t.held > 0 ? t.att / t.held : null) +
+        '</td><td class="num">' + t.allowed + '</td><td class="num">' + t.missed +
+        '</td><td class="num bunkcell">' + Math.max(0, t.spare) + "</td><td></td></tr>";
+      $("ledger").innerHTML = head + "<tbody>" + body + foot + "</tbody>";
+    }
+
+    /* cost of a day off */
+    var working = DAYS.filter(function (d) {
+      return state.workingDays.indexOf(d.i) >= 0 && classesOn(d.i) > 0;
+    });
+    if (!working.length || !c.live.length) {
+      $("daycost").innerHTML = '<tbody><tr><td class="hint">Nothing scheduled yet.</td></tr></tbody>';
+    } else {
+      var h2 = "<thead><tr><th>Day</th><th class=\"num\">Classes</th><th>Subjects you would miss</th><th class=\"num\">Days like this left</th><th></th></tr></thead>";
+      var b2 = working.map(function (d) {
+        var lost = c.rows.filter(function (r) { return r.perWeekday[d.i] > 0; });
+        var affordable = lost.every(function (r) { return r.perWeekday[d.i] <= r.spare; });
+        var detail = lost.map(function (r) {
+          return '<span class="chip" style="background:var(--surface-2);color:var(--ink-soft)">' +
+            esc(r.name) + " ×" + r.perWeekday[d.i] + "</span>";
+        }).join(" ");
+        return "<tr><td>" + d.s + '</td><td class="num">' + classesOn(d.i) + "</td>" +
+          '<td><span class="chips" style="margin:0">' + detail + "</span></td>" +
+          '<td class="num">' + (c.perDay[d.i] || 0) + "</td>" +
+          '<td><span class="pill ' + (affordable ? "safe" : "over") + '">' +
+            (affordable ? "affordable" : "too costly") + "</span></td></tr>";
+      }).join("");
+      $("daycost").innerHTML = h2 + "<tbody>" + b2 + "</tbody>";
+    }
+  }
+
+  function renderAll() {
+    renderControls();
+    renderGrid();
+    renderSubjects();
+    update();
+  }
+
+  function update() {
+    renderResults(compute());
+    save();
+  }
+
+  /* ---------------- reading a pasted portal table ----------------
+     Portals differ, so nothing here assumes a fixed shape: a header row maps
+     the columns when there is one, and otherwise the numbers at the end of
+     each line are read positionally. Whatever it works out is shown for
+     approval before it touches the ledger. */
+
+  var HEAD = {
+    code:  /\b(code|course\s*code|subject\s*code)\b/i,
+    name:  /\b(course|subject|paper|title|description)\b/i,
+    total: /\b(total|conducted|held|delivered|no\.?\s*of\s*classes|classes)\b/i,
+    att:   /\b(attend|present|attended)\b/i,
+    absent:/\b(absent|missed|leave)\b/i,
+    pct:   /(%|percent|percentage|att\.?\s*%)/i
+  };
+  var NUM = /^\d+(?:\.\d+)?\s*%?$/;
+  var PAIR = /^(\d+)\s*\/\s*(\d+)$/;
+
+  function splitCells(line) {
+    if (line.indexOf("\t") >= 0) return line.split("\t").map(trim);
+    if (line.indexOf("|") >= 0) return line.split("|").map(trim).filter(function (c, i, a) {
+      return !(c === "" && (i === 0 || i === a.length - 1));
+    });
+    if ((line.match(/,/g) || []).length >= 2) return line.split(",").map(trim);
+    var wide = line.split(/\s{2,}/).map(trim);
+    if (wide.length >= 2) return wide;
+    var m = /^(.*?)((?:\s+(?:\d+(?:\.\d+)?\s*%?|\d+\s*\/\s*\d+))+)\s*$/.exec(line);
+    if (m) return [trim(m[1])].concat(m[2].trim().split(/\s+/));
+    return [trim(line)];
+  }
+  function trim(s) { return String(s).trim(); }
+  function isNum(c) { return NUM.test(c) || PAIR.test(c); }
+  function numOf(c) { return parseFloat(String(c).replace("%", "")); }
+
+  function findHeader(lines) {
+    for (var i = 0; i < Math.min(lines.length, 8); i++) {
+      var cells = splitCells(lines[i]);
+      if (cells.length < 2 || cells.some(isNum)) continue;
+      /* Claim the most specific headings first: "Course Code" must not eat
+         the name column, and "Att. %" is a percentage, not an attended count. */
+      var map = {}, hits = 0, taken = {};
+      var pick = function (test) {
+        for (var k = 0; k < cells.length; k++) {
+          if (taken[k] || !test.test(cells[k])) continue;
+          taken[k] = true; hits++;
+          return k;
+        }
+        return undefined;
+      };
+      ["code", "pct", "absent", "att", "total", "name"].forEach(function (f) {
+        map[f] = pick(HEAD[f]);
+        if (map[f] === undefined) delete map[f];
+      });
+      if (hits >= 2 && (map.total !== undefined || map.att !== undefined || map.pct !== undefined)) {
+        return { row: i, map: map };
+      }
+    }
+    return null;
+  }
+
+  function reconcile(v) {
+    var total = v.total, att = v.att, absent = v.absent, pct = v.pct, note = "";
+    if (total === undefined && att !== undefined && absent !== undefined) total = att + absent;
+    if (att === undefined && total !== undefined && absent !== undefined) att = total - absent;
+    if (total !== undefined && att === undefined && pct !== undefined) {
+      att = Math.round(total * pct / 100); note = "attended from %";
+    }
+    if (att !== undefined && total === undefined && pct !== undefined && pct > 0) {
+      total = Math.round(att / (pct / 100)); note = "total from %";
+    }
+    if (total === undefined || att === undefined) return null;
+    if (att > total) { var t = total; total = att; att = t; note = "columns swapped"; }
+    if (pct !== undefined && total > 0) {
+      var shown = Math.round(att / total * 1000) / 10;
+      if (Math.abs(shown - pct) > 1.5) note = "portal shows " + pct + "%";
+    }
+    return { total: Math.max(0, Math.round(total)), att: Math.max(0, Math.round(att)), note: note };
+  }
+
+  function parsePaste(text) {
+    var lines = String(text).split(/\r?\n/).map(trim).filter(Boolean);
+    if (!lines.length) return [];
+    var header = findHeader(lines);
+    var out = [];
+
+    lines.forEach(function (line, i) {
+      if (header && i === header.row) return;
+      var cells = splitCells(line);
+      if (!cells.length) return;
+
+      var v = {}, name = "", code = "";
+      var m = header && header.map;
+      var mapped = false;
+
+      if (m) {
+        var need = Math.max.apply(null, Object.keys(m).map(function (f) { return m[f]; }));
+        if (cells.length > need) {
+          mapped = true;
+          if (m.name !== undefined) name = cells[m.name] || "";
+          if (m.code !== undefined) code = cells[m.code] || "";
+          ["total", "att", "absent", "pct"].forEach(function (f) {
+            if (m[f] === undefined) return;
+            var c = cells[m[f]];
+            if (c === undefined || !isNum(c)) return;
+            var p = PAIR.exec(c);
+            if (p) { v.att = +p[1]; v.total = +p[2]; } else v[f] = numOf(c);
+          });
+        }
+      }
+
+      if (!mapped) {
+        var words = cells.filter(function (c) { return c && !isNum(c); });
+        var nums = [];
+        cells.forEach(function (c) {
+          var p = PAIR.exec(c);
+          if (p) { nums.push(+p[2]); nums.push(+p[1]); return; }
+          if (isNum(c)) nums.push(numOf(c));
+        });
+        if (!words.length || nums.length < 2) return;
+        if (words.length > 1 && /^[A-Za-z]{2,4}[\s-]?\d{3,4}[A-Za-z]?$/.test(words[0])) {
+          code = words[0];
+          words = words.slice(1);
+        }
+        name = words.sort(function (a, b) { return b.length - a.length; })[0];
+        var pcts = nums.filter(function (n) { return n > 0 && n <= 100 && !Number.isInteger(n); });
+        if (pcts.length) v.pct = pcts[0];
+        var counts = nums.filter(function (n) { return Number.isInteger(n); });
+        if (counts.length >= 2) {
+          counts.sort(function (a, b) { return b - a; });
+          v.total = counts[0];
+          v.att = counts[1];
+        } else if (counts.length === 1) {
+          v.total = counts[0];
+        }
+      }
+
+      name = trim(name).replace(/\s+/g, " ");
+      /* portals often print "CS2001 Data Structures" in one column */
+      var lead = /^([A-Za-z]{2,4}[\s-]?\d{3,4}[A-Za-z]?)\s+(.{2,})$/.exec(name);
+      if (lead) { code = code || lead[1]; name = trim(lead[2]); }
+      if (!name || name.length < 2) return;
+      if (/^(total|overall|grand\s*total|aggregate)$/i.test(name)) return;
+
+      var r = reconcile(v);
+      if (!r) return;
+      out.push({ code: trim(code), name: name, held: r.total, att: r.att, note: r.note });
+    });
+
+    return out;
+  }
+
+  function normName(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  function matchSubject(row) {
+    var target = normName(row.name);
+    var byName = state.subjects.filter(function (s) {
+      var n = normName(s.name);
+      return n === target || (n.length > 3 && target.indexOf(n) >= 0) || (target.length > 3 && n.indexOf(target) >= 0);
+    })[0];
+    if (byName) return byName;
+    if (row.code) {
+      var c = normName(row.code);
+      return state.subjects.filter(function (s) { return normName(s.name).indexOf(c) >= 0; })[0] || null;
+    }
+    return null;
+  }
+
+  var lastParse = [];
+
+  function renderPreview() {
+    var text = $("paste").value;
+    lastParse = parsePaste(text);
+    var box = $("pastePreview");
+    if (!trim(text)) { box.innerHTML = ""; $("importNote").textContent = ""; return; }
+    if (!lastParse.length) {
+      box.innerHTML = '<div class="alert"><span>&#9888;</span><span>No attendance rows found in that text. Each row needs a subject name and at least two numbers &mdash; classes held and classes attended, or a total and a percentage.</span></div>';
+      return;
+    }
+    var rows = lastParse.map(function (r) {
+      var p = r.held > 0 ? r.att / r.held : null;
+      var known = matchSubject(r);
+      return "<tr><td>" + (r.code ? '<span class="hint">' + esc(r.code) + "</span> " : "") + esc(r.name) +
+        (r.note ? ' <span class="hint">(' + esc(r.note) + ")</span>" : "") + "</td>" +
+        '<td class="num">' + r.held + '</td><td class="num">' + r.att + '</td><td class="num">' + pct(p) + "</td>" +
+        '<td><span class="pill ' + (known ? "safe" : "tight") + '">' + (known ? "updates " + esc(known.name) : "new subject") + "</span></td></tr>";
+    }).join("");
+    box.innerHTML = '<div class="scroll"><table><thead><tr><th>Read as</th><th class="num">Held</th>' +
+      '<th class="num">Attended</th><th class="num">%</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    $("importNote").textContent = plural(lastParse.length, "row", "rows") + " ready — check them against the portal first.";
+  }
+
+  function applyImport(replace) {
+    if (!lastParse.length) return;
+    var oldNames = {};
+    if (replace) {
+      state.subjects.forEach(function (s) { oldNames[s.id] = normName(s.name); });
+      state.subjects = [];
+    }
+    lastParse.forEach(function (r) {
+      var s = replace ? null : matchSubject(r);
+      if (!s) {
+        s = { id: nextId(), name: r.name, held: 0, att: 0 };
+        state.subjects.push(s);
+      }
+      s.held = r.held;
+      s.att = Math.min(r.att, r.held);
+    });
+    if (replace) {
+      /* keep the timetable wherever a replaced subject came back under a
+         recognisable name; blank the slots that did not */
+      var byName = {};
+      state.subjects.forEach(function (s) { byName[normName(s.name)] = s.id; });
+      Object.keys(state.grid).forEach(function (d) {
+        state.grid[d] = state.grid[d].map(function (id) {
+          return id ? (byName[oldNames[id]] || "") : "";
+        });
+      });
+    }
+    renderGrid();
+    renderSubjects();
+    update();
+    $("importNote").textContent = replace
+      ? "Subjects replaced — now put them back into the timetable above."
+      : plural(lastParse.length, "subject", "subjects") + " updated.";
+    renderPreview();
+  }
+
+  /* ---------------- events ---------------- */
+
+  function nextId() {
+    var n = 1;
+    var used = {};
+    state.subjects.forEach(function (s) { used[s.id] = true; });
+    while (used["s" + n]) n++;
+    return "s" + n;
+  }
+
+  $("addSubject").addEventListener("click", function () {
+    state.subjects.push({ id: nextId(), name: "New subject", held: 0, att: 0 });
+    renderGrid();
+    renderSubjects();
+    update();
+    var last = $("subjects").querySelector("tr:last-child input[data-f='name']");
+    if (last) { last.focus(); last.select(); }
+  });
+
+  $("subjects").addEventListener("input", function (e) {
+    var input = e.target.closest("input");
+    if (!input) return;
+    var id = e.target.closest("tr").dataset.id;
+    var s = state.subjects.filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    var f = input.dataset.f;
+    if (f === "name") s.name = input.value;
+    else {
+      s[f] = Math.max(0, Math.round(+input.value) || 0);
+      if (s.att > s.held) {
+        if (f === "att") s.held = s.att; else s.att = s.held;
+        renderSubjects();
+      }
+    }
+    update();
+  });
+
+  $("subjects").addEventListener("change", function (e) {
+    if (e.target.dataset && e.target.dataset.f === "name") { renderGrid(); renderSubjects(); }
+  });
+
+  $("subjects").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-remove]");
+    if (!btn) return;
+    var id = btn.dataset.remove;
+    state.subjects = state.subjects.filter(function (s) { return s.id !== id; });
+    Object.keys(state.grid).forEach(function (d) {
+      state.grid[d] = state.grid[d].map(function (x) { return x === id ? "" : x; });
+    });
+    renderGrid();
+    renderSubjects();
+    update();
+  });
+
+  $("grid").addEventListener("change", function (e) {
+    var sel = e.target.closest("select");
+    if (!sel) return;
+    var d = sel.dataset.day, p = +sel.dataset.period;
+    var row = state.grid[d] || [];
+    while (row.length < state.periods) row.push("");
+    row[p] = sel.value;
+    state.grid[d] = row;
+    var td = sel.closest("td");
+    td.classList.toggle("empty", !sel.value);
+    td.style.setProperty("--h", sel.value ? hueFor(sel.value) : 222);
+    update();
+  });
+
+  $("estimate").addEventListener("click", function () {
+    var from = parseISO(state.start), today = parseISO(isoToday());
+    if (state.mode !== "dates" || !from || today < from) {
+      alert("Set a term start date in the past first — the estimate counts classes between the start of term and today.");
+      return;
+    }
+    var hol = holidaySet();
+    var counts = {};
+    var cur = new Date(from.getTime()), guard = 0;
+    while (cur < today && guard++ < 800) {
+      var iso = toISO(cur), wd = cur.getUTCDay();
+      if (state.workingDays.indexOf(wd) >= 0 && !hol[iso]) {
+        state.subjects.forEach(function (s) {
+          counts[s.id] = (counts[s.id] || 0) + periodsOn(wd, s.id);
+        });
+      }
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    state.subjects.forEach(function (s) {
+      s.held = counts[s.id] || 0;
+      s.att = s.held;
+    });
+    renderSubjects();
+    update();
+  });
+
+  $("threshold").addEventListener("input", function () {
+    state.threshold = clamp(+this.value || 0, 1, 100);
+    document.querySelectorAll("[data-thr]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(+b.dataset.thr === +state.threshold));
+    });
+    update();
+  });
+
+  document.querySelectorAll("[data-thr]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      state.threshold = +b.dataset.thr;
+      renderControls();
+      update();
+    });
+  });
+
+  $("periods").addEventListener("input", function () {
+    state.periods = clamp(Math.round(+this.value), 1, 12);
+    Object.keys(state.grid).forEach(function (d) {
+      state.grid[d] = state.grid[d].slice(0, state.periods);
+    });
+    renderGrid();
+    update();
+  });
+
+  $("dayToggles").addEventListener("change", function (e) {
+    var box = e.target.closest("input[data-day]");
+    if (!box) return;
+    var d = +box.dataset.day;
+    if (box.checked) {
+      if (state.workingDays.indexOf(d) < 0) state.workingDays.push(d);
+    } else {
+      state.workingDays = state.workingDays.filter(function (x) { return x !== d; });
+    }
+    state.workingDays.sort();
+    renderGrid();
+    update();
+  });
+
+  ["start", "end", "holidays"].forEach(function (id) {
+    $(id).addEventListener("input", function () { state[id] = this.value; update(); });
+  });
+  $("weeks").addEventListener("input", function () {
+    state.weeks = clamp(Math.round(+this.value) || 0, 0, 60);
+    update();
+  });
+  $("modeDates").addEventListener("click", function () { state.mode = "dates"; renderControls(); update(); });
+  $("modeWeeks").addEventListener("click", function () { state.mode = "weeks"; renderControls(); update(); });
+
+  $("paste").addEventListener("input", renderPreview);
+  $("importMerge").addEventListener("click", function () { applyImport(false); });
+  $("importReplace").addEventListener("click", function () {
+    if (!lastParse.length) return;
+    if (!confirm("Replace every subject with the " + lastParse.length + " pasted rows?")) return;
+    applyImport(true);
+  });
+
+  var BOOKMARKLET = "javascript:(function(){var t=[].map.call(document.querySelectorAll('table'),function(b){" +
+    "return [].map.call(b.rows,function(r){return [].map.call(r.cells,function(c){" +
+    "return (c.innerText||'').trim().replace(/\\s+/g,' ')}).join('\\t')}).join('\\n')}).filter(Boolean).join('\\n\\n');" +
+    "if(!t){alert('No table found on this page.');return}" +
+    "if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(" +
+    "function(){alert('Copied '+t.split('\\n').length+' rows. Paste them into Bunk Ledger.')}," +
+    "function(){prompt('Copy this:',t)})}else{prompt('Copy this:',t)}})();";
+  $("bookmarklet").value = BOOKMARKLET;
+  $("copyBm").addEventListener("click", function () {
+    var box = $("bookmarklet");
+    box.focus();
+    box.select();
+    var done = false;
+    try { done = document.execCommand("copy"); } catch (e) { done = false; }
+    if (!done && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(BOOKMARKLET).then(function () {
+        $("copyBmNote").textContent = "Copied — save it as a bookmark.";
+      });
+      return;
+    }
+    $("copyBmNote").textContent = done ? "Copied — save it as a bookmark." : "Select the text and copy it.";
+  });
+
+  $("reset").addEventListener("click", function () {
+    if (!confirm("Clear the timetable, subjects and dates?")) return;
+    state = blankState();
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
