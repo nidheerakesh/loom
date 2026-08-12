@@ -1,4 +1,4 @@
-<title>Bunk Ledger — how many classes can I actually skip?</title>
+<title>Bunk Ledger</title>
 
 <style>
   /* ---------- tokens: light is the base, both dark paths override ---------- */
@@ -253,7 +253,8 @@
   <header class="masthead">
     <div class="eyebrow">Attendance arithmetic</div>
     <h1>How many classes can I skip and still clear 80%?</h1>
-    <p>Enter your weekly timetable and the term dates. This works out the exact number of classes you may still miss in each subject &mdash; and how many whole days off that adds up to.</p>
+    <p>Loaded with <strong>B.Tech Semester V, AI &amp; Data Science, Batch-III</strong> &mdash; July&ndash;November 2026. It works out the exact number of classes you may still miss in each subject, and how many whole days off that adds up to. Edit anything; it recalculates as you type.</p>
+    <p class="hint" style="max-width:62ch">Term dates below are a placeholder: the institute&rsquo;s calendar PDF could not be opened from where this was built, so only its instructional-day count (65) is known. Set the real start, end and holidays and every figure follows.</p>
   </header>
 
   <section class="card" id="verdictCard">
@@ -324,6 +325,11 @@
             <span>Holidays &amp; breaks</span>
             <textarea id="holidays" placeholder="2026-08-15&#10;2026-10-19 to 2026-10-23&#10;one date or range per line"></textarea>
           </label>
+          <label class="field">
+            <span>Instructional days in the calendar</span>
+            <input type="number" id="instrDays" min="0" max="220" step="1">
+          </label>
+          <div id="calCheck"></div>
         </div>
 
         <div id="weeksMode" class="stack" style="gap:12px" hidden>
@@ -408,7 +414,7 @@
 (function () {
   "use strict";
 
-  var KEY = "bunk-ledger.v1";
+  var KEY = "bunk-ledger.v2";
   var HUES = [222, 168, 24, 292, 344, 96, 196, 46, 268, 130];
   var DAYS = [
     { i: 1, s: "Mon" }, { i: 2, s: "Tue" }, { i: 3, s: "Wed" }, { i: 4, s: "Thu" },
@@ -425,28 +431,36 @@
       end: addDays(isoToday(), 112),
       weeks: 12,
       workingDays: [1, 2, 3, 4, 5],
-      periods: 5,
+      periods: 7,
       holidays: "",
+      instrDays: 65,
       subjects: [],
       grid: {}
     };
   }
 
+  /* B.Tech Semester V, AI & Data Science, Batch-III (Adm-2024),
+     July–November 2026. Periods 1–7; the 5:00–6:30 slot is Coding Club and
+     Saturday is Sports/Cultural, so neither counts as class time. Lab hours
+     sit under their parent course, matching each [L-T-P] structure. */
   function sampleState() {
     var st = blankState();
-    var names = ["Data Structures", "Database Systems", "Operating Systems",
-                 "Discrete Maths", "Digital Systems", "DS Lab"];
+    var names = [
+      "CSE 311 AI", "CSE 312 Software Arch", "CSS 311 PDC", "IEG 311/313 DSP",
+      "IMA 314 Optimization", "IHS 311 HRM", "IHS 312 Finance", "IHS 313 OSCM"
+    ];
     st.subjects = names.map(function (n, k) {
       return { id: "s" + (k + 1), name: n, held: 0, att: 0 };
     });
-    var plan = {
-      1: ["s1", "s2", "s3", "s4", "s5"],
-      2: ["s2", "s3", "s1", "s5", "s4"],
-      3: ["s6", "s6", "s4", "s3", "s2"],
-      4: ["s3", "s4", "s5", "s1", "s2"],
-      5: ["s5", "s1", "s2", "s4", "s3"]
+    st.grid = {
+      1: ["s8", "",   "s1", "",   "s6", "",   "s1"],
+      2: ["s2", "",   "s2", "s2", "s7", "",   ""  ],
+      3: ["s5", "s1", "s3", "s2", "s3", "s5", "s4"],
+      4: ["s3", "s3", "s4", "s2", "s4", "s4", "s5"],
+      5: ["s3", "s4", "s1", "s1", "",   "",   ""  ]
     };
-    st.grid = plan;
+    st.start = "2026-07-20";
+    st.end = "2026-11-20";
     return st;
   }
 
@@ -572,6 +586,44 @@
     return days;
   }
 
+  /* Class days across the whole term, ignoring today — used only to check the
+     dates entered here against the instructional-day count in the institute's
+     academic calendar. */
+  function termDayCount() {
+    var from = parseISO(state.start), to = parseISO(state.end);
+    if (!from || !to || to < from) return null;
+    var hol = holidaySet(), n = 0, guard = 0;
+    var cur = new Date(from.getTime());
+    while (cur <= to && guard++ < 800) {
+      if (state.workingDays.indexOf(cur.getUTCDay()) >= 0 && !hol[toISO(cur)] && classesOn(cur.getUTCDay()) > 0) n++;
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return n;
+  }
+
+  function renderCalCheck() {
+    var box = $("calCheck");
+    if (!box) return;
+    var want = Math.round(state.instrDays) || 0;
+    var got = termDayCount();
+    if (!want || got === null) { box.innerHTML = ""; return; }
+    var diff = got - want;
+    var msg, kind;
+    if (diff === 0) {
+      kind = "info";
+      msg = "Your dates give exactly " + want + " class days — that matches the calendar.";
+    } else if (diff > 0) {
+      kind = "";
+      msg = "Your dates give <strong>" + got + "</strong> class days, " + diff +
+        " more than the calendar's " + want + ". Add the Onam break, mid-semester exams and public holidays above until it matches.";
+    } else {
+      kind = "";
+      msg = "Your dates give <strong>" + got + "</strong> class days, " + (-diff) +
+        " fewer than the calendar's " + want + ". The term end here may be too early, or a holiday range is too wide.";
+    }
+    box.innerHTML = '<div class="alert ' + kind + '"><span>' + (diff === 0 ? "&#10003;" : "&#9888;") + "</span><span>" + msg + "</span></div>";
+  }
+
   /* ---------------- the maths ---------------- */
 
   function compute() {
@@ -692,6 +744,7 @@
     $("end").value = state.end;
     $("weeks").value = state.weeks;
     $("holidays").value = state.holidays;
+    $("instrDays").value = state.instrDays;
     $("datesMode").hidden = state.mode !== "dates";
     $("weeksMode").hidden = state.mode !== "weeks";
     $("modeDates").setAttribute("aria-pressed", String(state.mode === "dates"));
@@ -874,6 +927,7 @@
 
   function update() {
     renderResults(compute());
+    renderCalCheck();
     save();
   }
 
@@ -1239,6 +1293,10 @@
 
   ["start", "end", "holidays"].forEach(function (id) {
     $(id).addEventListener("input", function () { state[id] = this.value; update(); });
+  });
+  $("instrDays").addEventListener("input", function () {
+    state.instrDays = clamp(Math.round(+this.value) || 0, 0, 220);
+    update();
   });
   $("weeks").addEventListener("input", function () {
     state.weeks = clamp(Math.round(+this.value) || 0, 0, 60);
