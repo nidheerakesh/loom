@@ -366,15 +366,16 @@
         <span class="hint" id="importNote"></span>
       </div>
       <details>
-        <summary class="hint" style="cursor:pointer">Grab the table without retyping it</summary>
+        <summary class="hint" style="cursor:pointer">Sync it in one click instead of copying</summary>
         <div class="stack" style="gap:10px; margin-top:10px">
           <ul class="plain">
-            <li>Easiest: drag over the attendance table in the portal, copy, and paste here &mdash; columns arrive as tabs and are read automatically.</li>
-            <li>Or save the snippet below as a bookmark, open your attendance page, and click it. It copies every table on the page to your clipboard.</li>
+            <li>Copy the snippet below and save it as a bookmark &mdash; name it <em>Sync attendance</em>. Paste the snippet into the bookmark&rsquo;s <strong>URL</strong> field, not the name.</li>
+            <li>Open your attendance page in the portal, signed in as usual, and click the bookmark. It reads the table already on screen and reopens this page with the rows filled in, ready to check.</li>
+            <li>If your browser blocks the new tab, it falls back to copying the rows so you can paste them above.</li>
           </ul>
           <textarea id="bookmarklet" readonly rows="3" aria-label="Bookmarklet code"></textarea>
-          <div class="actions"><button type="button" id="copyBm">Copy snippet</button><span class="hint" id="copyBmNote"></span></div>
-          <p class="hint" style="margin:0">Nothing is sent anywhere &mdash; the snippet reads the page you already have open, and this calculator never talks to the portal.</p>
+          <div class="actions"><button type="button" id="copyBm" class="primary">Copy snippet</button><span class="hint" id="copyBmNote"></span></div>
+          <p class="hint" style="margin:0">The snippet runs inside your own browser, on a page you already have open, and carries the rows in the link&rsquo;s fragment &mdash; the part after <code>#</code>, which browsers never send to a server. This calculator never contacts the portal and never sees your login.</p>
         </div>
       </details>
     </div>
@@ -1325,13 +1326,19 @@
     applyImport(true);
   });
 
+  /* Where the bookmarklet sends the rows. Falls back to this page's own
+     address when the file is opened from disk rather than the hosted copy. */
+  var LEDGER_URL = "https://claude.ai/code/artifact/138b3abf-8507-45bd-bd55-27db055bd9bb";
+
   var BOOKMARKLET = "javascript:(function(){var t=[].map.call(document.querySelectorAll('table'),function(b){" +
     "return [].map.call(b.rows,function(r){return [].map.call(r.cells,function(c){" +
     "return (c.innerText||'').trim().replace(/\\s+/g,' ')}).join('\\t')}).join('\\n')}).filter(Boolean).join('\\n\\n');" +
     "if(!t){alert('No table found on this page.');return}" +
-    "if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(" +
-    "function(){alert('Copied '+t.split('\\n').length+' rows. Paste them into Bunk Ledger.')}," +
-    "function(){prompt('Copy this:',t)})}else{prompt('Copy this:',t)}})();";
+    "var d=encodeURIComponent(btoa(unescape(encodeURIComponent(t))));" +
+    "var w=window.open('" + LEDGER_URL + "#import='+d,'_blank');" +
+    "if(!w){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(" +
+    "function(){alert('Popup blocked, so the rows were copied instead. Paste them into Bunk Ledger.')}," +
+    "function(){prompt('Copy this:',t)})}else{prompt('Copy this:',t)}}})();";
   $("bookmarklet").value = BOOKMARKLET;
   $("copyBm").addEventListener("click", function () {
     var box = $("bookmarklet");
@@ -1354,6 +1361,31 @@
     renderAll();
   });
 
+  /* Rows handed over by the bookmarklet ride in the URL fragment, which the
+     browser keeps client-side. Read it once, then strip it from the address
+     bar so attendance figures do not sit in history. */
+  function importFromHash() {
+    var m = /[#&]import=([^&]+)/.exec(location.hash || "");
+    if (!m) return;
+    var text = "";
+    try {
+      var bin = atob(decodeURIComponent(m[1]));
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      text = new TextDecoder().decode(bytes);
+    } catch (e) {
+      text = "";
+    }
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* file:// */ }
+    if (!trim(text)) return;
+    $("paste").value = text;
+    renderPreview();
+    $("importNote").textContent = "Loaded from the portal — check the rows, then update your subjects.";
+    var card = $("paste").closest("section");
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   renderAll();
+  importFromHash();
 })();
 </script>

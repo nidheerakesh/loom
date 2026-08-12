@@ -35,9 +35,16 @@ Anything it infers is labelled, and every parsed row is previewed with the subje
 update before you commit the import. Check it against the portal — a misread column is the
 one failure mode worth catching by eye.
 
-The bundled bookmarklet is a convenience for the copying step: it serialises every table
-on whatever page you have open to your clipboard. It runs in your browser, on a page you
-have already loaded, and sends nothing anywhere.
+The bundled bookmarklet automates the copying step. Clicked on the portal's attendance
+page, it serialises every table there and reopens the calculator with the rows already in
+the import box. The data travels in the URL fragment — the part after `#`, which browsers
+do not send to servers — and the page strips it from the address bar on arrival so
+attendance figures do not linger in history. If the browser blocks the new tab, it copies
+the rows to the clipboard instead.
+
+The bookmarklet reads the rendered DOM, so it works whether the portal is server-rendered
+or draws its table from an internal JSON call. It runs on the portal's own origin under
+your existing session; the calculator itself never makes a network request.
 
 ## What it computes
 
