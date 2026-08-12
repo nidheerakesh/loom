@@ -254,7 +254,7 @@
     <div class="eyebrow">Attendance arithmetic</div>
     <h1>How many classes can I skip and still clear 80%?</h1>
     <p>Loaded with <strong>B.Tech Semester V, AI &amp; Data Science, Batch-III</strong> &mdash; July&ndash;November 2026. It works out the exact number of classes you may still miss in each subject, and how many whole days off that adds up to. Edit anything; it recalculates as you type.</p>
-    <p class="hint" style="max-width:62ch">Term dates below are a placeholder: the institute&rsquo;s calendar PDF could not be opened from where this was built, so only its instructional-day count (65) is known. Set the real start, end and holidays and every figure follows.</p>
+    <p class="hint" style="max-width:62ch">Dates come from the Odd Semester 2026&ndash;27 academic calendar: classes from 20 July to 26 October, five holidays, 66 instructional days. End-semester exams begin 28 October, so 26 October is the last day attendance can move.</p>
   </header>
 
   <section class="card" id="verdictCard">
@@ -414,7 +414,7 @@
 (function () {
   "use strict";
 
-  var KEY = "bunk-ledger.v2";
+  var KEY = "bunk-ledger.v3";
   var HUES = [222, 168, 24, 292, 344, 96, 196, 46, 268, 130];
   var DAYS = [
     { i: 1, s: "Mon" }, { i: 2, s: "Tue" }, { i: 3, s: "Wed" }, { i: 4, s: "Thu" },
@@ -433,7 +433,7 @@
       workingDays: [1, 2, 3, 4, 5],
       periods: 7,
       holidays: "",
-      instrDays: 65,
+      instrDays: 0,
       subjects: [],
       grid: {}
     };
@@ -459,8 +459,20 @@
       4: ["s3", "s3", "s4", "s2", "s4", "s4", "s5"],
       5: ["s3", "s4", "s1", "s1", "",   "",   ""  ]
     };
+    /* Odd Semester 2026-27 academic calendar, B.Tech Sem III/V/VII: classes
+       begin Mon 20 Jul, "Class Ends" on Mon 26 Oct = instructional day 66.
+       The five weekday holidays inside that window are the only breaks; every
+       printed day number in the calendar reproduces from these. */
     st.start = "2026-07-20";
-    st.end = "2026-11-20";
+    st.end = "2026-10-26";
+    st.instrDays = 66;
+    st.holidays = [
+      "2026-08-25 # Milad un Nabi",
+      "2026-08-26 # Onam / Thiruvonam",
+      "2026-09-25 # Sports Meet",
+      "2026-10-02 # Mahatma Gandhi's Birthday",
+      "2026-10-20 # Dussehra"
+    ].join("\n");
     return st;
   }
 
