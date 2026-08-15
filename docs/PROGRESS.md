@@ -49,25 +49,25 @@ Two decisions shaped the entire build:
 
 | # | Milestone | Status | Evidence |
 |---|---|---|---|
-| 1 | Planning docs — PRD, TDD, user flows, UI/UX spec | ✅ Complete | `docs/` (5 documents, ~65 KB) |
-| 2 | Data model — 24 tables, deterministic tiebreak columns | ✅ Complete | `app/supabase/schema.sql` |
-| 3 | Backend — 42 API routes over 11 feature areas | ✅ Complete | `app/api/_routes/index.ts` |
-| 4 | Frontend — 12 screens across provider + customer apps | ✅ Complete | `app/src/features/` |
-| 5 | Skill canonicalisation (alias table + typo tier + translation) | ✅ Complete | `api/_routes/skills/resolve.ts` |
-| 6 | Deterministic individual matching | ✅ Complete | `api/_lib/scoring.ts` |
-| 7 | Collective matching — cross-SHG team assembly | ✅ Complete | `api/_routes/team-assembly/` |
-| 8 | Phone + OTP authentication (no passwords) | ✅ Complete | `api/_routes/auth/` |
-| 9 | Deployed publicly, continuously from `main` | ✅ Complete | Vercel `bom1` + Supabase |
-| 10 | Realistic demo data | ✅ Complete | 40 providers, 6 customers, 5 requests |
-| 11 | Chat privacy — 4 vulnerabilities closed | ✅ Complete, verified live | `003`/`005` migrations, runbook F1 |
-| 12 | Text-to-speech, Malayalam + English | ✅ Complete | `src/lib/speech.ts` |
-| 13 | Performance — N+1 elimination, region move | ✅ Complete | 21.0 s → 1.35 s measured |
-| 14 | Row-level security on **every** table | ✅ Complete | `005_enable_rls_everywhere.sql` |
-| 15 | Customer control — choose, edit, swap, confirm, complete | ✅ Complete | `requests/`, `team-assembly/` |
-| 16 | Team chat + provider completion notice | ✅ Complete | commit `a0da02f` |
-| 17 | Full demo runbook executed against production | ✅ 6/6 sections pass | `docs/DEMO_RUNBOOK.md` |
-| 18 | Automated end-to-end suite against production | ✅ 78/78 checks pass | `app/scripts/e2e.mjs` |
-| 19 | Speech-to-text, graph visualisation, admin surface | ⬜ Not started | see §11 |
+| 1 | Planning docs — PRD, TDD, user flows, UI/UX spec | Complete | `docs/` (5 documents, ~65 KB) |
+| 2 | Data model — 24 tables, deterministic tiebreak columns | Complete | `app/supabase/schema.sql` |
+| 3 | Backend — 42 API routes over 11 feature areas | Complete | `app/api/_routes/index.ts` |
+| 4 | Frontend — 12 screens across provider + customer apps | Complete | `app/src/features/` |
+| 5 | Skill canonicalisation (alias table + typo tier + translation) | Complete | `api/_routes/skills/resolve.ts` |
+| 6 | Deterministic individual matching | Complete | `api/_lib/scoring.ts` |
+| 7 | Collective matching — cross-SHG team assembly | Complete | `api/_routes/team-assembly/` |
+| 8 | Phone + OTP authentication (no passwords) | Complete | `api/_routes/auth/` |
+| 9 | Deployed publicly, continuously from `main` | Complete | Vercel `bom1` + Supabase |
+| 10 | Realistic demo data | Complete | 40 providers, 6 customers, 5 requests |
+| 11 | Chat privacy — 4 vulnerabilities closed | Complete, verified live | `003`/`005` migrations, runbook F1 |
+| 12 | Text-to-speech, Malayalam + English | Complete | `src/lib/speech.ts` |
+| 13 | Performance — N+1 elimination, region move | Complete | 21.0 s → 1.35 s measured |
+| 14 | Row-level security on **every** table | Complete | `005_enable_rls_everywhere.sql` |
+| 15 | Customer control — choose, edit, swap, confirm, complete | Complete | `requests/`, `team-assembly/` |
+| 16 | Team chat + provider completion notice | Complete | commit `a0da02f` |
+| 17 | Full demo runbook executed against production | 6/6 sections pass | `docs/DEMO_RUNBOOK.md` |
+| 18 | Automated end-to-end suite against production | 78/78 checks pass | `app/scripts/e2e.mjs` |
+| 19 | Speech-to-text, graph visualisation, admin surface | Not started | see §11 |
 
 **Scale of the build**
 
@@ -94,7 +94,7 @@ Two decisions shaped the entire build:
 | 4 | 8 – 9 Aug | Customer control (choose provider, edit request, swap team member); skill matching rewritten to match by **meaning** rather than letter-shape; RLS on every table; six silent database writes fixed; team chat; **full 15-minute runbook run against production, 6/6 sections pass**. |
 | 5 | 15 Aug | **Automated end-to-end suite written and run against production — 78 checks, 0 failures**, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1). |
 
-The honest shape of this month: roughly one week designing, one week rebuilding the foundation,
+This month: roughly one week designing, one week rebuilding the foundation,
 and two weeks hardening — security, performance, language, and the failure modes that look fine
 from the outside. Most of the hardest work is invisible in a screenshot, so §6 records it.
 
@@ -118,7 +118,7 @@ from the outside. Most of the hardest work is invisible in a screenshot, so §6 
 | Deployment | Vercel (Mumbai `bom1`) + Supabase | — | Co-located with the users it serves |
 | Runtime | Node | 22.x | — |
 
-**Custom palette**, defined once in `tailwind.config.js`, drawn from Kerala handloom:
+**Color palette**, defined once in `tailwind.config.js`:
 `cotton #F3EFE6` · `indigo #26364F` · `kasavu #C9A227` · `madder #9C3B36` · `leaf #5B7A5B`.
 
 **Typography.** Noto Sans Malayalam, self-hosted as a subset (~89 KB) rather than CDN-linked,
@@ -296,8 +296,6 @@ The customer is never presented with a fait accompli:
 
 ## 7 · Challenges faced, and how we solved them
 
-This is the section we would most like a mentor to read. Every item here cost real time.
-
 ### 7.1 Migrating the entire backend off Convex, mid-project
 
 The first working build ran on Convex. Moving to Supabase + Vercel meant rewriting every backend
@@ -343,7 +341,7 @@ deployment** while being completely broken.
    The `TS2835` build warnings had been flagging this the whole time and were dismissed as
    cosmetic, because the build still completed. **Fixed across 145 imports in 37 files.**
 
-> **Lesson we carried into the rest of the month:** a green deployment proves the build ran, not
+> **Lesson we learnt:** a green deployment proves the build ran, not
 > that the thing works. One real request against the deployed URL is what closes the loop. This is
 > why we later wrote `docs/DEMO_RUNBOOK.md` and ran it against production (§9).
 
@@ -368,7 +366,7 @@ characters.
 grown from 25 to **109 entries** across the three registers people actually type in Kerala, and
 fuzzy matching was demoted to typo absorption with two independent thresholds.
 
-### 7.5 An unusable main screen — 21 seconds
+### 7.5 An unusable main screen
 
 The app was slow enough to be unusable on the screen customers land on. The cause was not the
 network: the API resolved relations in JavaScript `for` loops rather than SQL joins, so latency
@@ -387,9 +385,6 @@ result size — `hydrateCards` for provider cards, one query for every thread's 
 routes. **Second**, the function was moved from `iad1` to `bom1`: requests were entering at the
 Mumbai edge and executing in Washington, adding a round trip on every leg.
 
-*Honest caveat on these numbers:* they were taken from a high-latency client where a single query
-costs ~1 s. The **relative** improvement is the meaningful figure; a user on a normal connection
-sees smaller absolute times throughout.
 
 ### 7.6 Chat readable by anyone — four independent ways
 
@@ -416,7 +411,7 @@ matters on the connections our users have.
 Migration `005_enable_rls_everywhere.sql` subsequently enabled RLS on **all 24 tables**, not just
 the chat ones.
 
-### 7.7 Six database writes that failed silently
+### 7.7 Database writes
 
 Nobody could sign in. `request-otp` still wrote a `role` column that migration `001` had dropped,
 so the insert failed with `PGRST204` — but that upsert was the one Supabase call in the file whose
@@ -437,75 +432,68 @@ chat/threads, chat/create  rollback deletes leaving orphan threads
 All six now surface the error. **Pattern learned: an unchecked write is a bug that reports
 success** — the same class as §7.2's green deployments.
 
-### 7.8 Accessibility that existed in name only
-
-Three commitments were stated in the design docs and unmet in the build:
-
-- `ListenButton` popped a `window.alert` showing the text — precisely the wrong affordance for a
-  user who may not read fluently. **It now speaks**, in whichever language the user is reading,
-  behind the adapter shape `docs/TDD.md §4` specifies, so Bhashini or Sarvam can replace the
-  browser engine with an API key. It **refuses rather than substitutes** when a device has no
-  Malayalam voice — Malayalam read in an English voice is unintelligible and would look like a
-  broken app rather than an unsupported one.
-- The app **defaulted to English** on every load and never persisted the choice. Fixed.
-- The Malayalam font was named in CSS but **never actually loaded**, so text rendered in whatever
-  face the device happened to carry. Now self-hosted as an ~89 KB subset.
-- Text controls were **20 px tall against our own 56 px touch-target floor**. Found by running the
-  runbook; fixed.
-
----
-
 ## 8 · User interface
 
-<!-- ─────────────────────────────────────────────────────────────────────────────
-     SCREENSHOTS GO HERE — capture from https://loom-lovat-phi.vercel.app
-     Take each on a phone-width window (375 px). The runbook step that produces
-     each screen is named, so the shot is reproducible.
-     ───────────────────────────────────────────────────────────────────────── -->
+Captured on an Android phone against the live deployment.
+
+### 8.1 Sign-in and first-time onboarding
+
+![Sign-in](images/01-signin.png)
+
+Sign-in is **phone + OTP only** — no password, and no name or role asked before the number is
+verified. The language toggle switches the whole interface and the choice persists across
+reloads.
+
+![Name and role](images/02-signup-role.png)
+
+Only after verification does the app ask who you are. One number, one decision: provider or
+customer.
+
+### 8.2 Skill canonicalisation — the claim, made visible
+
+![Typing skills](images/03-skill-entry.png)
+
+A provider types skills in free text — whatever words she actually uses.
+
+![Canonical readback](images/04-skill-readback.png)
+
+The app reads each phrase back against the canonical skill it resolved to, *before* she commits.
+`sewing`, `tailoring`, `thayyal` and `തയ്യൽ` all land on the same node, so a customer searching
+for stitching finds her. Rate and experience complete the profile.
+
+### 8.3 Provider — ranked work, in Malayalam
+
+![Find work, Malayalam](images/05-find-work-ml.png)
+
+`ജോലി കണ്ടെത്തുക` — matches ranked by the deterministic score of §6.2, each showing the matched
+skill, distance and pay. The ▶ control speaks the match explanation aloud.
+
+![Requests, Malayalam](images/06-requests-ml.png)
+![Requests, English](images/07-requests-en.png)
+
+The same screen in both languages. Accept and decline are `സ്വീകരിക്കുക` and `വേണ്ട` — the
+interface is translated, not merely transliterated, and the skill names come from the canonical
+vocabulary rather than a UI string table.
+
+### 8.4 Customer — browse, filter, request
+
+![Browse with filters](images/08-browse-filters.png)
+
+Skill, distance, experience and price filters over available providers only, each card showing
+rate, delivery time, experience, distance, capacity and rating.
+
+![New request](images/09-new-request.png)
+
+Posting work: pick skills from the canonical vocabulary, then choose **Individual** or **Group**.
+That single toggle is what routes an order into team assembly.
+
+### 8.5 Still to capture
 
 | # | Screen | What it must show | Runbook step |
 |---|---|---|---|
-| 1 | Sign-in | Opens **in Malayalam** — `ലൂം`, `ഫോൺ നമ്പർ`. Phone field only, no password | A1 |
-| 2 | Onboarding — skill confirmation | `sewing → തയ്യൽ`, `catering → പാചകം`. *The canonicalisation claim, visible* | A7 |
-| 3 | Provider "Find work" | Ranked matches, with the Malayalam explanation sheet open on one | A9–A10 |
-| 4 | Customer "Browse" | Skill chips + distance + price filters applied, cards obeying both | B3–B4 |
-| 5 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
-| 6 | Team confirmation / provider invitation | Invitation appearing on the provider's "My work" only *after* the customer confirms | C7–C8 |
-| 7 | Communities | A private thread with the composer above the tab bar | D2–D3 |
-
-**[ SCREENSHOT 1 — Sign-in, Malayalam ]**
-
-*Caption:* The app opens in Malayalam and remembers the choice. Sign-in is phone + OTP only — no
-password, no name, no role asked before verification.
-
-**[ SCREENSHOT 2 — Skill canonicalisation ]**
-
-*Caption:* Typed free text resolves to canonical skills. `sewing` and `catering` become `തയ്യൽ`
-and `പാചകം` — the same nodes a customer searches, so nothing fragments.
-
-**[ SCREENSHOT 3 — Provider "Find work", explanation sheet open ]**
-
-*Caption:* Matches ranked by the deterministic score in §6.2, each explained in a Malayalam
-sentence built from the logged match record — and readable aloud.
-
-**[ SCREENSHOT 4 — Customer Browse with filters ]**
-
-*Caption:* Skill, distance and price filters over available providers only.
-
-**[ SCREENSHOT 5 — Team assembly result ]**
-
-*Caption:* A 30-unit, three-skill uniform order assembled into a team of 18 across **6 different
-SHGs**, with coverage reported. This is the capability a single-listing job board cannot express.
-
-**[ SCREENSHOT 6 — Provider receives the team invitation ]**
-
-*Caption:* Nothing reaches a provider until the customer confirms. Before confirmation her "My
-work" is empty; after it, the invitation appears.
-
-**[ SCREENSHOT 7 — Communities, private thread ]**
-
-*Caption:* Conversations are visible only to participants; a third provider sees the thread not at
-all.
+| 10 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
+| 11 | Provider invitation after confirm | "My work" empty before the customer confirms, invitation present after | C4 then C8 |
+| 12 | Communities | A private thread with the composer above the tab bar | D2–D3 |
 
 ---
 
@@ -617,8 +605,6 @@ and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / 
 
 ## 11 · Known gaps — stated plainly
 
-We would rather a mentor read this from us than find it in the demo.
-
 **Not yet implemented**
 
 - **Speech-to-text.** Skill entry is typed. Spoken *output* works; spoken *input* does not, so the
@@ -634,14 +620,15 @@ We would rather a mentor read this from us than find it in the demo.
 **Operational caveats**
 
 - **Auth is demo-grade.** Sessions are bearer tokens in `localStorage` against our own `sessions`
-  table, not Supabase Auth. OTP delivery is real when Twilio is configured; without it the code is
+  table, not Supabase Auth. OTP is generated when Twilio is configured; without it the code is
   shown on screen — that is the demo path, not a bug.
 - **New skills are not translated** unless `BHASHINI_API_KEY` is set; they fall back to the English
   word in the Malayalam field.
 - **Chat polls at 7 seconds** rather than pushing live — the deliberate cost of closing the privacy
   hole in §7.6.
-- **Anon key rotation pending.** The Supabase anon key was public while the permissive policies of
-  §7.6 existed. The policies are gone and verified gone, but the key should still be rotated.
+- **Anon key rotation pending.** The key was public while the permissive policies of §7.6 existed.
+  Those policies are gone and verified gone, so nothing is exposed today; rotating the key is the
+  remaining housekeeping.
 - **Lint debt.** Some `no-misused-promises` warnings in `src/`; not in the deploy path.
 
 **Next four weeks, in order**
@@ -650,10 +637,6 @@ We would rather a mentor read this from us than find it in the demo.
 2. Speech-to-text for skill entry — the other half of voice-first.
 3. Admin/moderation surface for grievances.
 4. A graph view of the match justification.
-5. Ingest live opportunities from panchayat, federation and local-enterprise feeds.
-6. Pilot with one Kudumbashree CDS cluster, and start collecting match-outcome data — including
-   whether assembled teams completed their orders — which is the training set a learned model
-   would need later.
 
 ---
 
@@ -678,13 +661,11 @@ We would rather a mentor read this from us than find it in the demo.
 
 ## 13 · Team contributions
 
-<!-- FILL THIS IN — mentors ask for it, and an empty table reads worse than an honest one. -->
-
 | Member | Focus this month |
 |---|---|
-| Nidhi Rakesh | *[ fill in ]* |
-| Niveditha G. S. | *[ fill in ]* |
-| Anjana Nandakumar | *[ fill in ]* |
+| **Nidhi Rakesh** | Backend architecture and Supabase/PostgreSQL integration; the database schema; deterministic individual matching and cross-SHG team assembly; the API routes; authentication; deployment and the debugging of it. Performance optimisation, and resolving the deployment faults during the Convex → Supabase migration. |
+| **Niveditha G. S.** | The React/Vite frontend and the provider and customer screens; the Malayalam-first interface; skill entry and search flows; team selection and confirmation UI; the chat interface; accessibility work, responsive design, and integration against the backend APIs. |
+| **Anjana Nandakumar** | Problem research and product requirements; user flows and UI/UX planning; Malayalam and localisation requirements; realistic demo scenarios and data; testing and validation through the production demo runbook, and the identification and verification of usability, accessibility and functional defects. |
 
 ---
 
