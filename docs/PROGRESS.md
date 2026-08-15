@@ -434,15 +434,15 @@ success** — the same class as §7.2's green deployments.
 
 ## 8 · User interface
 
-Captured on an Android phone against the live deployment.
+Captured against the live deployment.
 
 ### 8.1 Sign-in and first-time onboarding
 
 ![Sign-in](images/01-signin.png)
 
-Sign-in is **phone + OTP only** — no password, and no name or role asked before the number is
-verified. The language toggle switches the whole interface and the choice persists across
-reloads.
+**The app opens in Malayalam.** `ലൂം · വൈദഗ്ധ്യം വരുമാനമാക്കുന്നു` — a first-time user is never
+shown English unless she asks for it, and the choice she makes persists across reloads. Sign-in
+is **phone + OTP only**: no password, and no name or role asked before the number is verified.
 
 ![Name and role](images/02-signup-role.png)
 
@@ -453,13 +453,17 @@ customer.
 
 ![Typing skills](images/03-skill-entry.png)
 
-A provider types skills in free text — whatever words she actually uses.
+A provider types her skills as free text — whatever words she actually uses, in whichever of the
+three registers she types in.
 
 ![Canonical readback](images/04-skill-readback.png)
 
-The app reads each phrase back against the canonical skill it resolved to, *before* she commits.
-`sewing`, `tailoring`, `thayyal` and `തയ്യൽ` all land on the same node, so a customer searching
-for stitching finds her. Rate and experience complete the profile.
+**This screen is the canonicalisation claim, visible.** She typed `stiching` and `coocking` —
+both misspelled — and the app reads back `stiching → തയ്യൽ` and `coocking → പാചകം` *before* she
+commits. Two things are happening at once: the typo tier of §6.1 absorbs the misspelling, and
+the canonical skill is shown to her in Malayalam, which is the same node a customer filtering
+for stitching will search. Nothing fragments into an unsearchable synonym, and she can see that
+it did not before she taps `പൂർത്തിയാക്കുക`.
 
 ### 8.3 Provider — ranked work, in Malayalam
 
