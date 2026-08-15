@@ -16,9 +16,10 @@ these names, so a rename breaks the report.
 | `07-requests-en.png`   | Requests tab, English            | Tap `EN` on the same screen |
 | `08-browse-filters.png`| Browse with filters applied      | Runbook B3–B4 — apply a skill chip and a price filter before capturing |
 | `09-new-request.png`   | New request form                 | Runbook B6 |
-| `10-team-assembly.png` | **Team assembly result**         | Runbook C2–C3 — the headline shot: members across more than one SHG, with the coverage rationale |
-| `11-invitation.png`    | Provider invitation after confirm| Runbook C4 (empty) then C8 (invitation present) |
-| `12-communities.png`   | A private conversation           | Runbook D2–D3 |
+| `10-my-work.png`       | My work, Malayalam               | **Captured.** Shows "waiting for the customer's reply" and a separate completed section — the two provider-state defects that were fixed |
+| `11-team-assembly.png` | **Team assembly result**         | Runbook C2–C3 — the headline shot: members across more than one SHG, with the coverage rationale |
+| `12-invitation.png`    | Provider invitation after confirm| Runbook C4 (nothing) then C8 (invitation present). Best taken as the same `എന്റെ ജോലി` screen as `10`, so the reader sees the invitation arrive |
+| `13-communities.png`   | A private conversation           | Runbook D2–D3 |
 
 Capture at one width throughout. The first set was taken on a phone with the browser chrome in
 frame and the retakes are a clean viewport; either is fine, but mixing them in one document

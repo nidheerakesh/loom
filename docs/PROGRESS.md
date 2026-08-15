@@ -479,6 +479,19 @@ The same screen in both languages. Accept and decline are `സ്വീകരി
 interface is translated, not merely transliterated, and the skill names come from the canonical
 vocabulary rather than a UI string table.
 
+![My work, Malayalam](images/10-my-work.png)
+
+`എന്റെ ജോലി` answers the question a provider actually has: *what happened to the work I said yes
+to?* Two details here were defects we fixed, and both are the kind that look like nothing:
+
+- The blouse job is marked `ഉപഭോക്താവിന്റെ മറുപടി കാത്തിരിക്കുന്നു` — **waiting for the
+  customer's reply**. Applying registers interest; it does not win the job. Before this screen
+  existed an accepted job simply vanished from every provider view, and the state it vanished
+  into was one the provider had no way to learn.
+- Finished work sits in its own `പൂർത്തിയായ ജോലി` section. Until the most recent commit a
+  provider was never told a job had ended — the card kept reporting the *team's* status, which
+  stays `confirmed` forever, so a completed job showed as active indefinitely.
+
 ### 8.4 Customer — browse, filter, request
 
 ![Browse with filters](images/08-browse-filters.png)
@@ -495,9 +508,9 @@ That single toggle is what routes an order into team assembly.
 
 | # | Screen | What it must show | Runbook step |
 |---|---|---|---|
-| 10 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
-| 11 | Provider invitation after confirm | "My work" empty before the customer confirms, invitation present after | C4 then C8 |
-| 12 | Communities | A private thread with the composer above the tab bar | D2–D3 |
+| 11 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
+| 12 | Provider invitation after confirm | The same `എന്റെ ജോലി` screen above, now carrying a team invitation that was not there before the customer confirmed | C4 then C8 |
+| 13 | Communities | A private thread with the composer above the tab bar | D2–D3 |
 
 ---
 
