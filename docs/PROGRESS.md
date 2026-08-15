@@ -12,7 +12,7 @@
 | **Period covered** | 13 July 2026 – 15 August 2026 |
 | **Live deployment** | https://loom-lovat-phi.vercel.app — **working, publicly reachable, no install required** |
 | **Repository** | https://github.com/nidheerakesh/loom |
-| **Report status** | Reflects the code at commit `a0da02f`; all claims re-verified against the live deployment on 15 Aug 2026 |
+| **Report status** | Reflects `main` at commit `e797b53`; every claim re-verified against the live deployment on 15 Aug 2026 |
 
 > **Everything described below is deployed and running.** Where the build diverges from the
 > original design specs (`docs/PRD.md`, `docs/TDD.md`), this report follows the build. §11 states
@@ -70,13 +70,15 @@ Two decisions shaped the entire build:
 | 16 | Team chat + provider completion notice | Complete | commit `a0da02f` |
 | 17 | Full demo runbook executed against production | 6/6 sections pass | `docs/DEMO_RUNBOOK.md` |
 | 18 | Automated end-to-end suite against production | 78/78 checks pass | `app/scripts/e2e.mjs` |
-| 19 | Speech-to-text, graph visualisation, admin surface | Not started | see §11 |
+| 19 | Conversation named after the other participant, per viewer | Complete | `chat/threads.ts`, §7.8 |
+| 20 | Lint clean — 30 pre-existing errors cleared | Complete | `npm run lint`: 0 issues |
+| 21 | Speech-to-text, graph visualisation, admin surface | Not started | see §11 |
 
 **Scale of the build**
 
 | Measure | Count |
 |---|---|
-| Commits over the period | 34 |
+| Commits over the period | 44 |
 | TypeScript / TSX written | ~7,200 lines (4,002 API · 3,214 frontend) + 589 lines of seed/dev tooling |
 | API route handlers | 42, across 11 feature areas |
 | Shared server modules | 13 (`api/_lib/`) |
@@ -92,14 +94,14 @@ Two decisions shaped the entire build:
 | Week | Dates | What happened |
 |---|---|---|
 | 1 | 13 – 26 Jul | Problem research and the four planning documents. First working app built on Convex + React. |
-| 2 | 2 Aug | **Full backend migration off Convex** onto Supabase + Vercel Serverless. Every backend function rewritten. Then three deployment faults, each of which reported success (§6.2). |
+| 2 | 2 Aug | **Full backend migration off Convex** onto Supabase + Vercel Serverless. Every backend function rewritten. Then three deployment faults, each of which reported success (§7.2). |
 | 3 | 2 – 7 Aug | Real demo data; phone + OTP sign-in; chat privacy audit and fixes; **N+1 elimination — the main screen went from 21 s to 1.35 s**; Malayalam defaults and self-hosted font; text-to-speech made real; "My work" view. |
 | 4 | 8 – 9 Aug | Customer control (choose provider, edit request, swap team member); skill matching rewritten to match by **meaning** rather than letter-shape; RLS on every table; six silent database writes fixed; team chat; **full 15-minute runbook run against production, 6/6 sections pass**. |
 | 5 | 15 Aug | **Automated end-to-end suite written and run against production — 78 checks, 0 failures**, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1). |
 
 This month: roughly one week designing, one week rebuilding the foundation,
 and two weeks hardening — security, performance, language, and the failure modes that look fine
-from the outside. Most of the hardest work is invisible in a screenshot, so §6 records it.
+from the outside. Most of the hardest work is invisible in a screenshot, so §7 records it.
 
 ---
 
@@ -152,7 +154,7 @@ because the app targets patchy rural connections.
 ```
 
 **The browser talks only to `/api/*`.** No Supabase client ships to the frontend, so the database
-is never addressed directly by an untrusted caller — this is both a security property (§7) and
+is never addressed directly by an untrusted caller — this is both a security property (§7.6) and
 the reason the bundle halved (438 KB → 221 KB).
 
 **Data model.** `providers`, `customers`, `skills`, `groups`, `cds`, `requests` as entities, with
@@ -307,8 +309,7 @@ const complete = [...remaining.values()].every(x => x <= 0);  // reported, never
 
 That third sort key is not cosmetic. Convex `_id`s are creation-ordered; Postgres UUIDv4 is
 random. On migration, ties silently reordered between identical runs and determinism broke —
-fixed with explicit `seq bigserial` tiebreak columns on `providers` and `team_members` (§6.1
-of the challenges below).
+fixed with explicit `seq bigserial` tiebreak columns on `providers` and `team_members` (§7.1).
 
 **Verified on the deployed instance, over seeded data:** a 30-unit, three-skill uniform order
 assembles **18 provider records across 6 seeded groups**, coverage complete, with 18 audit rows
