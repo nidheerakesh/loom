@@ -71,7 +71,7 @@ export function ProviderProfile() {
     });
     setReadback(res.readback);
     setSkillText("");
-    queryClient.invalidateQueries({ queryKey: ["mySkills", token] });
+    void queryClient.invalidateQueries({ queryKey: ["mySkills", token] });
   };
 
   const uploadImage = async (file: File) => {
@@ -113,7 +113,7 @@ export function ProviderProfile() {
           ))}
         </div>
         <Field placeholder={t("skillsPlaceholder")} value={skillText} onChange={(e) => setSkillText(e.target.value)} />
-        <Button className="w-full" onClick={addSkills}>{t("save")}</Button>
+        <Button className="w-full" onClick={() => void addSkills()}>{t("save")}</Button>
         {readback && (
           <div className="mt-3 text-sm space-y-1">
             <div className="font-semibold text-loom-indigo">{t("confirmSkills")}:</div>
@@ -145,7 +145,7 @@ export function ProviderProfile() {
             </div>
           ))}
         </div>
-        <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+        <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) void uploadImage(e.target.files[0]); }} />
       </Card>
 
       <Card>
@@ -159,10 +159,12 @@ export function ProviderProfile() {
             <Button
               variant="ghost"
               className="w-full"
-              onClick={async () => {
-                await submitGrievance.mutateAsync({ subject: gSubject, body: gBody });
-                setGSubject("");
-                setGBody("");
+              onClick={() => {
+                void (async () => {
+                  await submitGrievance.mutateAsync({ subject: gSubject, body: gBody });
+                  setGSubject("");
+                  setGBody("");
+                })();
               }}
             >
               {t("submit")}

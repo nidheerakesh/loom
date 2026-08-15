@@ -105,7 +105,7 @@ export function SignIn() {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="9876500000"
             />
-            <Button className="w-full" onClick={sendCode} disabled={!phone || busy}>
+            <Button className="w-full" onClick={() => void sendCode()} disabled={!phone || busy}>
               {t("sendCode")}
             </Button>
           </>
@@ -125,7 +125,7 @@ export function SignIn() {
               autoFocus
               onChange={(e) => setCode(e.target.value)}
             />
-            <Button className="w-full" onClick={verify} disabled={code.length < 4 || busy}>
+            <Button className="w-full" onClick={() => void verify()} disabled={code.length < 4 || busy}>
               {t("verify")}
             </Button>
             <TextButton className="mt-3 w-full" onClick={restart}>
@@ -140,7 +140,7 @@ export function SignIn() {
             <div className="mb-3 text-loom-indigo font-medium">{t("continueAs")}</div>
             <div className="flex gap-2">
               {roles.map((r) => (
-                <Button key={r} className="flex-1" disabled={busy} onClick={() => completeLogin(r)}>
+                <Button key={r} className="flex-1" disabled={busy} onClick={() => void completeLogin(r)}>
                   {t(r)}
                 </Button>
               ))}
@@ -176,7 +176,7 @@ export function SignIn() {
             </div>
             <Button
               className="w-full"
-              onClick={() => completeLogin(role, name.trim())}
+              onClick={() => void completeLogin(role, name.trim())}
               disabled={!name.trim() || busy}
             >
               {t("continue")}

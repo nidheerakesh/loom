@@ -82,7 +82,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.6em 0; }
    from the sentence explaining it. Height is the binding constraint, so bound that: tall
    images shrink to fit beside their text, wide ones still use the width they need. */
 img {
-  max-width: 74%; max-height: 128mm; width: auto; height: auto; object-fit: contain;
+  max-width: 56%; max-height: 88mm; width: auto; height: auto; object-fit: contain;
   display: block; margin: .9em auto;
   border: 1px solid var(--rule); border-radius: 6px; page-break-inside: avoid;
 }
@@ -95,7 +95,7 @@ img {
 .missing b { display: block; color: var(--indigo); font-size: 10pt; margin-bottom: .3em; }
 /* Diagrams carry small type across their whole width, so the phone-screenshot height cap
    would render them unreadable. Marked with {: .wide } in the Markdown. */
-img.wide { max-width: 100%; max-height: 215mm; }
+img.wide { max-width: 92%; max-height: 150mm; }
 """
 
 MALAYALAM = re.compile(r"[ഀ-ൿ]")

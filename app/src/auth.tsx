@@ -53,6 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Fast refresh wants a module to export only components, and this one also exports the hook
+// that reads its context. Splitting them would create a second file existing only to satisfy a
+// dev-server optimisation, so the rule is disabled here rather than obeyed.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const c = useContext(Ctx);
   if (!c) throw new Error("useAuth outside provider");

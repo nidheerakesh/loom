@@ -69,9 +69,11 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               <Button
                 variant="gold"
                 className="w-full"
-                onClick={async () => {
-                  if (token) await assemble.mutateAsync(created.requestId);
-                  onDone();
+                onClick={() => {
+                  void (async () => {
+                    if (token) await assemble.mutateAsync(created.requestId);
+                    onDone();
+                  })();
                 }}
               >
                 {t("assembleTeam")}
@@ -114,7 +116,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
           <Field label={t("units")} type="number" value={units} onChange={(e) => setUnits(Number(e.target.value))} />
           <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
         </div>
-        <Button className="w-full" onClick={submit} disabled={!title || selected.size === 0}>
+        <Button className="w-full" onClick={() => void submit()} disabled={!title || selected.size === 0}>
           {t("submit")}
         </Button>
         {err && <div className="text-loom-madder text-sm mt-2">{err}</div>}

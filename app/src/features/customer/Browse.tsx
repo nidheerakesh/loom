@@ -197,7 +197,7 @@ function ProviderDetail({
               ))}
             </div>
           )}
-          <Button variant="gold" className="w-full" onClick={startChat}>{t("chat")}</Button>
+          <Button variant="gold" className="w-full" onClick={() => void startChat()}>{t("chat")}</Button>
           {p.reviews.length > 0 && (
             <Card>
               {p.reviews.map((r, i) => (

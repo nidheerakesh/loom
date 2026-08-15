@@ -59,7 +59,7 @@ export function RoleSwitch() {
         variant="ghost"
         className="w-full"
         disabled={busy || (asking && !name.trim())}
-        onClick={() => go(asking ? name.trim() : undefined)}
+        onClick={() => void go(asking ? name.trim() : undefined)}
       >
         {target === "customer" ? t("switchToCustomer") : t("switchToProvider")}
       </Button>
