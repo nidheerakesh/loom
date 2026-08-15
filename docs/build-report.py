@@ -77,8 +77,13 @@ tr:nth-child(even) td { background: #fbfaf6; }
 ul, ol { margin: .5em 0; padding-left: 1.3em; }
 li { margin: .25em 0; }
 hr { border: none; border-top: 1px solid var(--rule); margin: 1.6em 0; }
+/* Phone captures are twice as tall as they are wide. Constrained by width alone each one
+   takes a whole page and pushes its caption onto the next, which separates every screenshot
+   from the sentence explaining it. Height is the binding constraint, so bound that: tall
+   images shrink to fit beside their text, wide ones still use the width they need. */
 img {
-  max-width: 62%; height: auto; display: block; margin: .9em auto;
+  max-width: 74%; max-height: 128mm; width: auto; height: auto; object-fit: contain;
+  display: block; margin: .9em auto;
   border: 1px solid var(--rule); border-radius: 6px; page-break-inside: avoid;
 }
 .missing {
