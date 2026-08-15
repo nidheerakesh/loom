@@ -1,0 +1,1207 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 18mm 16mm; }
+:root { --ink:#1c1c1c; --indigo:#26364F; --soft:#5a6a80; --rule:#d8d2c4; --cotton:#F7F4ED; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Source Serif 4", Georgia, "Liberation Serif", serif;
+  font-size: 10.5pt; line-height: 1.5; color: var(--ink);
+  margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+:lang(ml), .ml { font-family: "Manjari", "Gayathri", "Lohit Malayalam", "Noto Sans Malayalam", sans-serif; }
+h1, h2, h3, h4 {
+  font-family: "Inter", "Liberation Sans", system-ui, sans-serif;
+  color: var(--indigo); line-height: 1.25; margin: 1.4em 0 .5em;
+}
+h1 { font-size: 23pt; margin-top: 0; letter-spacing: -.01em; }
+h2 { font-size: 15pt; border-bottom: 2px solid var(--rule); padding-bottom: .25em; page-break-after: avoid; }
+h3 { font-size: 12pt; page-break-after: avoid; }
+h2 + p, h3 + p { margin-top: .3em; }
+p { margin: .55em 0; orphans: 3; widows: 3; }
+strong { color: var(--indigo); }
+a { color: var(--indigo); text-decoration: none; border-bottom: 1px solid var(--rule); }
+code {
+  font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 8.6pt;
+  background: var(--cotton); padding: .1em .35em; border-radius: 3px;
+}
+pre {
+  background: var(--cotton); border: 1px solid var(--rule); border-left: 3px solid var(--indigo);
+  border-radius: 4px; padding: .7em .9em; overflow-x: auto; page-break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: 8pt; line-height: 1.45; }
+blockquote {
+  margin: .9em 0; padding: .55em .9em; background: var(--cotton);
+  border-left: 3px solid #C9A227; page-break-inside: avoid;
+}
+blockquote p { margin: .2em 0; }
+table {
+  width: 100%; border-collapse: collapse; margin: .9em 0; font-size: 9pt;
+  page-break-inside: avoid;
+}
+th, td { border: 1px solid var(--rule); padding: .38em .55em; text-align: left; vertical-align: top; }
+th { background: var(--cotton); color: var(--indigo); font-weight: 600; }
+tr:nth-child(even) td { background: #fbfaf6; }
+ul, ol { margin: .5em 0; padding-left: 1.3em; }
+li { margin: .25em 0; }
+hr { border: none; border-top: 1px solid var(--rule); margin: 1.6em 0; }
+img {
+  max-width: 62%; height: auto; display: block; margin: .9em auto;
+  border: 1px solid var(--rule); border-radius: 6px; page-break-inside: avoid;
+}
+.missing {
+  max-width: 62%; margin: .9em auto; padding: 2.2em 1em; text-align: center;
+  border: 2px dashed var(--rule); border-radius: 6px; background: var(--cotton);
+  color: var(--soft); font-family: "Inter", sans-serif; font-size: 9pt;
+  page-break-inside: avoid;
+}
+.missing b { display: block; color: var(--indigo); font-size: 10pt; margin-bottom: .3em; }
+</style></head><body><h1>Loom — Progress Check Report</h1>
+<p><strong>AI Matching Engine for Women's Livelihood Networks</strong><br />
+<em>Turning skills into income no one could reach alone</em></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project</strong></td>
+<td>Loom — a two-sided skills marketplace and team-assembly engine for women's Self-Help Group (SHG) networks in Kerala</td>
+</tr>
+<tr>
+<td><strong>Team members</strong></td>
+<td>Nidhi Rakesh · Niveditha G. S. · Anjana Nandakumar</td>
+</tr>
+<tr>
+<td><strong>Institution</strong></td>
+<td>Indian Institute of Information Technology (IIIT) Kottayam</td>
+</tr>
+<tr>
+<td><strong>Hackathon / Track</strong></td>
+<td>Girlathon — GDG On Campus, Mar Athanasius College of Engineering · <em>BharatNext: Building for Tier-2 and Tier-3 India</em></td>
+</tr>
+<tr>
+<td><strong>Period covered</strong></td>
+<td>13 July 2026 – 15 August 2026</td>
+</tr>
+<tr>
+<td><strong>Live deployment</strong></td>
+<td>https://loom-lovat-phi.vercel.app — <strong>working, publicly reachable, no install required</strong></td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td>https://github.com/nidheerakesh/loom</td>
+</tr>
+<tr>
+<td><strong>Report status</strong></td>
+<td>Reflects the code at commit <code>a0da02f</code>; all claims re-verified against the live deployment on 15 Aug 2026</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Everything described below is deployed and running.</strong> Where the build diverges from the<br />
+original design specs (<code>docs/PRD.md</code>, <code>docs/TDD.md</code>), this report follows the build. §11 states<br />
+what is <em>not</em> built, plainly.</p>
+</blockquote>
+<hr />
+<h2>1 · What we set out to build, and what exists today</h2>
+<p><strong>The problem.</strong> India has 8.5 M+ women's self-help groups; ~4.5 M women are in Kerala's<br />
+Kudumbashree network alone. Credit and organisation have reached them at scale — <em>market access<br />
+has not</em>. Two failures follow: a woman cannot see paid demand three kilometres away, and the<br />
+largest opportunities (a 200-piece uniform order, a 300-plate catering job) are invisible to<br />
+everyone because <strong>no single woman can fulfil them alone</strong>.</p>
+<p><strong>What we built.</strong> Providers — an individual woman, or a small SHG-run unit — list skills.<br />
+Customers browse, filter and post work. Small jobs route to one person. Large or multi-skill<br />
+orders trigger a <strong>capacity-aware team assembly across different SHGs</strong>, and every result is<br />
+explained in Malayalam and can be spoken aloud.</p>
+<p>Two decisions shaped the entire build:</p>
+<ul>
+<li><strong>Malayalam-first.</strong> The app opens in Malayalam and remembers the choice. A user typing<br />
+<code>sewing</code>, <code>tailoring</code>, <code>thayyal</code> or <code><span class="ml">തയ്യൽ</span></code> must land on the <strong>same canonical skill</strong>, or the<br />
+  marketplace fragments into unsearchable synonyms and the whole thing quietly fails.</li>
+<li><strong>Deterministic matching.</strong> Ranking and team assembly are explainable, reproducible functions,<br />
+  not a black box. The same data always produces the same team — down to explicit tiebreak<br />
+  columns. Every match is written to an audit table before any sentence is generated, so the<br />
+  explanation <em>reports</em> the decision and cannot contradict it.</li>
+</ul>
+<hr />
+<h2>2 · Progress summary</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Milestone</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Planning docs — PRD, TDD, user flows, UI/UX spec</td>
+<td>Complete</td>
+<td><code>docs/</code> (5 documents, ~65 KB)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Data model — 24 tables, deterministic tiebreak columns</td>
+<td>Complete</td>
+<td><code>app/supabase/schema.sql</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Backend — 42 API routes over 11 feature areas</td>
+<td>Complete</td>
+<td><code>app/api/_routes/index.ts</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Frontend — 12 screens across provider + customer apps</td>
+<td>Complete</td>
+<td><code>app/src/features/</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Skill canonicalisation (alias table + typo tier + translation)</td>
+<td>Complete</td>
+<td><code>api/_routes/skills/resolve.ts</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Deterministic individual matching</td>
+<td>Complete</td>
+<td><code>api/_lib/scoring.ts</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Collective matching — cross-SHG team assembly</td>
+<td>Complete</td>
+<td><code>api/_routes/team-assembly/</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Phone + OTP authentication (no passwords)</td>
+<td>Complete</td>
+<td><code>api/_routes/auth/</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Deployed publicly, continuously from <code>main</code></td>
+<td>Complete</td>
+<td>Vercel <code>bom1</code> + Supabase</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Realistic demo data</td>
+<td>Complete</td>
+<td>40 providers, 6 customers, 5 requests</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Chat privacy — 4 vulnerabilities closed</td>
+<td>Complete, verified live</td>
+<td><code>003</code>/<code>005</code> migrations, runbook F1</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Text-to-speech, Malayalam + English</td>
+<td>Complete</td>
+<td><code>src/lib/speech.ts</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td>Performance — N+1 elimination, region move</td>
+<td>Complete</td>
+<td>21.0 s → 1.35 s measured</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Row-level security on <strong>every</strong> table</td>
+<td>Complete</td>
+<td><code>005_enable_rls_everywhere.sql</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td>Customer control — choose, edit, swap, confirm, complete</td>
+<td>Complete</td>
+<td><code>requests/</code>, <code>team-assembly/</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td>Team chat + provider completion notice</td>
+<td>Complete</td>
+<td>commit <code>a0da02f</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td>Full demo runbook executed against production</td>
+<td>6/6 sections pass</td>
+<td><code>docs/DEMO_RUNBOOK.md</code></td>
+</tr>
+<tr>
+<td>18</td>
+<td>Automated end-to-end suite against production</td>
+<td>78/78 checks pass</td>
+<td><code>app/scripts/e2e.mjs</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td>Speech-to-text, graph visualisation, admin surface</td>
+<td>Not started</td>
+<td>see §11</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scale of the build</strong></p>
+<table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commits over the period</td>
+<td>34</td>
+</tr>
+<tr>
+<td>TypeScript / TSX written</td>
+<td>~7,200 lines (4,002 API · 3,214 frontend) + 589 lines of seed/dev tooling</td>
+</tr>
+<tr>
+<td>API route handlers</td>
+<td>42, across 11 feature areas</td>
+</tr>
+<tr>
+<td>Shared server modules</td>
+<td>13 (<code>api/_lib/</code>)</td>
+</tr>
+<tr>
+<td>React screens</td>
+<td>12 user-facing, in two role-scoped apps</td>
+</tr>
+<tr>
+<td>Postgres tables</td>
+<td>24, RLS enabled on all of them</td>
+</tr>
+<tr>
+<td>Applied / written migrations</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Design + process documents</td>
+<td>6 (<code>PRD</code>, <code>TDD</code>, <code>USER_FLOWS</code>, <code>UI_UX_DESIGN</code>, <code>SUBMISSION</code>, <code>DEMO_RUNBOOK</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3 · Timeline — how the month actually went</h2>
+<table>
+<thead>
+<tr>
+<th>Week</th>
+<th>Dates</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>13 – 26 Jul</td>
+<td>Problem research and the four planning documents. First working app built on Convex + React.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2 Aug</td>
+<td><strong>Full backend migration off Convex</strong> onto Supabase + Vercel Serverless. Every backend function rewritten. Then three deployment faults, each of which reported success (§6.2).</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2 – 7 Aug</td>
+<td>Real demo data; phone + OTP sign-in; chat privacy audit and fixes; <strong>N+1 elimination — the main screen went from 21 s to 1.35 s</strong>; Malayalam defaults and self-hosted font; text-to-speech made real; "My work" view.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>8 – 9 Aug</td>
+<td>Customer control (choose provider, edit request, swap team member); skill matching rewritten to match by <strong>meaning</strong> rather than letter-shape; RLS on every table; six silent database writes fixed; team chat; <strong>full 15-minute runbook run against production, 6/6 sections pass</strong>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>15 Aug</td>
+<td><strong>Automated end-to-end suite written and run against production — 78 checks, 0 failures</strong>, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1).</td>
+</tr>
+</tbody>
+</table>
+<p>This month: roughly one week designing, one week rebuilding the foundation,<br />
+and two weeks hardening — security, performance, language, and the failure modes that look fine<br />
+from the outside. Most of the hardest work is invisible in a screenshot, so §6 records it.</p>
+<hr />
+<h2>4 · Tools, technologies and components</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Choice</th>
+<th>Version</th>
+<th>Why this one</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Language</td>
+<td>TypeScript</td>
+<td>5.2</td>
+<td>One language for matching engine <em>and</em> interface; strict mode everywhere</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>React + Vite</td>
+<td>18.3 / 5.3</td>
+<td>Fast builds, simple SPA, small bundle</td>
+</tr>
+<tr>
+<td>Styling</td>
+<td>Tailwind CSS</td>
+<td>3.4</td>
+<td>Custom Kerala-handloom palette, 56 px touch targets enforced in one place</td>
+</tr>
+<tr>
+<td>UI primitives</td>
+<td>Radix UI + shadcn patterns</td>
+<td>1.x</td>
+<td>Accessible dialogs, toggles, menus without shipping a heavy kit</td>
+</tr>
+<tr>
+<td>Server state</td>
+<td>TanStack Query</td>
+<td>5.59</td>
+<td>Caching and 7-second polling for chat and invitations</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Vercel Serverless Functions</td>
+<td><code>@vercel/node</code> 3.2</td>
+<td>Same-origin <code>/api/*</code> — no CORS, no separate server to operate</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>Supabase (PostgreSQL)</td>
+<td>managed</td>
+<td>Relational model of the livelihood network + RLS</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Zod</td>
+<td>3.23</td>
+<td>A request schema at <strong>every</strong> route boundary</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>Phone + OTP, HMAC-signed tickets</td>
+<td>—</td>
+<td>No passwords; Twilio Verify optional, falls back to on-screen code</td>
+</tr>
+<tr>
+<td>Voice output</td>
+<td>Web Speech API (<code>ml-IN</code> / <code>en-IN</code>)</td>
+<td>browser</td>
+<td>Spoken Malayalam with no API key and no per-use cost</td>
+</tr>
+<tr>
+<td>Translation</td>
+<td>Bhashini NMT → NVIDIA → Anthropic → Gemini → offline echo</td>
+<td>—</td>
+<td>Only used to <em>name</em> a genuinely new skill; never influences a match</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td>Vercel (Mumbai <code>bom1</code>) + Supabase</td>
+<td>—</td>
+<td>Co-located with the users it serves</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td>Node</td>
+<td>22.x</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Color palette</strong>, defined once in <code>tailwind.config.js</code>:<br />
+<code>cotton #F3EFE6</code> · <code>indigo #26364F</code> · <code>kasavu #C9A227</code> · <code>madder #9C3B36</code> · <code>leaf #5B7A5B</code>.</p>
+<p><strong>Typography.</strong> Noto Sans Malayalam, self-hosted as a subset (~89 KB) rather than CDN-linked,<br />
+because the app targets patchy rural connections.</p>
+<hr />
+<h2>5 · System architecture</h2>
+<pre><code>                Browser — React + Vite, Malayalam-first
+                          │
+                          │  same-origin  /api/*      (no Supabase client in the browser)
+                          ▼
+            api/router.ts          ← the ONE serverless function
+                          │        path → handler map
+                          ▼
+            api/_routes/**         ← 42 handlers over 11 feature areas:
+                          │          auth · providers · customers · skills · requests ·
+                          │          matching · team-assembly · narration · ratings ·
+                          │          grievances · chat
+                          ▼
+            api/_lib/**            ← supabaseAdmin · auth · scoring · geo · text
+                          │          canonicalisation · chat access control ·
+                          │          translation chain · SMS
+                          ▼
+            Supabase Postgres      ← 24 tables, RLS enabled on every one
+</code></pre>
+<p><strong>The browser talks only to <code>/api/*</code>.</strong> No Supabase client ships to the frontend, so the database<br />
+is never addressed directly by an untrusted caller — this is both a security property (§7) and<br />
+the reason the bundle halved (438 KB → 221 KB).</p>
+<p><strong>Data model.</strong> <code>providers</code>, <code>customers</code>, <code>skills</code>, <code>groups</code>, <code>cds</code>, <code>requests</code> as entities, with<br />
+<code>provider_skills</code>, <code>request_skills</code>, <code>skill_aliases</code>, <code>near_distances</code>, <code>teams</code>, <code>team_members</code>,<br />
+<code>matches</code>, <code>chat_threads</code>, <code>messages</code>, <code>ratings</code>, <code>sessions</code>, <code>otps</code> and others as the typed<br />
+relationships and audit trail between them.</p>
+<hr />
+<h2>6 · Key components built — with code</h2>
+<h3>6.1 Skill canonicalisation — the thing the marketplace depends on</h3>
+<p><code>api/_routes/skills/resolve.ts</code> resolves typed free text to one canonical skill in four tiers:<br />
+<strong>exact → curated alias → typo → new skill (translated and created).</strong></p>
+<pre><code>&quot;sewing&quot;            → <span class="ml">തയ്യൽ  (</span>stitching)   matched via alias
+&quot;garment finishing&quot; → <span class="ml">തയ്യൽ  (</span>stitching)   matched via alias
+&quot;thayyal&quot;           → <span class="ml">തയ്യൽ  (</span>stitching)   matched via alias   (Manglish)
+&quot;stiching&quot;          → <span class="ml">തയ്യൽ  (</span>stitching)   matched via typo
+&quot;covering&quot;          → covering                new skill, created
+</code></pre>
+<p>The subtle part: <strong>meaning lives in the curated alias table (109 phrases over six skills, in<br />
+English, Malayalam and Manglish); fuzzy matching is demoted to absorbing typos only.</strong></p>
+<pre><code class="language-ts">// api/_lib/text.ts
+//
+// Is `input` a MISSPELLING of `candidate` — not &quot;does it mean something similar&quot;.
+//
+// Character similarity cannot express meaning, and treating it as if it could produced real
+// nonsense: &quot;covering&quot; scored 0.56 on trigrams against the alias &quot;catering&quot; and was filed
+// under cooking. Two words differing by two letters are not related, they merely look alike.
+//
+// Meaning lives in the curated alias table instead, which is why &quot;garment finishing&quot; resolves
+// to stitching despite sharing almost no characters with it.
+export function isProbableTypo(input: string, candidate: string): boolean {
+  const a = normalize(input);
+  const b = normalize(candidate);
+  if (a === b) return true;
+  // Too short to correct safely — at four characters one edit is a quarter of the word, and
+  // &quot;cook&quot;, &quot;book&quot; and &quot;look&quot; are all a single edit apart.
+  if (a.length &lt; 5 || b.length &lt; 5) return false;
+  if (similarity(a, b) &lt; TYPO_TRIGRAM_MIN) return false;              // 0.70 trigram overlap
+  return editDistance(a, b) / Math.max(a.length, b.length) &lt;= TYPO_EDIT_MAX;  // 0.15
+}
+</code></pre>
+<p>Measured on real inputs, genuine typos land near <strong>0.11</strong> normalised edit distance<br />
+(<code>stiching</code>/<code>stitching</code>) while unrelated lookalikes sit at <strong>0.25</strong> (<code>covering</code>/<code>catering</code>) — the<br />
+two separate cleanly, which is why both tests must pass.</p>
+<h3>6.2 Deterministic individual matching</h3>
+<pre><code class="language-ts">// api/_lib/scoring.ts — weights are fixed config; same inputs → same score → same ranking.
+export const WEIGHTS = { skill: 0.5, dist: 0.3, earn: 0.2 } as const;
+
+export const proximity      = (km: number) =&gt; (isFinite(km) ? 1 / (1 + km) : 0);
+export const normalizedPay  = (pay?: number) =&gt; (!pay || pay &lt;= 0 ? 0 : Math.min(1, pay / 2000));
+export const skillFit       = (prof: number) =&gt; Math.max(0, Math.min(1, prof / 5));
+
+export function score(fit: number, distanceKm: number, pay: number | undefined) {
+  const total =
+    WEIGHTS.skill * fit + WEIGHTS.dist * proximity(distanceKm) + WEIGHTS.earn * normalizedPay(pay);
+  return { skillFit: fit, proximity: proximity(distanceKm), pay: normalizedPay(pay), total };
+}
+</code></pre>
+<p>Distance is a haversine computation over stored coordinates. No model, no inference cost, no<br />
+training data required — and every ranking is reproducible and auditable, which we consider a<br />
+requirement for a system that intermediates people's income.</p>
+<h3>6.3 Collective matching — the headline capability</h3>
+<p><code>api/_routes/team-assembly/assemble.ts</code> runs a <strong>greedy, capacity-aware set-cover</strong> over the<br />
+cluster, and reports honestly whether coverage is complete.</p>
+<pre><code class="language-ts">// Deterministic: candidates sorted by (proficiency desc, distance asc, seq asc) — no
+// randomness, so the same request always yields the same team.
+while (progress) {
+  progress = false;
+  for (const rs of skills) {
+    const need = remaining.get(rs.skill_id) ?? 0;
+    if (need &lt;= 0) continue;
+    const eligible = [...candMap.values()].filter(c =&gt; c.capLeft &gt; 0 &amp;&amp; c.prof.has(rs.skill_id));
+    if (eligible.length === 0) continue;
+    eligible.sort((a, b) =&gt; {
+      const pa = a.prof.get(rs.skill_id)!, pb = b.prof.get(rs.skill_id)!;
+      if (pb !== pa) return pb - pa;                       // 1. proficiency
+      if (a.distance !== b.distance) return a.distance - b.distance;  // 2. proximity
+      return a.provider.seq - b.provider.seq;              // 3. explicit tiebreak
+    });
+    const pick = eligible[0];
+    const take = Math.min(need, pick.capLeft);             // capacity-aware
+    pick.capLeft -= take;
+    remaining.set(rs.skill_id, need - take);
+    /* … record the assignment … */
+    progress = true;
+  }
+}
+const complete = [...remaining.values()].every(x =&gt; x &lt;= 0);  // reported, never faked
+</code></pre>
+<p>That third sort key is not cosmetic. Convex <code>_id</code>s are creation-ordered; Postgres UUIDv4 is<br />
+random. On migration, ties silently reordered between identical runs and determinism broke —<br />
+fixed with explicit <code>seq bigserial</code> tiebreak columns on <code>providers</code> and <code>team_members</code> (§6.1<br />
+of the challenges below).</p>
+<p><strong>Verified in production:</strong> a seeded 30-unit, three-skill uniform order assembles <strong>18 members<br />
+across 6 different SHGs</strong>, coverage complete, with 18 audit rows written to <code>matches</code>.</p>
+<h3>6.4 Authentication — phone + OTP, no passwords</h3>
+<p>The server resolves the account from the verified number and returns one of three outcomes:</p>
+<table>
+<thead>
+<tr>
+<th>Outcome</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session</code></td>
+<td>Exactly one account → straight to the dashboard</td>
+</tr>
+<tr>
+<td><code>choose</code></td>
+<td>The number holds both a provider <em>and</em> a customer account → pick one</td>
+</tr>
+<tr>
+<td><code>signup</code></td>
+<td>New number → collect name and role</td>
+</tr>
+</tbody>
+</table>
+<p>For the latter two, the server issues a <strong>short-lived HMAC-signed ticket</strong> proving the number<br />
+passed OTP, redeemed exactly once by <code>complete-login</code>. No name or role is asked before<br />
+verification — a deliberate low-friction path for a first-time, low-literacy user.</p>
+<h3>6.5 Customer control</h3>
+<p>The customer is never presented with a fait accompli:</p>
+<ul>
+<li>Providers who apply to an individual job are <strong>applicants</strong>, not winners — the customer chooses,<br />
+  and everyone else is declined automatically.</li>
+<li>Any team member can be <strong>replaced before confirmation</strong>, from a ranked list of alternatives that<br />
+  excludes people already on the team.</li>
+<li>After confirmation, swapping an <em>accepted</em> member is refused (it would revoke work she agreed<br />
+  to) but replacing a member who <em>declined</em> is allowed — her slot is already vacant.</li>
+<li>Confirming a team creates a <strong>team chat</strong>, idempotently, whose membership resolves from the team<br />
+  itself, so it follows accepts, declines and replacements with no bookkeeping.</li>
+</ul>
+<hr />
+<h2>7 · Challenges faced, and how we solved them</h2>
+<h3>7.1 Migrating the entire backend off Convex, mid-project</h3>
+<p>The first working build ran on Convex. Moving to Supabase + Vercel meant rewriting every backend<br />
+function <em>and</em> reproducing Convex's implicit guarantees. The subtlest: <strong>Convex <code>_id</code>s are<br />
+creation-ordered, Postgres UUIDv4 is random.</strong> Deterministic ranking broke silently on ties — the<br />
+same request could return a different team on two consecutive runs, with nothing in any log.</p>
+<p><strong>Solved</strong> with explicit <code>seq bigserial</code> tiebreak columns, sorted on last in every ranking path.</p>
+<h3>7.2 Three deployment faults that each reported success</h3>
+<p>The hardest debugging of the month. Every one produced a <strong>green build and a ● Ready<br />
+deployment</strong> while being completely broken.</p>
+<ol>
+<li>
+<p><strong>A build that produced nothing.</strong> Production served an empty page:<br />
+<code>Build Completed in /vercel/output [92ms]
+   Skipping cache upload because no files were prepared</code><br />
+   92 ms, no <code>npm install</code>, no functions. The project was building from the repository root,<br />
+   which has no <code>package.json</code>. Root Directory had since been corrected — but <em>settings do not<br />
+   retroactively rebuild</em>, so the broken deployment stayed live.</p>
+</li>
+<li>
+<p><strong>The Hobby function cap.</strong> Vercel creates one function per file under <code>api/</code>, capped at 12;<br />
+   we had 32 routes. The build succeeds and the <strong>deploy step</strong> fails afterwards, which reads<br />
+   like a code fault. <strong>Solved</strong> by moving handlers into <code>api/_routes/</code> — underscore directories<br />
+   are excluded from function detection — behind a single entry point.</p>
+</li>
+<li>
+<p><strong>A catch-all that is built but never routed to.</strong> The obvious fix, <code>api/[...path].ts</code>,<br />
+   appears in the build output as <code>λ api/[...path]</code> and then receives nothing: every request<br />
+   returns Vercel's own <code>NOT_FOUND</code>, with no invocation and no logs. <strong>Isolated</strong> by deploying a<br />
+   static <code>api/ping.ts</code> beside it, which answered 200 from the same deployment — proving <code>/api</code><br />
+   routing worked and catch-all routing specifically did not. <strong>Solved</strong> with a static<br />
+<code>api/router.ts</code> plus an explicit rewrite, preserving every public URL.</p>
+</li>
+<li>
+<p><strong>ESM imports that resolve at compile time but not at runtime.</strong> <code>@vercel/node</code> does not<br />
+   bundle; it compiles and runs under Node's native ESM loader, which requires fully specified<br />
+   paths:<br />
+<code>ERR_UNSUPPORTED_DIR_IMPORT: Directory import '/var/task/app/api/_routes'
+   is not supported resolving ES modules imported from .../api/router.js</code><br />
+   The <code>TS2835</code> build warnings had been flagging this the whole time and were dismissed as<br />
+   cosmetic, because the build still completed. <strong>Fixed across 145 imports in 37 files.</strong></p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Lesson we learnt:</strong> a green deployment proves the build ran, not<br />
+that the thing works. One real request against the deployed URL is what closes the loop. This is<br />
+why we later wrote <code>docs/DEMO_RUNBOOK.md</code> and ran it against production (§9).</p>
+</blockquote>
+<h3>7.3 The SPA rewrite swallowing the entire API</h3>
+<p><code>vercel.json</code> rewrote <code>/(.*)</code> → <code>/index.html</code>. Harmless while each route was its own file (exact<br />
+filesystem matches are checked before rewrites) — but once the API became one dynamic route, the<br />
+rewrite won, and every <code>/api/*</code> call returned the app shell instead of JSON. The symptom was an<br />
+HTML-parse error in the client and a perfectly healthy-looking deployment. Now written<br />
+<code>/((?!api/).*)</code>.</p>
+<h3>7.4 Skills fragmenting, then a matcher that invented meaning</h3>
+<p>Without canonicalisation, "sewing", "tailoring" and "<span class="ml">തയ്യൽ</span>" become three unrelated skills and<br />
+search silently misses providers. We added fuzzy character matching — and then found it had<br />
+resolved <strong>"covering" to cooking</strong>, having scored 0.56 Sørensen–Dice against the alias<br />
+"catering". Two words differing by two letters are not related; they merely look alike. Worse, it<br />
+<em>missed</em> real relationships like "garment finishing" → stitching, which shares almost no<br />
+characters.</p>
+<p><strong>Solved</strong> by separating the two jobs entirely (§6.1): meaning moved into a curated alias table<br />
+grown from 25 to <strong>109 entries</strong> across the three registers people actually type in Kerala, and<br />
+fuzzy matching was demoted to typo absorption with two independent thresholds.</p>
+<h3>7.5 An unusable main screen</h3>
+<p>The app was slow enough to be unusable on the screen customers land on. The cause was not the<br />
+network: the API resolved relations in JavaScript <code>for</code> loops rather than SQL joins, so latency<br />
+scaled with row count — the directory search issued roughly <strong>two queries per provider</strong>.</p>
+<p>Measured against production, before and after:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Before</th>
+<th>After</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>providers/search</code> (Browse — the landing screen)</td>
+<td>21,008 ms</td>
+<td>1,350 ms</td>
+<td><strong>15.6× faster</strong></td>
+</tr>
+<tr>
+<td><code>chat/threads</code></td>
+<td>2,315 ms</td>
+<td>952 ms</td>
+<td>2.4× faster</td>
+</tr>
+</tbody>
+</table>
+<p>Two changes. <strong>First</strong>, the hot paths were batched to a fixed number of queries regardless of<br />
+result size — <code>hydrateCards</code> for provider cards, one query for every thread's last message,<br />
+<code>distanceMap</code> in place of a per-row distance lookup, and PostgREST embedded joins for the team<br />
+routes. <strong>Second</strong>, the function was moved from <code>iad1</code> to <code>bom1</code>: requests were entering at the<br />
+Mumbai edge and executing in Washington, adding a round trip on every leg.</p>
+<h3>7.6 Chat readable by anyone — four independent ways</h3>
+<p>A security review of the chat feature found conversations were exposed four separate ways. All<br />
+four are fixed:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>chat_threads</code> and <code>messages</code> had <code>for select using (true)</code> RLS, so the anon key — which ships in the public JS bundle — could read <strong>every message in the app</strong> via PostgREST</td>
+<td>Policies dropped; no Supabase client ships to the browser at all</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>GET /api/chat/threads</code> returned the 50 most recent threads <strong>system-wide</strong> to any signed-in user, each with its last message</td>
+<td>Scoped to threads the caller participates in</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>GET /api/chat/messages</code> served any thread to anyone holding its id</td>
+<td>Participation checked; non-participants get <strong>404, not 403</strong>, so a thread id cannot be confirmed by probing</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Provider chats were keyed on the provider id alone, so every customer contacting the same provider shared one thread and read the others' messages</td>
+<td>Keyed on both parties</td>
+</tr>
+</tbody>
+</table>
+<p>The root cause of #1 is worth recording. The permissive policy existed so a browser-side Supabase<br />
+client could receive Realtime updates. <strong>RLS cannot express "only participants" here</strong> — the app<br />
+does not use Supabase Auth, so to Postgres every browser caller is the same anonymous role, with<br />
+no identity to filter on. The fix was to stop the browser talking to the database entirely and<br />
+move the check into the API, which knows the user via the <code>sessions</code> table.</p>
+<p>Chat now polls every 7 seconds instead of subscribing — a deliberate, stated cost. Removing<br />
+<code>@supabase/supabase-js</code> from the browser also <strong>halved the bundle, 438 KB → 221 KB</strong>, which<br />
+matters on the connections our users have.</p>
+<p>Migration <code>005_enable_rls_everywhere.sql</code> subsequently enabled RLS on <strong>all 24 tables</strong>, not just<br />
+the chat ones.</p>
+<h3>7.7 Database writes</h3>
+<p>Nobody could sign in. <code>request-otp</code> still wrote a <code>role</code> column that migration <code>001</code> had dropped,<br />
+so the insert failed with <code>PGRST204</code> — but that upsert was the one Supabase call in the file whose<br />
+result was never checked. The handler carried on and returned a freshly generated code <strong>that had<br />
+never been stored</strong>. The user saw an OTP on screen, and <code>verify-otp</code> then correctly told them to<br />
+request one.</p>
+<p>Auditing for the same pattern found five more, each turning a failure into a plausible-looking<br />
+success:</p>
+<pre><code>providers/update-profile   a profile save that appears to work and does not
+auth/sign-out              leaves a live session while reporting sign-out
+auth/verify-otp            a code that cannot be consumed can be replayed
+chat/threads, chat/create  rollback deletes leaving orphan threads
+</code></pre>
+<p>All six now surface the error. <strong>Pattern learned: an unchecked write is a bug that reports<br />
+success</strong> — the same class as §7.2's green deployments.</p>
+<h3>7.8 A conversation named after the wrong person</h3>
+<p>Found by walking the app during screenshot capture. A provider opening Communities saw her own<br />
+name at the top of every conversation, where the other person's should be.</p>
+<p>A thread's title is written <strong>once</strong>, at creation, by whoever opened it. A customer starts a<br />
+chat from a provider's profile, so the title stored is the provider's name — correct for the<br />
+customer reading it, and wrong for the provider, who is then looking at a list of conversations<br />
+all labelled with herself. There is no title that is right for both ends of a two-person<br />
+conversation, because the useful label is <em>the other person</em>, and who that is depends on who is<br />
+reading.</p>
+<p>So it is no longer stored. <code>chat/threads</code> now resolves the counterparty per viewer — the<br />
+provider's name for a customer, the customer's name for a provider — batched into one query per<br />
+side rather than one per thread, because this list polls every seven seconds. Group and team<br />
+threads keep their stored titles: a conversation the customer deliberately named "Onam bulk<br />
+order" means the same thing to everyone in it.</p>
+<p>The chat screen itself was headed only <code><span class="ml">ചാറ്റ്</span></code>, so having opened a conversation you could no<br />
+longer tell which one it was. It now carries the same resolved name.</p>
+<h2>8 · User interface</h2>
+<p>Captured against the live deployment.</p>
+<h3>8.1 Sign-in and first-time onboarding</h3>
+<p><div class="missing"><b>Screenshot not yet captured</b>01-signin.png<br>see docs/images/README.md for how to take it</div></p>
+<p><strong>The app opens in Malayalam.</strong> <code><span class="ml">ലൂം · വൈദഗ്ധ്യം വരുമാനമാക്കുന്നു</span></code> — a first-time user is never<br />
+shown English unless she asks for it, and the choice she makes persists across reloads. Sign-in<br />
+is <strong>phone + OTP only</strong>: no password, and no name or role asked before the number is verified.</p>
+<p><div class="missing"><b>Screenshot not yet captured</b>02-signup-role.png<br>see docs/images/README.md for how to take it</div></p>
+<p>Only after verification does the app ask who you are. One number, one decision: provider or<br />
+customer.</p>
+<h3>8.2 Skill canonicalisation — the claim, made visible</h3>
+<p><div class="missing"><b>Screenshot not yet captured</b>03-skill-entry.png<br>see docs/images/README.md for how to take it</div></p>
+<p>A provider types her skills as free text — whatever words she actually uses, in whichever of the<br />
+three registers she types in.</p>
+<p><div class="missing"><b>Screenshot not yet captured</b>04-skill-readback.png<br>see docs/images/README.md for how to take it</div></p>
+<p><strong>This screen is the canonicalisation claim, visible.</strong> She typed <code>stiching</code> and <code>coocking</code> —<br />
+both misspelled — and the app reads back <code>stiching → <span class="ml">തയ്യൽ</span></code> and <code>coocking → <span class="ml">പാചകം</span></code> <em>before</em> she<br />
+commits. Two things are happening at once: the typo tier of §6.1 absorbs the misspelling, and<br />
+the canonical skill is shown to her in Malayalam, which is the same node a customer filtering<br />
+for stitching will search. Nothing fragments into an unsearchable synonym, and she can see that<br />
+it did not before she taps <code><span class="ml">പൂർത്തിയാക്കുക</span></code>.</p>
+<h3>8.3 Provider — ranked work, in Malayalam</h3>
+<p><div class="missing"><b>Screenshot not yet captured</b>05-find-work-ml.png<br>see docs/images/README.md for how to take it</div></p>
+<p><code><span class="ml">ജോലി കണ്ടെത്തുക</span></code> — matches ranked by the deterministic score of §6.2, each showing the matched<br />
+skill, distance and pay. The ▶ control speaks the match explanation aloud.</p>
+<p><div class="missing"><b>Screenshot not yet captured</b>06-requests-ml.png<br>see docs/images/README.md for how to take it</div><br />
+<div class="missing"><b>Screenshot not yet captured</b>07-requests-en.png<br>see docs/images/README.md for how to take it</div></p>
+<p>The same screen in both languages. Accept and decline are <code><span class="ml">സ്വീകരിക്കുക</span></code> and <code><span class="ml">വേണ്ട</span></code> — the<br />
+interface is translated, not merely transliterated, and the skill names come from the canonical<br />
+vocabulary rather than a UI string table.</p>
+<p><div class="missing"><b>Screenshot not yet captured</b>10-my-work.png<br>see docs/images/README.md for how to take it</div></p>
+<p><code><span class="ml">എന്റെ ജോലി</span></code> answers the question a provider actually has: <em>what happened to the work I said yes<br />
+to?</em> Two details here were defects we fixed, and both are the kind that look like nothing:</p>
+<ul>
+<li>The blouse job is marked <code><span class="ml">ഉപഭോക്താവിന്റെ മറുപടി കാത്തിരിക്കുന്നു</span></code> — <strong>waiting for the<br />
+  customer's reply</strong>. Applying registers interest; it does not win the job. Before this screen<br />
+  existed an accepted job simply vanished from every provider view, and the state it vanished<br />
+  into was one the provider had no way to learn.</li>
+<li>Finished work sits in its own <code><span class="ml">പൂർത്തിയായ ജോലി</span></code> section. Until the most recent commit a<br />
+  provider was never told a job had ended — the card kept reporting the <em>team's</em> status, which<br />
+  stays <code>confirmed</code> forever, so a completed job showed as active indefinitely.</li>
+</ul>
+<h3>8.4 Customer — browse, filter, request</h3>
+<p><div class="missing"><b>Screenshot not yet captured</b>08-browse-filters.png<br>see docs/images/README.md for how to take it</div></p>
+<p>Skill, distance, experience and price filters over available providers only, each card showing<br />
+rate, delivery time, experience, distance, capacity and rating.</p>
+<p><div class="missing"><b>Screenshot not yet captured</b>09-new-request.png<br>see docs/images/README.md for how to take it</div></p>
+<p>Posting work: pick skills from the canonical vocabulary, then choose <strong>Individual</strong> or <strong>Group</strong>.<br />
+That single toggle is what routes an order into team assembly.</p>
+<h3>8.5 Communities — conversations private to their participants</h3>
+<p><div class="missing"><b>Screenshot not yet captured</b>13-chat.png<br>see docs/images/README.md for how to take it</div></p>
+<p><code><span class="ml">ചാറ്റ്</span></code> — a one-to-one conversation. Sent messages sit right, received left, and each received<br />
+message carries a listen control, because the person who cannot read the message is exactly the<br />
+person who needs it spoken. The composer sits <strong>above</strong> the tab bar: it used to render<br />
+underneath it, at the same <code>bottom-0</code>, which left the message box unreachable on the screen<br />
+whose entire purpose is sending messages.</p>
+<p>A thread is visible only to the people in it. There is no participants table — membership is<br />
+derived from the thread's context (§7.6) — so a customer, a provider on a team, and an outsider<br />
+each get a different answer to the same URL, and the outsider gets <code>404</code> rather than <code>403</code>.</p>
+<h3>8.6 Still to capture</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Screen</th>
+<th>What it must show</th>
+<th>Runbook step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11</td>
+<td><strong>Team assembly result</strong></td>
+<td>Members drawn from <strong>more than one SHG</strong>, with the coverage rationale — the headline shot</td>
+<td>C2–C3</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Provider invitation after confirm</td>
+<td>The same <code><span class="ml">എന്റെ ജോലി</span></code> screen above, now carrying a team invitation that was not there before the customer confirmed</td>
+<td>C4 then C8</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Communities thread list</td>
+<td>Each conversation named after <strong>the other person in it</strong>. Retake after the §7.8 fix deploys — the current build labels a thread with the viewer's own name</td>
+<td>D1</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9 · Testing and verification</h2>
+<p>Two layers: an automated end-to-end suite that drives the deployed API, and a manual runbook<br />
+that drives the screens.</p>
+<h3>9.1 Automated end-to-end suite — 78 checks, 0 failures</h3>
+<p><code>app/scripts/e2e.mjs</code> (<code>npm run test:e2e</code>) signs <strong>three provider accounts and two customer<br />
+accounts</strong> in through the real phone + OTP flow and drives the complete product against<br />
+production — no fixtures, no mocks, no direct database access. Three providers and two<br />
+customers are the minimum that can express the interesting cases: two providers competing for<br />
+one job, a customer choosing between them, a team whose members accept and decline<br />
+independently, and a non-participant who must be locked out of a conversation.</p>
+<p><strong>Run of 15 August 2026 against production: 78 passed, 0 failed.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Checks</th>
+<th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A · Authentication</td>
+<td>6</td>
+<td>Signup, returning sign-in, <code>auth/me</code>, wrong OTP rejected, bogus token yields no session</td>
+</tr>
+<tr>
+<td>B · Skill canonicalisation</td>
+<td>7</td>
+<td><code>sewing</code>→<code><span class="ml">തയ്യൽ</span></code> and <code>catering</code>→<code><span class="ml">പാചകം</span></code> by alias; <code>stiching</code>→stitching by <strong>typo</strong>; <code>garment finishing</code>→stitching despite sharing almost no characters; a new phrase becomes its own skill and is reused, not duplicated; <strong><code>covering</code> no longer collapses into cooking</strong></td>
+</tr>
+<tr>
+<td>C · Profiles</td>
+<td>5</td>
+<td>Provider and customer profile writes persist and read back</td>
+</tr>
+<tr>
+<td>D · Browse and filters</td>
+<td>5</td>
+<td>43 cards; skill filter 23/43; price filter 39 ≤ ₹400; distance filter 27 ≤ 5 km; combined 16</td>
+</tr>
+<tr>
+<td>E · Individual lifecycle</td>
+<td>17</td>
+<td>Post → ranked feed → <strong>Malayalam narration with score breakdown</strong> → two providers apply → customer chooses → <strong>loser auto-declined</strong> → second choice rejected 409 → edit-after-assign rejected 409 → complete → double-complete rejected 409 → rate → re-rate revises rather than duplicates → appears in history</td>
+</tr>
+<tr>
+<td>F · Collective lifecycle</td>
+<td>19</td>
+<td>Group order stays <strong>out</strong> of the individual feed → team assembled, coverage complete → <strong>units split 4 + 2 = 6 respecting capacity</strong> → <strong>determinism: re-assembly yields the identical team</strong> → re-assembly replaces the draft, no orphans → <strong>provider sees nothing before confirm</strong>, and cannot accept even by calling the API directly (409) → swap before confirm → confirm → invitations appear → one accepts, one declines → <strong>declined member replaced on a confirmed team</strong> → <strong>accepted member cannot be swapped out (409)</strong></td>
+</tr>
+<tr>
+<td>G · Chat and privacy</td>
+<td>7</td>
+<td>Participant reads; <strong>non-participant gets 404, not 403</strong>; her thread list excludes it; re-opening reuses the thread; confirming a team creates the team chat</td>
+</tr>
+<tr>
+<td>H · Authorisation</td>
+<td>7</td>
+<td>Request detail 401 without a session; no cross-customer edit (403); no assembling someone else's order (403); customer cannot read the provider feed; grievances scoped to their author</td>
+</tr>
+<tr>
+<td>I · Teardown</td>
+<td>2</td>
+<td>Sign-out kills the token</td>
+</tr>
+</tbody>
+</table>
+<p>Selected output, verbatim:</p>
+<pre><code>✅ 'stiching' (typo) resolves to stitching via typo tier — → stitching via typo
+✅ 'covering' does NOT collapse into cooking — covering → covering via exact
+✅ the losing applicant is declined automatically — Test Provider Three state=declined
+✅ units are split across members, respecting capacity — Three:4 + Two:2 = 6 units
+✅ DETERMINISM — re-assembling the same request yields the identical team
+✅ provider cannot accept before confirmation, even via direct API call — 409 This team is not confirmed yet
+✅ a DECLINED member can be replaced on a confirmed team — her slot was already vacant
+✅ an ACCEPTED member cannot be swapped out — 409 only a provider who declined can be replaced
+✅ NON-participant gets 404, not 403 — status=404
+
+  78 passed, 0 failed, 78 checks total
+</code></pre>
+<p>Two behaviours the suite pinned down that are worth stating, because both look like bugs and<br />
+are not: re-assembling a request <strong>replaces</strong> the previous draft rather than accumulating<br />
+teams, and request detail is readable by any signed-in user — the guard is the session, not<br />
+ownership, because a provider must read a request to decide whether to apply.</p>
+<h3>9.2 Manual runbook — 52 checks, 6/6 sections pass</h3>
+<p><code>docs/DEMO_RUNBOOK.md</code> — 52 checks in six sections, each stated as <strong>action → expect →<br />
+why it matters</strong>, with the claim it demonstrates, so a failure tells us exactly which claim we can<br />
+no longer make. A full pass takes ~15 minutes.</p>
+<p><strong>Result of the full pass against production, 8 August 2026:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Result</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A · Provider journey</td>
+<td>✅ Pass</td>
+<td><strong>Found and fixed:</strong> group orders were appearing in the individual work feed</td>
+</tr>
+<tr>
+<td>B · Customer journey</td>
+<td>✅ Pass</td>
+<td>Availability filter verified by ratio — 44 total, 4 unavailable, 40 returned</td>
+</tr>
+<tr>
+<td>C · Collective journey</td>
+<td>✅ Pass</td>
+<td><strong>18 members across 6 SHGs</strong>, coverage complete; invitation correctly withheld until confirm</td>
+</tr>
+<tr>
+<td>D · Communities</td>
+<td>✅ Pass</td>
+<td>Members read the thread, an outsider gets 404 and an empty list</td>
+</tr>
+<tr>
+<td>E · Cross-cutting</td>
+<td>✅ Pass</td>
+<td><strong>Found and fixed:</strong> text controls at 20 px against the 56 px floor</td>
+</tr>
+<tr>
+<td>F · Negative checks</td>
+<td>✅ Pass</td>
+<td>18 team audit rows written; swap-after-confirm returns 409; unauthenticated request detail now 401</td>
+</tr>
+</tbody>
+</table>
+<p>Section F exists because <strong>each of those failures is silent</strong> — the app looks fine and the data is<br />
+wrong. It checks that the anon key returns <code>[]</code> against <code>sessions</code>, <code>providers</code> and <code>messages</code>;<br />
+that a request detail cannot be read without a token; that a thread id cannot be confirmed by<br />
+probing; that a request cannot be edited after assignment; that a provider cannot accept a team<br />
+invite before the customer confirms, even by replaying the API call directly; and that audit rows<br />
+are actually written.</p>
+<p><strong>Test accounts</strong> (live, sign in with the number; the OTP prints on screen):</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Phone</th>
+<th>Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provider</td>
+<td>9000000101</td>
+<td>Test Provider One</td>
+</tr>
+<tr>
+<td>Provider</td>
+<td>9000000102</td>
+<td>Test Provider Two</td>
+</tr>
+<tr>
+<td>Provider</td>
+<td>9000000103</td>
+<td>Test Provider Three</td>
+</tr>
+<tr>
+<td>Customer</td>
+<td>9000000201</td>
+<td>Test Customer One</td>
+</tr>
+<tr>
+<td>Customer</td>
+<td>9000000202</td>
+<td>Test Customer Two</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Demo data seeded:</strong> 40 providers (Ernakulam SHG members with real-looking names, rates, capacity<br />
+and Malayalam skills), 6 customers, 5 requests spanning <code>open</code> / <code>assembling</code> / <code>assigned</code> /<br />
+<code>completed</code>, 8 portfolio items, 9 bilingual ratings, and a seeded conversation.</p>
+<hr />
+<h2>10 · Milestones achieved — measurable</h2>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Working, publicly reachable deployment</td>
+<td>Live at a URL anyone can open, no install</td>
+</tr>
+<tr>
+<td>Collective matching proven end to end</td>
+<td>18 providers across 6 SHGs assembled for one 30-unit order</td>
+</tr>
+<tr>
+<td>Determinism proven</td>
+<td>Same request → same team, enforced by explicit tiebreak columns</td>
+</tr>
+<tr>
+<td>Canonical vocabulary</td>
+<td>109 alias phrases over 6 skills in 3 registers; typo tier separated from meaning</td>
+</tr>
+<tr>
+<td>Malayalam-first proven</td>
+<td>App opens in Malayalam, persists the choice, self-hosted font loads</td>
+</tr>
+<tr>
+<td>Landing screen made usable</td>
+<td>21,008 ms → 1,350 ms (<strong>15.6×</strong>)</td>
+</tr>
+<tr>
+<td>Payload halved for low-bandwidth users</td>
+<td>438 KB → 221 KB</td>
+</tr>
+<tr>
+<td>Chat privacy</td>
+<td>4 vulnerabilities closed; RLS on 24/24 tables</td>
+</tr>
+<tr>
+<td>Silent-failure class eliminated</td>
+<td>6 unchecked writes fixed</td>
+</tr>
+<tr>
+<td>Verification discipline</td>
+<td>78-check automated suite (0 failures) <strong>and</strong> a 52-check manual runbook, both against production</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>11 · Known gaps — stated plainly</h2>
+<p><strong>Not yet implemented</strong></p>
+<ul>
+<li><strong>Speech-to-text.</strong> Skill entry is typed. Spoken <em>output</em> works; spoken <em>input</em> does not, so the<br />
+  voice-first goal for low-literacy users is only half met. <strong>This is our top priority.</strong></li>
+<li><strong>Learned embeddings.</strong> Skill matching uses a curated alias table, not vector similarity. It is<br />
+  deterministic and explainable, but does not generalise to phrases nobody has listed.</li>
+<li><strong>Real locations.</strong> A provider's location is assigned deterministically rather than captured, so<br />
+  distances are computed correctly over placeholder coordinates — "3.2 km" is correct arithmetic<br />
+  over data that does not mean anything yet.</li>
+<li><strong>Graph visualisation.</strong> The justification for a match is text, not an animated traversal.</li>
+<li><strong>Admin surface.</strong> Grievances are collected; there is no moderation screen.</li>
+</ul>
+<p><strong>Operational caveats</strong></p>
+<ul>
+<li><strong>Auth is demo-grade.</strong> Sessions are bearer tokens in <code>localStorage</code> against our own <code>sessions</code><br />
+  table, not Supabase Auth. OTP is generated when Twilio is configured; without it the code is<br />
+  shown on screen — that is the demo path, not a bug.</li>
+<li><strong>New skills are not translated</strong> unless <code>BHASHINI_API_KEY</code> is set; they fall back to the English<br />
+  word in the Malayalam field.</li>
+<li><strong>Chat polls at 7 seconds</strong> rather than pushing live — the deliberate cost of closing the privacy<br />
+  hole in §7.6.</li>
+<li><strong>Anon key rotation pending.</strong> The key was public while the permissive policies of §7.6 existed.<br />
+  Those policies are gone and verified gone, so nothing is exposed today; rotating the key is the<br />
+  remaining housekeeping.</li>
+<li><strong>Lint debt.</strong> Some <code>no-misused-promises</code> warnings in <code>src/</code>; not in the deploy path.</li>
+</ul>
+<p><strong>Next four weeks, in order</strong></p>
+<ol>
+<li>Capture real locations (browser geolocation + a panchayat-level fallback picker).</li>
+<li>Speech-to-text for skill entry — the other half of voice-first.</li>
+<li>Admin/moderation surface for grievances.</li>
+<li>A graph view of the match justification.</li>
+</ol>
+<hr />
+<h2>12 · Evidence and links</h2>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Live application</strong></td>
+<td>https://loom-lovat-phi.vercel.app — sign in with any phone number; the OTP prints on screen in demo mode</td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td>https://github.com/nidheerakesh/loom</td>
+</tr>
+<tr>
+<td>Full project submission document</td>
+<td><code>docs/SUBMISSION.md</code></td>
+</tr>
+<tr>
+<td>Product requirements</td>
+<td><code>docs/PRD.md</code></td>
+</tr>
+<tr>
+<td>Technical design</td>
+<td><code>docs/TDD.md</code></td>
+</tr>
+<tr>
+<td>User flows · UI/UX spec</td>
+<td><code>docs/USER_FLOWS.md</code> · <code>docs/UI_UX_DESIGN.md</code></td>
+</tr>
+<tr>
+<td><strong>Demo runbook + results</strong></td>
+<td><code>docs/DEMO_RUNBOOK.md</code></td>
+</tr>
+<tr>
+<td><strong>Automated end-to-end suite</strong></td>
+<td><code>app/scripts/e2e.mjs</code> — <code>npm run test:e2e</code></td>
+</tr>
+<tr>
+<td>Deployment constraints and their symptoms</td>
+<td><code>app/README.md</code></td>
+</tr>
+<tr>
+<td>Matching engine</td>
+<td><code>app/api/_lib/scoring.ts</code> · <code>app/api/_routes/team-assembly/assemble.ts</code></td>
+</tr>
+<tr>
+<td>Skill canonicalisation</td>
+<td><code>app/api/_routes/skills/resolve.ts</code> · <code>app/api/_lib/text.ts</code></td>
+</tr>
+<tr>
+<td>Schema and migrations</td>
+<td><code>app/supabase/schema.sql</code> · <code>app/supabase/migrations/</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>13 · Team contributions</h2>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Focus this month</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nidhi Rakesh</strong></td>
+<td>Backend architecture and Supabase/PostgreSQL integration; the database schema; deterministic individual matching and cross-SHG team assembly; the API routes; authentication; deployment and the debugging of it. Performance optimisation, and resolving the deployment faults during the Convex → Supabase migration.</td>
+</tr>
+<tr>
+<td><strong>Niveditha G. S.</strong></td>
+<td>The React/Vite frontend and the provider and customer screens; the Malayalam-first interface; skill entry and search flows; team selection and confirmation UI; the chat interface; accessibility work, responsive design, and integration against the backend APIs.</td>
+</tr>
+<tr>
+<td><strong>Anjana Nandakumar</strong></td>
+<td>Problem research and product requirements; user flows and UI/UX planning; Malayalam and localisation requirements; realistic demo scenarios and data; testing and validation through the production demo runbook, and the identification and verification of usability, accessibility and functional defects.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>14 · In one line</h2>
+<p>India has built the world's largest network of women's self-help groups and given them credit.<br />
+What is missing is the intelligence to route income through that network. Loom is that layer — and<br />
+this month it went from a planning document to a deployed, secured, measured system that assembles<br />
+an 18-woman team across 6 SHGs for an order none of them could have taken alone.</p></body></html>
