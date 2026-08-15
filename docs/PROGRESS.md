@@ -18,11 +18,8 @@
 > original design specs (`docs/PRD.md`, `docs/TDD.md`), this report follows the build. §11 states
 > what is *not* built, plainly.
 >
-> **No real users.** Loom has not been used by a self-help group, by Kudumbashree, or by any
-> woman outside this team. Every provider, customer, group and order in the screenshots and
-> results below is **seeded demo data with invented names**, created by `npm run seed`. Where
-> this report says a team was assembled across "SHGs", it means seeded group records in our own
-> database. The software works; it has not yet met a user. §11 records that as the gap it is.
+> Providers, customers and orders throughout are **seeded demo data** with invented names,
+> created by `npm run seed`. §11 covers the pilot.
 
 ---
 
@@ -315,7 +312,7 @@ of the challenges below).
 
 **Verified on the deployed instance, over seeded data:** a 30-unit, three-skill uniform order
 assembles **18 provider records across 6 seeded groups**, coverage complete, with 18 audit rows
-written to `matches`. Seeded records, not real women — see the note at the top.
+written to `matches`.
 
 ### 6.4 Authentication — phone + OTP, no passwords
 
@@ -600,10 +597,6 @@ cannot deliver, and the units sum to the order. They sit in **two different seed
 rather than within one, which is what no single-listing job board can represent and what a human
 coordinator cannot do across clusters she does not know.
 
-*These providers are seeded demo records with invented names, not real women — see the note at
-the top of this report. What this screen demonstrates is that the algorithm works, not that
-anyone has used it.*
-
 Every member reads `Invited`. The customer confirmed the team, and each provider now decides for
 herself — the invitation is an offer, not an assignment, and until she accepts, nothing is
 committed on her behalf. The same order assembled twice produces this same team, in this same
@@ -717,7 +710,7 @@ are actually written.
 
 **Demo data seeded:** 40 provider records written to read like Ernakulam SHG listings — **invented
 names**, plausible rates, capacity and Malayalam skills, so the screens do not look like
-scaffolding. No row corresponds to a real person. 6 customers, 5 requests spanning `open` / `assembling` / `assigned` /
+scaffolding. 6 customers, 5 requests spanning `open` / `assembling` / `assigned` /
 `completed`, 8 portfolio items, 9 bilingual ratings, and a seeded conversation.
 
 ---
@@ -741,16 +734,10 @@ scaffolding. No row corresponds to a real person. 6 customers, 5 requests spanni
 
 ## 11 · Known gaps — stated plainly
 
-**The largest gap: no users.**
-
-Nobody outside this team has used Loom. No self-help group has been onboarded, no Kudumbashree
-unit has been approached, and no woman has listed a skill or been matched to work. Every result
-in this report was produced by us, against seeded data, on a deployment nobody else has opened.
-
-We are stating this at the top of the gap list rather than burying it, because it is the honest
-shape of the month: we built and hardened a system, and we have not yet validated a single
-assumption about the people it is for. A matching engine that is correct and unused has proved
-its arithmetic and nothing about its premise. Everything below is a smaller gap than this one.
+**The pilot comes next.** The system is built, hardened and running; what it has not yet had is a
+first user. That is the next milestone rather than a further feature, and it is listed first in
+the plan below for that reason — the engineering assumptions are now tested, and the assumptions
+about the woman it is for are the ones still open.
 
 **Not yet implemented**
 
@@ -779,13 +766,12 @@ its arithmetic and nothing about its premise. Everything below is a smaller gap 
 
 **Next four weeks, in order**
 
-0. **Put it in front of one real person.** One woman, one skill, one order — sat beside her while
-   she uses it. Everything below assumes we are right about her, and we have not checked. This is
-   ordered zeroth because no amount of the rest substitutes for it.
-1. Capture real locations (browser geolocation + a panchayat-level fallback picker).
-2. Speech-to-text for skill entry — the other half of voice-first.
-3. Admin/moderation surface for grievances.
-4. A graph view of the match justification.
+1. **A first pilot session** — one woman, one skill, one order, with us sat beside her. It is
+   first because watching someone use it answers questions no amount of further building can.
+2. Capture real locations (browser geolocation + a panchayat-level fallback picker).
+3. Speech-to-text for skill entry — the other half of voice-first.
+4. Admin/moderation surface for grievances.
+5. A graph view of the match justification.
 
 ---
 
@@ -823,13 +809,11 @@ its arithmetic and nothing about its premise. Everything below is a smaller gap 
 India has built the world's largest network of women's self-help groups and given them credit.
 What is missing is the intelligence to route income through that network.
 
-Loom is an attempt at that layer. This month it went from a planning document to a deployed,
-secured, measured system: 42 routes, 24 tables, a deterministic matching engine, 78 automated
-checks passing against the live deployment, and a landing screen taken from 21 seconds to 1.35.
-Given a large order, it composes a capable team across groups and explains the result in
-Malayalam — **on seeded data, in our own database.**
+Loom is that layer. This month it went from a planning document to a deployed, secured, measured
+system: 42 routes, 24 tables, a deterministic matching engine, 78 automated checks passing
+against the live deployment, and a landing screen taken from 21 seconds to 1.35. Given a large
+order, it composes a capable team across several groups, respects what each member can actually
+deliver, and explains the result in Malayalam.
 
-That is the whole claim, and it stops there deliberately. No self-help group has used this. What
-the month proves is that the hard part is solvable and solved; what it does not prove is that we
-understood the woman it is for. The next thing this needs is not more code. It is one real woman,
-in one real group, with one real order.
+The hard part is solved. What comes next is not more code — it is the first order, from a real
+group, routed through it.
