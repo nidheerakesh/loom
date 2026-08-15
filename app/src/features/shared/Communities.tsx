@@ -18,17 +18,20 @@ export function Communities() {
     enabled: !!token,
     refetchInterval: POLL_MS,
   });
-  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [openThread, setOpenThread] = useState<{ id: string; title?: string } | null>(null);
   const [composing, setComposing] = useState(false);
 
-  if (openThreadId) return <ChatThread threadId={openThreadId} onBack={() => setOpenThreadId(null)} />;
+  if (openThread)
+    return (
+      <ChatThread threadId={openThread.id} title={openThread.title} onBack={() => setOpenThread(null)} />
+    );
   if (composing)
     return (
       <NewConversation
         onBack={() => setComposing(false)}
         onCreated={(id) => {
           setComposing(false);
-          setOpenThreadId(id);
+          setOpenThread({ id });
         }}
       />
     );
@@ -46,7 +49,7 @@ export function Communities() {
       {threads && threads.length === 0 && <div className="text-loom-indigoSoft">{t("noResults")}</div>}
       {threads?.map((th) => (
         <Card key={th._id} className="mb-2 cursor-pointer" >
-          <button className="text-left w-full" onClick={() => setOpenThreadId(th._id)}>
+          <button className="text-left w-full" onClick={() => setOpenThread({ id: th._id, title: th.title })}>
             <div className="font-semibold text-loom-indigo">{th.title}</div>
             <div className="text-sm text-loom-indigoSoft truncate">{th.lastMessage ?? "—"}</div>
           </button>
@@ -56,7 +59,18 @@ export function Communities() {
   );
 }
 
-export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () => void }) {
+// `title` is who the conversation is with, resolved per viewer by /api/chat/threads. Passed in
+// rather than fetched: the caller already has it, and a chat headed only "Chat" leaves you
+// unable to tell which conversation you opened.
+export function ChatThread({
+  threadId,
+  title,
+  onBack,
+}: {
+  threadId: string;
+  title?: string;
+  onBack: () => void;
+}) {
   const { token, t } = useAuth();
   const { data: messages } = useQuery({
     queryKey: ["chat/messages", threadId],
@@ -83,7 +97,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
   };
 
   return (
-    <Screen title={t("chat")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
+    <Screen title={title || t("chat")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
       <div className="space-y-2 mb-4">
         {messages?.map((m) => (
           <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
