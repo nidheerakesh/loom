@@ -432,6 +432,27 @@ chat/threads, chat/create  rollback deletes leaving orphan threads
 All six now surface the error. **Pattern learned: an unchecked write is a bug that reports
 success** — the same class as §7.2's green deployments.
 
+### 7.8 A conversation named after the wrong person
+
+Found by walking the app during screenshot capture. A provider opening Communities saw her own
+name at the top of every conversation, where the other person's should be.
+
+A thread's title is written **once**, at creation, by whoever opened it. A customer starts a
+chat from a provider's profile, so the title stored is the provider's name — correct for the
+customer reading it, and wrong for the provider, who is then looking at a list of conversations
+all labelled with herself. There is no title that is right for both ends of a two-person
+conversation, because the useful label is *the other person*, and who that is depends on who is
+reading.
+
+So it is no longer stored. `chat/threads` now resolves the counterparty per viewer — the
+provider's name for a customer, the customer's name for a provider — batched into one query per
+side rather than one per thread, because this list polls every seven seconds. Group and team
+threads keep their stored titles: a conversation the customer deliberately named "Onam bulk
+order" means the same thing to everyone in it.
+
+The chat screen itself was headed only `ചാറ്റ്`, so having opened a conversation you could no
+longer tell which one it was. It now carries the same resolved name.
+
 ## 8 · User interface
 
 Captured against the live deployment.
@@ -504,13 +525,27 @@ rate, delivery time, experience, distance, capacity and rating.
 Posting work: pick skills from the canonical vocabulary, then choose **Individual** or **Group**.
 That single toggle is what routes an order into team assembly.
 
-### 8.5 Still to capture
+### 8.5 Communities — conversations private to their participants
+
+![A conversation](images/13-chat.png)
+
+`ചാറ്റ്` — a one-to-one conversation. Sent messages sit right, received left, and each received
+message carries a listen control, because the person who cannot read the message is exactly the
+person who needs it spoken. The composer sits **above** the tab bar: it used to render
+underneath it, at the same `bottom-0`, which left the message box unreachable on the screen
+whose entire purpose is sending messages.
+
+A thread is visible only to the people in it. There is no participants table — membership is
+derived from the thread's context (§7.6) — so a customer, a provider on a team, and an outsider
+each get a different answer to the same URL, and the outsider gets `404` rather than `403`.
+
+### 8.6 Still to capture
 
 | # | Screen | What it must show | Runbook step |
 |---|---|---|---|
 | 11 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
 | 12 | Provider invitation after confirm | The same `എന്റെ ജോലി` screen above, now carrying a team invitation that was not there before the customer confirmed | C4 then C8 |
-| 13 | Communities | A private thread with the composer above the tab bar | D2–D3 |
+| 14 | Communities thread list | Each conversation named after **the other person in it**. Retake after the §7.8 fix deploys — the current build labels a thread with the viewer's own name | D1 |
 
 ---
 

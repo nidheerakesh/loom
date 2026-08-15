@@ -2,7 +2,9 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
+import type { Session } from "../../_lib/auth.js";
 import { requireSession, sessionByToken } from "../../_lib/auth.js";
+import type { ThreadRow } from "../../_lib/chatAccess.js";
 import { canAccessThread, providerChatContextId, visibleThreads } from "../../_lib/chatAccess.js";
 
 const OpenBody = z.object({
@@ -96,11 +98,67 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     if (!lastByThread.has(m.thread_id)) lastByThread.set(m.thread_id, m.body);
   }
 
+  const titleFor = await counterpartyTitles(session, threads);
+
   res.status(200).json(
     threads.map((t) => ({
       _id: t.id,
-      title: t.title,
+      title: titleFor.get(t.id) ?? t.title,
       lastMessage: lastByThread.get(t.id) ?? null,
     })),
   );
 });
+
+// A one-to-one thread's stored title is written once, by whoever opened it — the provider's
+// name, because a customer starts the conversation from that provider's profile. It is
+// therefore right for exactly one of the two people in it: the provider opened her own
+// conversations and saw her own name at the top of every one.
+//
+// The name a conversation should carry is the name of the person on the other end, which
+// depends on who is reading. So it is resolved per viewer here rather than stored.
+//
+// Only one-to-one `provider` threads are relabelled. A group conversation was given a real
+// title by the customer who created it ("Onam bulk order"), a team thread is named after its
+// job, and both of those mean the same thing to everyone reading them.
+async function counterpartyTitles(
+  session: Session,
+  threads: ThreadRow[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const oneToOne = threads.filter((t) => t.context_type === "provider");
+  if (oneToOne.length === 0) return out;
+
+  const parsed = oneToOne.map((t) => {
+    const [providerId, customerId] = t.context_id.split(":");
+    return { threadId: t.id, providerId, customerId: customerId || undefined };
+  });
+
+  // One query per side, not one per thread — this list polls every 7 seconds.
+  const isProvider = session.role === "provider";
+  const names = new Map<string, string>();
+  if (isProvider) {
+    const ids = [...new Set(parsed.map((p) => p.customerId).filter(Boolean) as string[])];
+    if (ids.length > 0) {
+      const { data, error } = await supabaseAdmin.from("customers").select("id, name").in("id", ids);
+      if (error) throw new HttpError(500, error.message);
+      for (const c of data ?? []) names.set(c.id, c.name);
+    }
+  } else {
+    const ids = [...new Set(parsed.map((p) => p.providerId).filter(Boolean))];
+    if (ids.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from("providers")
+        .select("id, name, shop_name")
+        .in("id", ids);
+      if (error) throw new HttpError(500, error.message);
+      for (const p of data ?? []) names.set(p.id, p.shop_name ?? p.name);
+    }
+  }
+
+  for (const p of parsed) {
+    const otherId = isProvider ? p.customerId : p.providerId;
+    const name = otherId ? names.get(otherId) : undefined;
+    if (name) out.set(p.threadId, name);
+  }
+  return out;
+}
