@@ -17,6 +17,12 @@
 > **Everything described below is deployed and running.** Where the build diverges from the
 > original design specs (`docs/PRD.md`, `docs/TDD.md`), this report follows the build. §11 states
 > what is *not* built, plainly.
+>
+> **No real users.** Loom has not been used by a self-help group, by Kudumbashree, or by any
+> woman outside this team. Every provider, customer, group and order in the screenshots and
+> results below is **seeded demo data with invented names**, created by `npm run seed`. Where
+> this report says a team was assembled across "SHGs", it means seeded group records in our own
+> database. The software works; it has not yet met a user. §11 records that as the gap it is.
 
 ---
 
@@ -262,8 +268,9 @@ random. On migration, ties silently reordered between identical runs and determi
 fixed with explicit `seq bigserial` tiebreak columns on `providers` and `team_members` (§6.1
 of the challenges below).
 
-**Verified in production:** a seeded 30-unit, three-skill uniform order assembles **18 members
-across 6 different SHGs**, coverage complete, with 18 audit rows written to `matches`.
+**Verified on the deployed instance, over seeded data:** a 30-unit, three-skill uniform order
+assembles **18 provider records across 6 seeded groups**, coverage complete, with 18 audit rows
+written to `matches`. Seeded records, not real women — see the note at the top.
 
 ### 6.4 Authentication — phone + OTP, no passwords
 
@@ -525,7 +532,33 @@ rate, delivery time, experience, distance, capacity and rating.
 Posting work: pick skills from the canonical vocabulary, then choose **Individual** or **Group**.
 That single toggle is what routes an order into team assembly.
 
-### 8.5 Communities — conversations private to their participants
+### 8.5 Collective matching — the capability nothing else here has
+
+![Team assembly result](images/11-team-assembly.png)
+
+**This is the screen the whole project exists for.** A ten-unit uniform order that no single
+provider could take has been assembled into a team, and the app states its own reasoning:
+
+> All skills covered · confirmed
+> **4 providers across 2 group(s) cover stitching. Coverage complete.**
+
+Read the members. `Kudumbashree Tailoring Unit` takes 5 units, `Ponnu Tailoring` 3, and
+`Remya Suresh` and `Anju Haridas` 1 each — **capacity-aware**, so nobody is assigned work she
+cannot deliver, and the units sum to the order. They sit in **two different seeded groups**,
+`SHG 4` and `SHG 2`, which is the behaviour that matters: the engine composes across groups
+rather than within one, which is what no single-listing job board can represent and what a human
+coordinator cannot do across clusters she does not know.
+
+*These providers are seeded demo records with invented names, not real women — see the note at
+the top of this report. What this screen demonstrates is that the algorithm works, not that
+anyone has used it.*
+
+Every member reads `Invited`. The customer confirmed the team, and each provider now decides for
+herself — the invitation is an offer, not an assignment, and until she accepts, nothing is
+committed on her behalf. The same order assembled twice produces this same team, in this same
+order, because the ranking is deterministic down to an explicit tiebreak column (§6.3).
+
+### 8.6 Communities — conversations private to their participants
 
 ![A conversation](images/13-chat.png)
 
@@ -539,13 +572,13 @@ A thread is visible only to the people in it. There is no participants table —
 derived from the thread's context (§7.6) — so a customer, a provider on a team, and an outsider
 each get a different answer to the same URL, and the outsider gets `404` rather than `403`.
 
-### 8.6 Still to capture
+### 8.7 Still to capture
 
 | # | Screen | What it must show | Runbook step |
 |---|---|---|---|
-| 11 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
-| 12 | Provider invitation after confirm | The same `എന്റെ ജോലി` screen above, now carrying a team invitation that was not there before the customer confirmed | C4 then C8 |
-| 14 | Communities thread list | Each conversation named after **the other person in it**. Retake after the §7.8 fix deploys — the current build labels a thread with the viewer's own name | D1 |
+| 2 | Name and role, after verification | That nothing is asked before the number is verified | A6 |
+| 12 | Provider invitation after confirm | The same `എന്റെ ജോലി` screen as §8.3, now carrying the team invitation from §8.5 — the pair proves nothing reaches a provider before the customer confirms | C4 then C8 |
+| 14 | Communities thread list | Each conversation named after **the other person in it**. Held back deliberately: the deployed build still labels a thread with the viewer's own name, and the fix in §7.8 is committed but not yet released | D1 |
 
 ---
 
@@ -610,7 +643,7 @@ no longer make. A full pass takes ~15 minutes.
 |---|---|---|
 | A · Provider journey | ✅ Pass | **Found and fixed:** group orders were appearing in the individual work feed |
 | B · Customer journey | ✅ Pass | Availability filter verified by ratio — 44 total, 4 unavailable, 40 returned |
-| C · Collective journey | ✅ Pass | **18 members across 6 SHGs**, coverage complete; invitation correctly withheld until confirm |
+| C · Collective journey | ✅ Pass | **18 seeded providers across 6 seeded groups**, coverage complete; invitation correctly withheld until confirm |
 | D · Communities | ✅ Pass | Members read the thread, an outsider gets 404 and an empty list |
 | E · Cross-cutting | ✅ Pass | **Found and fixed:** text controls at 20 px against the 56 px floor |
 | F · Negative checks | ✅ Pass | 18 team audit rows written; swap-after-confirm returns 409; unauthenticated request detail now 401 |
@@ -632,8 +665,9 @@ are actually written.
 | Customer | 9000000201 | Test Customer One |
 | Customer | 9000000202 | Test Customer Two |
 
-**Demo data seeded:** 40 providers (Ernakulam SHG members with real-looking names, rates, capacity
-and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / `assigned` /
+**Demo data seeded:** 40 provider records written to read like Ernakulam SHG listings — **invented
+names**, plausible rates, capacity and Malayalam skills, so the screens do not look like
+scaffolding. No row corresponds to a real person. 6 customers, 5 requests spanning `open` / `assembling` / `assigned` /
 `completed`, 8 portfolio items, 9 bilingual ratings, and a seeded conversation.
 
 ---
@@ -643,7 +677,7 @@ and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / 
 | Milestone | Measure |
 |---|---|
 | Working, publicly reachable deployment | Live at a URL anyone can open, no install |
-| Collective matching proven end to end | 18 providers across 6 SHGs assembled for one 30-unit order |
+| Collective matching proven end to end | 18 seeded providers across 6 seeded groups assembled for one 30-unit order |
 | Determinism proven | Same request → same team, enforced by explicit tiebreak columns |
 | Canonical vocabulary | 109 alias phrases over 6 skills in 3 registers; typo tier separated from meaning |
 | Malayalam-first proven | App opens in Malayalam, persists the choice, self-hosted font loads |
@@ -656,6 +690,17 @@ and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / 
 ---
 
 ## 11 · Known gaps — stated plainly
+
+**The largest gap: no users.**
+
+Nobody outside this team has used Loom. No self-help group has been onboarded, no Kudumbashree
+unit has been approached, and no woman has listed a skill or been matched to work. Every result
+in this report was produced by us, against seeded data, on a deployment nobody else has opened.
+
+We are stating this at the top of the gap list rather than burying it, because it is the honest
+shape of the month: we built and hardened a system, and we have not yet validated a single
+assumption about the people it is for. A matching engine that is correct and unused has proved
+its arithmetic and nothing about its premise. Everything below is a smaller gap than this one.
 
 **Not yet implemented**
 
@@ -685,6 +730,9 @@ and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / 
 
 **Next four weeks, in order**
 
+0. **Put it in front of one real person.** One woman, one skill, one order — sat beside her while
+   she uses it. Everything below assumes we are right about her, and we have not checked. This is
+   ordered zeroth because no amount of the rest substitutes for it.
 1. Capture real locations (browser geolocation + a panchayat-level fallback picker).
 2. Speech-to-text for skill entry — the other half of voice-first.
 3. Admin/moderation surface for grievances.
@@ -726,4 +774,5 @@ and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / 
 India has built the world's largest network of women's self-help groups and given them credit.
 What is missing is the intelligence to route income through that network. Loom is that layer — and
 this month it went from a planning document to a deployed, secured, measured system that assembles
-an 18-woman team across 6 SHGs for an order none of them could have taken alone.
+an 18-member team across 6 groups for an order no one member could have taken alone. The next
+thing it needs is not more code. It is a real woman, in a real group, with a real order.
