@@ -95,7 +95,7 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
         />
 
         {!readback && (
-          <Button className="w-full" onClick={preview} disabled={!skillText.trim() || busy}>
+          <Button className="w-full" onClick={() => void preview()} disabled={!skillText.trim() || busy}>
             {t("confirmSkills")}
           </Button>
         )}
@@ -143,7 +143,7 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
               placeholder="5"
               onChange={(e) => setExperience(e.target.value)}
             />
-            <Button className="w-full" onClick={save} disabled={busy || !confirmed}>
+            <Button className="w-full" onClick={() => void save()} disabled={busy || !confirmed}>
               {t("finish")}
             </Button>
             <TextButton className="mt-3 w-full" onClick={onDone} disabled={busy}>
