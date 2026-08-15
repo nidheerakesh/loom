@@ -179,7 +179,17 @@ tabulated below rather than quietly corrected in the diagrams.
 
 **Interaction — three scenarios**
 
-![Sequence diagrams](images/16-sequence-diagrams.png){: .wide }
+*Scenario A — an individual match, from spoken skills to ranked nearby work.*
+
+![Sequence: individual match](images/16a-sequence-individual.png){: .wide }
+
+*Scenario B — a bulk order too large for one woman, assembled into a team.*
+
+![Sequence: collective assembly](images/16b-sequence-collective.png){: .wide }
+
+*Scenario C — a new opportunity arrives and collective detection fires immediately.*
+
+![Sequence: opportunity ingestion](images/16c-sequence-ingest.png){: .wide }
 
 **Where the build diverges from these diagrams**
 
@@ -766,7 +776,6 @@ its arithmetic and nothing about its premise. Everything below is a smaller gap 
 - **Anon key rotation pending.** The key was public while the permissive policies of §7.6 existed.
   Those policies are gone and verified gone, so nothing is exposed today; rotating the key is the
   remaining housekeeping.
-- **Lint debt.** Some `no-misused-promises` warnings in `src/`; not in the deploy path.
 
 **Next four weeks, in order**
 

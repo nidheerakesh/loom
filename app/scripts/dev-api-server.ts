@@ -42,20 +42,31 @@ function wrapResponse(res: ServerResponse) {
   };
 }
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
-  const handler = resolveHandler(url.pathname);
-  if (!handler) {
-    res.statusCode = 404;
-    res.end(JSON.stringify({ error: "Not found" }));
-    return;
-  }
+// The listener itself is sync and the work runs in a promise it deliberately does not return:
+// `createServer` has nowhere to put one, so an async callback would leave a rejection with no
+// handler. Failures are answered as a 500 instead.
+const server = createServer((req, res) => {
+  void (async () => {
+    const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+    const handler = resolveHandler(url.pathname);
+    if (!handler) {
+      res.statusCode = 404;
+      res.end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
 
-  const query: Record<string, string> = {};
-  for (const [k, v] of url.searchParams) query[k] = v;
-  const body = req.method === "POST" ? await readJsonBody(req) : undefined;
+    const query: Record<string, string> = {};
+    for (const [k, v] of url.searchParams) query[k] = v;
+    const body = req.method === "POST" ? await readJsonBody(req) : undefined;
 
-  await handler({ query, body, method: req.method }, wrapResponse(res));
+    await handler({ query, body, method: req.method }, wrapResponse(res));
+  })().catch((e: unknown) => {
+    console.error("[dev-api] unhandled", e);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: "Internal error" }));
+    }
+  });
 });
 
 server.listen(PORT, () => {

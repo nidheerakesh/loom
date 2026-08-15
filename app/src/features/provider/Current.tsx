@@ -29,8 +29,8 @@ export function ProviderCurrent() {
     mutationFn: (body: { requestId: string; accept: boolean }) => apiPost("/api/requests/respond", { token, ...body }),
     onSuccess: () => {
       // Accepting moves the job out of this feed and into My work, so refresh both.
-      queryClient.invalidateQueries({ queryKey: ["matching/feed", token] });
-      queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] });
+      void queryClient.invalidateQueries({ queryKey: ["matching/feed", token] });
+      void queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] });
     },
   });
   const getNarration = useMutation({
@@ -63,7 +63,7 @@ export function ProviderCurrent() {
                 {m.pay ? ` · ₹${m.pay}` : ""}
               </div>
             </div>
-            <Button variant="gold" onClick={() => openMatch(m.requestId, m.title)}>
+            <Button variant="gold" onClick={() => void openMatch(m.requestId, m.title)}>
               ▶
             </Button>
           </div>
@@ -87,9 +87,11 @@ export function ProviderCurrent() {
               <Button
                 variant="gold"
                 className="w-full"
-                onClick={async () => {
-                  await respond.mutateAsync({ requestId: open.requestId, accept: true });
-                  setOpen(null);
+                onClick={() => {
+                  void (async () => {
+                    await respond.mutateAsync({ requestId: open.requestId, accept: true });
+                    setOpen(null);
+                  })();
                 }}
               >
                 {t("accept")}
@@ -111,9 +113,11 @@ export function SignOut() {
       </TextButton>
       <TextButton
         className="text-loom-madder no-underline"
-        onClick={async () => {
-          if (token) await apiPost("/api/auth/sign-out", { token });
-          setToken(null);
+        onClick={() => {
+          void (async () => {
+            if (token) await apiPost("/api/auth/sign-out", { token });
+            setToken(null);
+          })();
         }}
       >
         {t("signOut")}

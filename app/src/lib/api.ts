@@ -13,7 +13,7 @@ async function handle<T>(res: Response): Promise<T> {
 
 export async function apiGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const entries = Object.entries(params ?? {}).filter(([, v]) => v !== undefined) as [string, string][];
-  const qs = entries.length ? `?${new URLSearchParams(entries)}` : "";
+  const qs = entries.length ? `?${new URLSearchParams(entries).toString()}` : "";
   const res = await fetch(path + qs);
   return handle<T>(res);
 }

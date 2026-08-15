@@ -97,7 +97,7 @@ export function Accepted() {
                 {t("assembleTeam")}
               </Button>
             )}
-            {r.teamId && <Button onClick={() => setTeamId(r.teamId!)}>{t("teams")}</Button>}
+            {r.teamId && <Button onClick={() => setTeamId(r.teamId)}>{t("teams")}</Button>}
             {/* Individual work is awarded by the customer, not claimed by whoever taps
                 first — this is where they see who applied and pick one. */}
             {r.mode === "individual" && r.interestedCount > 0 && (
@@ -154,7 +154,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
         replacementId,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
+      void queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
       setSwapping(null);
     },
   });
@@ -212,7 +212,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                 </div>
               ))}
               {swap.isError && (
-                <div className="mt-2 text-loom-madder text-sm">{(swap.error as Error).message}</div>
+                <div className="mt-2 text-loom-madder text-sm">{(swap.error).message}</div>
               )}
             </Card>
           )}
@@ -322,7 +322,7 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
     mutationFn: (providerId: string) =>
       apiPost("/api/requests/choose-provider", { token, requestId, providerId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
       onBack();
     },
   });
@@ -370,7 +370,7 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
         ))}
 
       {choose.isError && (
-        <div className="text-loom-madder text-sm">{(choose.error as Error).message}</div>
+        <div className="text-loom-madder text-sm">{(choose.error).message}</div>
       )}
     </Screen>
   );
@@ -393,7 +393,7 @@ function EditRequest({ request, onBack }: { request: MyRequest; onBack: () => vo
         units: Number(units),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
       onBack();
     },
   });
@@ -423,7 +423,7 @@ function EditRequest({ request, onBack }: { request: MyRequest; onBack: () => vo
           {t("save")}
         </Button>
         {save.isError && (
-          <div className="mt-2 text-loom-madder text-sm">{(save.error as Error).message}</div>
+          <div className="mt-2 text-loom-madder text-sm">{(save.error).message}</div>
         )}
       </Card>
     </Screen>

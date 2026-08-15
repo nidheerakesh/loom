@@ -114,7 +114,7 @@ export function ChatThread({
         <div className="flex-1">
           <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>
-        <Button variant="gold" onClick={submit}>{t("send")}</Button>
+        <Button variant="gold" onClick={() => void submit()}>{t("send")}</Button>
       </div>
     </Screen>
   );
@@ -190,7 +190,7 @@ function NewConversation({
           {t("startConversation")}
         </Button>
         {create.isError && (
-          <div className="mt-2 text-loom-madder text-sm">{(create.error as Error).message}</div>
+          <div className="mt-2 text-loom-madder text-sm">{(create.error).message}</div>
         )}
       </div>
     </Screen>
