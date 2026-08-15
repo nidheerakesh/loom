@@ -19,7 +19,8 @@ these names, so a rename breaks the report.
 | `10-my-work.png`       | My work, Malayalam               | **Captured.** Shows "waiting for the customer's reply" and a separate completed section — the two provider-state defects that were fixed |
 | `11-team-assembly.png` | **Team assembly result**         | Runbook C2–C3 — the headline shot: members across more than one SHG, with the coverage rationale |
 | `12-invitation.png`    | Provider invitation after confirm| Runbook C4 (nothing) then C8 (invitation present). Best taken as the same `എന്റെ ജോലി` screen as `10`, so the reader sees the invitation arrive |
-| `13-communities.png`   | A private conversation           | Runbook D2–D3 |
+| `13-chat.png`          | A private conversation           | **Captured.** Runbook D3 |
+| `14-communities.png`   | Communities thread list          | Retake after the §7.8 fix deploys — each thread must be named after the *other* person, not the viewer |
 
 Capture at one width throughout. The first set was taken on a phone with the browser chrome in
 frame and the retakes are a clean viewport; either is fine, but mixing them in one document
