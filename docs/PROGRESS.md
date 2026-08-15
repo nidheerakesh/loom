@@ -163,6 +163,41 @@ the reason the bundle halved (438 KB → 221 KB).
 `matches`, `chat_threads`, `messages`, `ratings`, `sessions`, `otps` and others as the typed
 relationships and audit trail between them.
 
+### 5.1 Design models
+
+These were drawn before the build, and are reproduced as drawn. Read them as the design we set
+out with, not as documentation of the deployed system — the two differ, and the differences are
+tabulated below rather than quietly corrected in the diagrams.
+
+**Use cases**
+
+![Use case diagram](images/17-use-case-diagram.png){: .wide }
+
+**Domain model**
+
+![Class diagram](images/15-class-diagram.png){: .wide }
+
+**Interaction — three scenarios**
+
+![Sequence diagrams](images/16-sequence-diagrams.png){: .wide }
+
+**Where the build diverges from these diagrams**
+
+| In the design | In the deployed system | Why |
+|---|---|---|
+| `Speech-to-Text (Malayalam)` in Scenario A | Not built. Skill entry is typed; speech works for *output* only | The adapter shape exists (`src/lib/speech.ts`); the input half is §11's top priority |
+| `Register Skills via Voice/Icon` | Typed entry. The icon path was built, then dropped — migration `002` removes `skills.icon_key` | Icons could not carry a growing, user-created vocabulary |
+| `Skill.computeSimilarity(other): float` | Built, then deliberately demoted. Similarity now decides only whether a word is a *typo*; meaning comes from a curated alias table | It resolved "covering" to *cooking*. §7.4 |
+| `Opportunity Feed (Panchayat/Enterprise)` ingesting orders, Scenario C | Not built. Orders are posted by customers in the app | Feed ingestion is future scope; the collective detection it triggers is built and works |
+| `Push notification of new team opportunity` | The app polls every 7 seconds | Push needed a browser-side database client, which is what made chat world-readable. §7.6 |
+| A single actor, `Woman` | Two roles: **provider** and **customer**, one phone number able to hold both | The design had nobody posting the work. A marketplace needs the other side, and giving the customer the decision (§6.5) is what keeps a provider from being assigned work she never agreed to |
+| `Woman`, `SelfHelpGroup` | `providers`, `groups`, plus `cds` for the federation above a group | Same shape, renamed for a schema that also holds customers |
+
+The matching core survived intact: `rankIndividualMatches`, `detectCollectiveOpportunity`,
+`assembleTeam` and `runSetCoverSearch` are the four operations on `MatchingService` in the class
+diagram, and all four exist — as `matching/feed`, the `mode: "group"` branch of `requests/create`,
+`team-assembly/assemble`, and the covering loop inside it (§6.3).
+
 ---
 
 ## 6 · Key components built — with code
@@ -462,7 +497,13 @@ longer tell which one it was. It now carries the same resolved name.
 
 ## 8 · User interface
 
-Captured against the live deployment.
+Captured against the live deployment, on a phone.
+
+Several screens show rows named `probe`, `probe2` and `DB connectivity probe`. Those are not
+product content: they are requests created by the automated end-to-end suite of §9.1 and by
+manual checks against the deployed database, left in place because these captures are of the
+real running system rather than a staged one. They are visible here for the same reason the
+seeded data is — nothing in this report is a mock-up.
 
 ### 8.1 Sign-in and first-time onboarding
 
@@ -576,7 +617,6 @@ each get a different answer to the same URL, and the outsider gets `404` rather 
 
 | # | Screen | What it must show | Runbook step |
 |---|---|---|---|
-| 2 | Name and role, after verification | That nothing is asked before the number is verified | A6 |
 | 12 | Provider invitation after confirm | The same `എന്റെ ജോലി` screen as §8.3, now carrying the team invitation from §8.5 — the pair proves nothing reaches a provider before the customer confirms | C4 then C8 |
 | 14 | Communities thread list | Each conversation named after **the other person in it**. Held back deliberately: the deployed build still labels a thread with the viewer's own name, and the fix in §7.8 is committed but not yet released | D1 |
 
@@ -772,7 +812,15 @@ its arithmetic and nothing about its premise. Everything below is a smaller gap 
 ## 14 · In one line
 
 India has built the world's largest network of women's self-help groups and given them credit.
-What is missing is the intelligence to route income through that network. Loom is that layer — and
-this month it went from a planning document to a deployed, secured, measured system that assembles
-an 18-member team across 6 groups for an order no one member could have taken alone. The next
-thing it needs is not more code. It is a real woman, in a real group, with a real order.
+What is missing is the intelligence to route income through that network.
+
+Loom is an attempt at that layer. This month it went from a planning document to a deployed,
+secured, measured system: 42 routes, 24 tables, a deterministic matching engine, 78 automated
+checks passing against the live deployment, and a landing screen taken from 21 seconds to 1.35.
+Given a large order, it composes a capable team across groups and explains the result in
+Malayalam — **on seeded data, in our own database.**
+
+That is the whole claim, and it stops there deliberately. No self-help group has used this. What
+the month proves is that the hard part is solvable and solved; what it does not prove is that we
+understood the woman it is for. The next thing this needs is not more code. It is one real woman,
+in one real group, with one real order.

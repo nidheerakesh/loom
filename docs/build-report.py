@@ -93,6 +93,9 @@ img {
   page-break-inside: avoid;
 }
 .missing b { display: block; color: var(--indigo); font-size: 10pt; margin-bottom: .3em; }
+/* Diagrams carry small type across their whole width, so the phone-screenshot height cap
+   would render them unreadable. Marked with {: .wide } in the Markdown. */
+img.wide { max-width: 100%; max-height: 215mm; }
 """
 
 MALAYALAM = re.compile(r"[ഀ-ൿ]")
