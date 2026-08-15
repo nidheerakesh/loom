@@ -1,306 +1,696 @@
 # Loom — Progress Check Report
 
-**Team project:** Loom — a two-sided skills marketplace for women's Self-Help Group (SHG)
-networks in Kerala.
-**Period covered:** 13 July 2026 – 7 August 2026
-**Live deployment:** https://loom-lovat-phi.vercel.app
-**Repository:** https://github.com/nidheerakesh/loom
+**AI Matching Engine for Women's Livelihood Networks**
+*Turning skills into income no one could reach alone*
 
-> Maintained doc — update as work lands. Last updated 8 Aug 2026 (auth fix, skill matching, doc accuracy).
-
----
-
-## 1. What the project is
-
-Providers — an individual woman or a small SHG-run shop — list the skills they offer.
-Customers browse, filter and request work. Small jobs go to one person; large or multi-skill
-orders assemble a **team across different SHGs**, capacity-aware and distance-aware.
-
-Two decisions shape the whole build:
-
-- **Malayalam-first.** Skills, matches and narration render in Malayalam. A user typing
-  "sewing", "tailoring" or "തയ്യൽ" must land on the *same* canonical skill, or the
-  marketplace fragments into unsearchable synonyms.
-- **Deterministic matching.** Ranking and team assembly are explainable, reproducible
-  functions — not a black box. Every match can be narrated back to the user.
-
----
-
-## 2. Progress summary
-
-| Milestone | Status |
+| | |
 |---|---|
-| Planning docs (PRD, TDD, user flows, UI/UX) | Complete |
-| Data model — 24 tables, RLS, deterministic tiebreak columns | Complete |
-| Backend — 33 API routes across 11 feature areas | Complete |
-| Frontend — 13 screens, provider + customer apps | Complete |
-| Skill canonicalisation with synonym merging | Complete |
-| Deterministic matching + team assembly | Complete |
-| Phone + OTP authentication | Complete |
-| Deployed and publicly reachable | Complete |
-| Realistic demo data | Complete |
-| Chat privacy | Fixed; one migration pending |
-| Text-to-speech (Malayalam + English) | Complete |
-| Provider "My work" view | Complete |
-| Performance — N+1 elimination | Complete; index migration pending |
-| Malayalam-first defaults + font | Complete |
+| **Project** | Loom — a two-sided skills marketplace and team-assembly engine for women's Self-Help Group (SHG) networks in Kerala |
+| **Team members** | Nidhi Rakesh · Niveditha G. S. · Anjana Nandakumar |
+| **Institution** | Indian Institute of Information Technology (IIIT) Kottayam |
+| **Hackathon / Track** | Girlathon — GDG On Campus, Mar Athanasius College of Engineering · *BharatNext: Building for Tier-2 and Tier-3 India* |
+| **Period covered** | 13 July 2026 – 15 August 2026 |
+| **Live deployment** | https://loom-lovat-phi.vercel.app — **working, publicly reachable, no install required** |
+| **Repository** | https://github.com/nidheerakesh/loom |
+| **Report status** | Reflects the code at commit `a0da02f`; all claims re-verified against the live deployment on 15 Aug 2026 |
 
-**Scale:** ~5,850 lines of TypeScript/TSX — 35 API handlers, 13 shared server modules,
-13 React screens, 24 Postgres tables.
+> **Everything described below is deployed and running.** Where the build diverges from the
+> original design specs (`docs/PRD.md`, `docs/TDD.md`), this report follows the build. §11 states
+> what is *not* built, plainly.
 
 ---
 
-## 3. Tools, technologies and components
+## 1 · What we set out to build, and what exists today
 
-| Layer | Choice | Version | Why |
+**The problem.** India has 8.5 M+ women's self-help groups; ~4.5 M women are in Kerala's
+Kudumbashree network alone. Credit and organisation have reached them at scale — *market access
+has not*. Two failures follow: a woman cannot see paid demand three kilometres away, and the
+largest opportunities (a 200-piece uniform order, a 300-plate catering job) are invisible to
+everyone because **no single woman can fulfil them alone**.
+
+**What we built.** Providers — an individual woman, or a small SHG-run unit — list skills.
+Customers browse, filter and post work. Small jobs route to one person. Large or multi-skill
+orders trigger a **capacity-aware team assembly across different SHGs**, and every result is
+explained in Malayalam and can be spoken aloud.
+
+Two decisions shaped the entire build:
+
+- **Malayalam-first.** The app opens in Malayalam and remembers the choice. A user typing
+  `sewing`, `tailoring`, `thayyal` or `തയ്യൽ` must land on the **same canonical skill**, or the
+  marketplace fragments into unsearchable synonyms and the whole thing quietly fails.
+- **Deterministic matching.** Ranking and team assembly are explainable, reproducible functions,
+  not a black box. The same data always produces the same team — down to explicit tiebreak
+  columns. Every match is written to an audit table before any sentence is generated, so the
+  explanation *reports* the decision and cannot contradict it.
+
+---
+
+## 2 · Progress summary
+
+| # | Milestone | Status | Evidence |
 |---|---|---|---|
-| Frontend | React + Vite | 18.3 / 5.3 | Fast builds, simple SPA |
-| Language | TypeScript | 5.2 | Strict mode across app and API |
-| Styling | Tailwind CSS | 3.4 | Custom Kerala-handloom palette |
-| Server state | TanStack Query | 5.59 | Caching + polling |
-| Database | Supabase (Postgres) | — | Managed Postgres, RLS |
-| Backend | Vercel Serverless Functions | @vercel/node 3.2 | Same-origin `/api/*`, no separate server |
-| Validation | Zod | 3.23 | Request schemas at every route boundary |
-| SMS | Twilio Verify | optional | Falls back to on-screen code in demo |
+| 1 | Planning docs — PRD, TDD, user flows, UI/UX spec | ✅ Complete | `docs/` (5 documents, ~65 KB) |
+| 2 | Data model — 24 tables, deterministic tiebreak columns | ✅ Complete | `app/supabase/schema.sql` |
+| 3 | Backend — 42 API routes over 11 feature areas | ✅ Complete | `app/api/_routes/index.ts` |
+| 4 | Frontend — 12 screens across provider + customer apps | ✅ Complete | `app/src/features/` |
+| 5 | Skill canonicalisation (alias table + typo tier + translation) | ✅ Complete | `api/_routes/skills/resolve.ts` |
+| 6 | Deterministic individual matching | ✅ Complete | `api/_lib/scoring.ts` |
+| 7 | Collective matching — cross-SHG team assembly | ✅ Complete | `api/_routes/team-assembly/` |
+| 8 | Phone + OTP authentication (no passwords) | ✅ Complete | `api/_routes/auth/` |
+| 9 | Deployed publicly, continuously from `main` | ✅ Complete | Vercel `bom1` + Supabase |
+| 10 | Realistic demo data | ✅ Complete | 40 providers, 6 customers, 5 requests |
+| 11 | Chat privacy — 4 vulnerabilities closed | ✅ Complete, verified live | `003`/`005` migrations, runbook F1 |
+| 12 | Text-to-speech, Malayalam + English | ✅ Complete | `src/lib/speech.ts` |
+| 13 | Performance — N+1 elimination, region move | ✅ Complete | 21.0 s → 1.35 s measured |
+| 14 | Row-level security on **every** table | ✅ Complete | `005_enable_rls_everywhere.sql` |
+| 15 | Customer control — choose, edit, swap, confirm, complete | ✅ Complete | `requests/`, `team-assembly/` |
+| 16 | Team chat + provider completion notice | ✅ Complete | commit `a0da02f` |
+| 17 | Full demo runbook executed against production | ✅ 6/6 sections pass | `docs/DEMO_RUNBOOK.md` |
+| 18 | Automated end-to-end suite against production | ✅ 78/78 checks pass | `app/scripts/e2e.mjs` |
+| 19 | Speech-to-text, graph visualisation, admin surface | ⬜ Not started | see §11 |
 
-**Custom palette**, defined in `tailwind.config.js` and drawn from Kerala handloom:
-`cotton #F3EFE6`, `indigo #26364F`, `kasavu #C9A227`, `madder #9C3B36`, `leaf #5B7A5B`.
+**Scale of the build**
 
----
-
-## 4. Architecture
-
-```
-Browser (React + Vite, Malayalam/English)
-        │  same-origin /api/*
-        ▼
-api/router.ts          ← the ONE serverless function
-        │  path → handler map
-        ▼
-api/_routes/**         ← 33 handlers: auth, providers, customers, skills,
-        │                requests, matching, team-assembly, narration,
-        │                ratings, grievances, chat
-        ▼
-api/_lib/**            ← supabaseAdmin, auth, scoring, geo, skill matching,
-        │                chat access control, LLM translation chain
-        ▼
-Supabase Postgres      ← 24 tables
-```
-
-The browser talks only to `/api/*`. No Supabase client ships to the browser, so the database
-is never addressed directly by an untrusted caller.
+| Measure | Count |
+|---|---|
+| Commits over the period | 34 |
+| TypeScript / TSX written | ~7,200 lines (4,002 API · 3,214 frontend) + 589 lines of seed/dev tooling |
+| API route handlers | 42, across 11 feature areas |
+| Shared server modules | 13 (`api/_lib/`) |
+| React screens | 12 user-facing, in two role-scoped apps |
+| Postgres tables | 24, RLS enabled on all of them |
+| Applied / written migrations | 5 |
+| Design + process documents | 6 (`PRD`, `TDD`, `USER_FLOWS`, `UI_UX_DESIGN`, `SUBMISSION`, `DEMO_RUNBOOK`) |
 
 ---
 
-## 5. Key components built
+## 3 · Timeline — how the month actually went
 
-**Skill canonicalisation** (`api/_routes/skills/resolve.ts`) — free text becomes one canonical
-skill. A curated alias table resolves known synonyms; anything unrecognised goes through a
-translation fallback chain (Bhashini NMT → NVIDIA → Anthropic → Gemini → offline echo) so
-the feature degrades instead of failing when no API key is set.
+| Week | Dates | What happened |
+|---|---|---|
+| 1 | 13 – 26 Jul | Problem research and the four planning documents. First working app built on Convex + React. |
+| 2 | 2 Aug | **Full backend migration off Convex** onto Supabase + Vercel Serverless. Every backend function rewritten. Then three deployment faults, each of which reported success (§6.2). |
+| 3 | 2 – 7 Aug | Real demo data; phone + OTP sign-in; chat privacy audit and fixes; **N+1 elimination — the main screen went from 21 s to 1.35 s**; Malayalam defaults and self-hosted font; text-to-speech made real; "My work" view. |
+| 4 | 8 – 9 Aug | Customer control (choose provider, edit request, swap team member); skill matching rewritten to match by **meaning** rather than letter-shape; RLS on every table; six silent database writes fixed; team chat; **full 15-minute runbook run against production, 6/6 sections pass**. |
+| 5 | 15 Aug | **Automated end-to-end suite written and run against production — 78 checks, 0 failures**, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1). |
+
+The honest shape of this month: roughly one week designing, one week rebuilding the foundation,
+and two weeks hardening — security, performance, language, and the failure modes that look fine
+from the outside. Most of the hardest work is invisible in a screenshot, so §6 records it.
+
+---
+
+## 4 · Tools, technologies and components
+
+| Layer | Choice | Version | Why this one |
+|---|---|---|---|
+| Language | TypeScript | 5.2 | One language for matching engine *and* interface; strict mode everywhere |
+| Frontend | React + Vite | 18.3 / 5.3 | Fast builds, simple SPA, small bundle |
+| Styling | Tailwind CSS | 3.4 | Custom Kerala-handloom palette, 56 px touch targets enforced in one place |
+| UI primitives | Radix UI + shadcn patterns | 1.x | Accessible dialogs, toggles, menus without shipping a heavy kit |
+| Server state | TanStack Query | 5.59 | Caching and 7-second polling for chat and invitations |
+| Backend | Vercel Serverless Functions | `@vercel/node` 3.2 | Same-origin `/api/*` — no CORS, no separate server to operate |
+| Database | Supabase (PostgreSQL) | managed | Relational model of the livelihood network + RLS |
+| Validation | Zod | 3.23 | A request schema at **every** route boundary |
+| Auth | Phone + OTP, HMAC-signed tickets | — | No passwords; Twilio Verify optional, falls back to on-screen code |
+| Voice output | Web Speech API (`ml-IN` / `en-IN`) | browser | Spoken Malayalam with no API key and no per-use cost |
+| Translation | Bhashini NMT → NVIDIA → Anthropic → Gemini → offline echo | — | Only used to *name* a genuinely new skill; never influences a match |
+| Deployment | Vercel (Mumbai `bom1`) + Supabase | — | Co-located with the users it serves |
+| Runtime | Node | 22.x | — |
+
+**Custom palette**, defined once in `tailwind.config.js`, drawn from Kerala handloom:
+`cotton #F3EFE6` · `indigo #26364F` · `kasavu #C9A227` · `madder #9C3B36` · `leaf #5B7A5B`.
+
+**Typography.** Noto Sans Malayalam, self-hosted as a subset (~89 KB) rather than CDN-linked,
+because the app targets patchy rural connections.
+
+---
+
+## 5 · System architecture
+
+```
+                Browser — React + Vite, Malayalam-first
+                          │
+                          │  same-origin  /api/*      (no Supabase client in the browser)
+                          ▼
+            api/router.ts          ← the ONE serverless function
+                          │        path → handler map
+                          ▼
+            api/_routes/**         ← 42 handlers over 11 feature areas:
+                          │          auth · providers · customers · skills · requests ·
+                          │          matching · team-assembly · narration · ratings ·
+                          │          grievances · chat
+                          ▼
+            api/_lib/**            ← supabaseAdmin · auth · scoring · geo · text
+                          │          canonicalisation · chat access control ·
+                          │          translation chain · SMS
+                          ▼
+            Supabase Postgres      ← 24 tables, RLS enabled on every one
+```
+
+**The browser talks only to `/api/*`.** No Supabase client ships to the frontend, so the database
+is never addressed directly by an untrusted caller — this is both a security property (§7) and
+the reason the bundle halved (438 KB → 221 KB).
+
+**Data model.** `providers`, `customers`, `skills`, `groups`, `cds`, `requests` as entities, with
+`provider_skills`, `request_skills`, `skill_aliases`, `near_distances`, `teams`, `team_members`,
+`matches`, `chat_threads`, `messages`, `ratings`, `sessions`, `otps` and others as the typed
+relationships and audit trail between them.
+
+---
+
+## 6 · Key components built — with code
+
+### 6.1 Skill canonicalisation — the thing the marketplace depends on
+
+`api/_routes/skills/resolve.ts` resolves typed free text to one canonical skill in four tiers:
+**exact → curated alias → typo → new skill (translated and created).**
 
 ```
 "sewing"            → തയ്യൽ  (stitching)   matched via alias
 "garment finishing" → തയ്യൽ  (stitching)   matched via alias
-"thayyal"           → തയ്യൽ  (stitching)   matched via alias  (Manglish)
+"thayyal"           → തയ്യൽ  (stitching)   matched via alias   (Manglish)
 "stiching"          → തയ്യൽ  (stitching)   matched via typo
+"covering"          → covering                new skill, created
 ```
 
-Meaning lives in the curated alias table (~110 phrases over six skills, in English, Malayalam
-and Manglish); fuzzy matching is restricted to typos. That split matters: character similarity
-once resolved "covering" to *cooking*, having scored 0.56 against the alias "catering" — two
-words differing by two letters. Lookalikes are not synonyms.
+The subtle part: **meaning lives in the curated alias table (109 phrases over six skills, in
+English, Malayalam and Manglish); fuzzy matching is demoted to absorbing typos only.**
 
-**Deterministic matching** (`api/_lib/scoring.ts`, `geo.ts`) — ranked on skill proficiency,
-haversine distance, rate and rating, with explicit tiebreak columns (`providers.seq`,
-`team_members.seq`) because Postgres UUIDs are random and ties must not reorder between runs.
+```ts
+// api/_lib/text.ts
+//
+// Is `input` a MISSPELLING of `candidate` — not "does it mean something similar".
+//
+// Character similarity cannot express meaning, and treating it as if it could produced real
+// nonsense: "covering" scored 0.56 on trigrams against the alias "catering" and was filed
+// under cooking. Two words differing by two letters are not related, they merely look alike.
+//
+// Meaning lives in the curated alias table instead, which is why "garment finishing" resolves
+// to stitching despite sharing almost no characters with it.
+export function isProbableTypo(input: string, candidate: string): boolean {
+  const a = normalize(input);
+  const b = normalize(candidate);
+  if (a === b) return true;
+  // Too short to correct safely — at four characters one edit is a quarter of the word, and
+  // "cook", "book" and "look" are all a single edit apart.
+  if (a.length < 5 || b.length < 5) return false;
+  if (similarity(a, b) < TYPO_TRIGRAM_MIN) return false;              // 0.70 trigram overlap
+  return editDistance(a, b) / Math.max(a.length, b.length) <= TYPO_EDIT_MAX;  // 0.15
+}
+```
 
-**Team assembly** (`api/_routes/team-assembly/`) — splits a multi-skill order across providers
-from different SHGs, respecting per-provider capacity, and reports whether skill coverage is
-complete.
+Measured on real inputs, genuine typos land near **0.11** normalised edit distance
+(`stiching`/`stitching`) while unrelated lookalikes sit at **0.25** (`covering`/`catering`) — the
+two separate cleanly, which is why both tests must pass.
 
-**Authentication** — phone + OTP only. The server resolves the account from the verified
-number and returns one of three outcomes:
+### 6.2 Deterministic individual matching
+
+```ts
+// api/_lib/scoring.ts — weights are fixed config; same inputs → same score → same ranking.
+export const WEIGHTS = { skill: 0.5, dist: 0.3, earn: 0.2 } as const;
+
+export const proximity      = (km: number) => (isFinite(km) ? 1 / (1 + km) : 0);
+export const normalizedPay  = (pay?: number) => (!pay || pay <= 0 ? 0 : Math.min(1, pay / 2000));
+export const skillFit       = (prof: number) => Math.max(0, Math.min(1, prof / 5));
+
+export function score(fit: number, distanceKm: number, pay: number | undefined) {
+  const total =
+    WEIGHTS.skill * fit + WEIGHTS.dist * proximity(distanceKm) + WEIGHTS.earn * normalizedPay(pay);
+  return { skillFit: fit, proximity: proximity(distanceKm), pay: normalizedPay(pay), total };
+}
+```
+
+Distance is a haversine computation over stored coordinates. No model, no inference cost, no
+training data required — and every ranking is reproducible and auditable, which we consider a
+requirement for a system that intermediates people's income.
+
+### 6.3 Collective matching — the headline capability
+
+`api/_routes/team-assembly/assemble.ts` runs a **greedy, capacity-aware set-cover** over the
+cluster, and reports honestly whether coverage is complete.
+
+```ts
+// Deterministic: candidates sorted by (proficiency desc, distance asc, seq asc) — no
+// randomness, so the same request always yields the same team.
+while (progress) {
+  progress = false;
+  for (const rs of skills) {
+    const need = remaining.get(rs.skill_id) ?? 0;
+    if (need <= 0) continue;
+    const eligible = [...candMap.values()].filter(c => c.capLeft > 0 && c.prof.has(rs.skill_id));
+    if (eligible.length === 0) continue;
+    eligible.sort((a, b) => {
+      const pa = a.prof.get(rs.skill_id)!, pb = b.prof.get(rs.skill_id)!;
+      if (pb !== pa) return pb - pa;                       // 1. proficiency
+      if (a.distance !== b.distance) return a.distance - b.distance;  // 2. proximity
+      return a.provider.seq - b.provider.seq;              // 3. explicit tiebreak
+    });
+    const pick = eligible[0];
+    const take = Math.min(need, pick.capLeft);             // capacity-aware
+    pick.capLeft -= take;
+    remaining.set(rs.skill_id, need - take);
+    /* … record the assignment … */
+    progress = true;
+  }
+}
+const complete = [...remaining.values()].every(x => x <= 0);  // reported, never faked
+```
+
+That third sort key is not cosmetic. Convex `_id`s are creation-ordered; Postgres UUIDv4 is
+random. On migration, ties silently reordered between identical runs and determinism broke —
+fixed with explicit `seq bigserial` tiebreak columns on `providers` and `team_members` (§6.1
+of the challenges below).
+
+**Verified in production:** a seeded 30-unit, three-skill uniform order assembles **18 members
+across 6 different SHGs**, coverage complete, with 18 audit rows written to `matches`.
+
+### 6.4 Authentication — phone + OTP, no passwords
+
+The server resolves the account from the verified number and returns one of three outcomes:
 
 | Outcome | Meaning |
 |---|---|
-| `session` | Exactly one account → straight to dashboard |
-| `choose` | Number holds both provider and customer accounts → pick one |
+| `session` | Exactly one account → straight to the dashboard |
+| `choose` | The number holds both a provider *and* a customer account → pick one |
 | `signup` | New number → collect name and role |
 
-For the latter two the server issues a short-lived HMAC-signed ticket proving the number
-passed OTP, redeemed once by `complete-login`.
+For the latter two, the server issues a **short-lived HMAC-signed ticket** proving the number
+passed OTP, redeemed exactly once by `complete-login`. No name or role is asked before
+verification — a deliberate low-friction path for a first-time, low-literacy user.
 
-**Chat** — private to participants, derived from thread context (see §7).
+### 6.5 Customer control
+
+The customer is never presented with a fait accompli:
+
+- Providers who apply to an individual job are **applicants**, not winners — the customer chooses,
+  and everyone else is declined automatically.
+- Any team member can be **replaced before confirmation**, from a ranked list of alternatives that
+  excludes people already on the team.
+- After confirmation, swapping an *accepted* member is refused (it would revoke work she agreed
+  to) but replacing a member who *declined* is allowed — her slot is already vacant.
+- Confirming a team creates a **team chat**, idempotently, whose membership resolves from the team
+  itself, so it follows accepts, declines and replacements with no bookkeeping.
 
 ---
 
-## 6. Challenges faced and how they were solved
+## 7 · Challenges faced, and how we solved them
 
-### 6.1 Migrating off Convex mid-project
+This is the section we would most like a mentor to read. Every item here cost real time.
 
-The original build used Convex. Moving to Supabase + Vercel meant rewriting every backend
-function and reproducing Convex's implicit guarantees — most subtly, Convex `_id`s are
-creation-ordered while Postgres UUIDv4 is random. Deterministic ranking silently broke on
-ties. Solved with explicit `seq bigserial` tiebreak columns.
+### 7.1 Migrating the entire backend off Convex, mid-project
 
-### 6.2 Deployment: three faults that all reported success
+The first working build ran on Convex. Moving to Supabase + Vercel meant rewriting every backend
+function *and* reproducing Convex's implicit guarantees. The subtlest: **Convex `_id`s are
+creation-ordered, Postgres UUIDv4 is random.** Deterministic ranking broke silently on ties — the
+same request could return a different team on two consecutive runs, with nothing in any log.
 
-The hardest debugging of the month. Each failure produced a **green build and a ● Ready
+**Solved** with explicit `seq bigserial` tiebreak columns, sorted on last in every ranking path.
+
+### 7.2 Three deployment faults that each reported success
+
+The hardest debugging of the month. Every one produced a **green build and a ● Ready
 deployment** while being completely broken.
 
-1. **A build that produced nothing.** Production served an empty page. The build log:
+1. **A build that produced nothing.** Production served an empty page:
    ```
    Build Completed in /vercel/output [92ms]
    Skipping cache upload because no files were prepared
    ```
-   92 ms, no `npm install`, no functions. The project had been building from the repository
-   root, which has no `package.json`. Root Directory had since been corrected — but *settings
-   do not retroactively rebuild*, so the empty deployment stayed live.
+   92 ms, no `npm install`, no functions. The project was building from the repository root,
+   which has no `package.json`. Root Directory had since been corrected — but *settings do not
+   retroactively rebuild*, so the broken deployment stayed live.
 
-2. **The Hobby function cap.** Vercel creates one function per file under `api/`, capped at 12
-   on the Hobby plan; the API had 32 routes. The build succeeds and the **deploy step** fails
-   afterwards, which reads like a code fault. Fixed by moving handlers into `api/_routes/`
-   (underscore directories are excluded from function detection) behind a single entry point.
+2. **The Hobby function cap.** Vercel creates one function per file under `api/`, capped at 12;
+   we had 32 routes. The build succeeds and the **deploy step** fails afterwards, which reads
+   like a code fault. **Solved** by moving handlers into `api/_routes/` — underscore directories
+   are excluded from function detection — behind a single entry point.
 
-3. **A catch-all that is built but never routed to.** The obvious fix — `api/[...path].ts` —
+3. **A catch-all that is built but never routed to.** The obvious fix, `api/[...path].ts`,
    appears in the build output as `λ api/[...path]` and then receives nothing: every request
-   returns Vercel's own `NOT_FOUND`, with no invocation and no logs. Isolated by deploying a
-   static `api/ping.ts` beside it, which answered 200 from the same deployment — proving
-   `/api` routing worked and catch-all routing specifically did not. Fixed with a static
+   returns Vercel's own `NOT_FOUND`, with no invocation and no logs. **Isolated** by deploying a
+   static `api/ping.ts` beside it, which answered 200 from the same deployment — proving `/api`
+   routing worked and catch-all routing specifically did not. **Solved** with a static
    `api/router.ts` plus an explicit rewrite, preserving every public URL.
 
-4. **ESM imports resolving at compile time but not runtime.** `@vercel/node` does not bundle;
-   it compiles and runs under Node's native ESM loader, which requires fully specified paths:
+4. **ESM imports that resolve at compile time but not at runtime.** `@vercel/node` does not
+   bundle; it compiles and runs under Node's native ESM loader, which requires fully specified
+   paths:
    ```
    ERR_UNSUPPORTED_DIR_IMPORT: Directory import '/var/task/app/api/_routes'
    is not supported resolving ES modules imported from .../api/router.js
    ```
    The `TS2835` build warnings had been flagging this the whole time and were dismissed as
-   cosmetic, because the build still completed. Fixed across 145 imports in 37 files.
+   cosmetic, because the build still completed. **Fixed across 145 imports in 37 files.**
 
-**Lesson carried forward:** a green deployment proves the build ran, not that the thing
-works. One real request against the deployed URL is what closes the loop.
+> **Lesson we carried into the rest of the month:** a green deployment proves the build ran, not
+> that the thing works. One real request against the deployed URL is what closes the loop. This is
+> why we later wrote `docs/DEMO_RUNBOOK.md` and ran it against production (§9).
 
-### 6.3 The SPA rewrite swallowing the API
+### 7.3 The SPA rewrite swallowing the entire API
 
-`vercel.json` rewrote `/(.*)` → `/index.html`. Harmless while each route was its own file
-(exact filesystem matches are checked before rewrites), but once the API became one dynamic
-route the rewrite won, and every `/api/*` call returned the app shell instead of JSON —
-producing an HTML-parse error in the client and a perfectly healthy-looking deployment.
-Now written `/((?!api/).*)`.
+`vercel.json` rewrote `/(.*)` → `/index.html`. Harmless while each route was its own file (exact
+filesystem matches are checked before rewrites) — but once the API became one dynamic route, the
+rewrite won, and every `/api/*` call returned the app shell instead of JSON. The symptom was an
+HTML-parse error in the client and a perfectly healthy-looking deployment. Now written
+`/((?!api/).*)`.
 
-### 6.4 Skills fragmenting across synonyms
+### 7.4 Skills fragmenting, then a matcher that invented meaning
 
 Without canonicalisation, "sewing", "tailoring" and "തയ്യൽ" become three unrelated skills and
-search silently misses providers. Solved with a curated alias table plus the LLM fallback
-chain in §5.
+search silently misses providers. We added fuzzy character matching — and then found it had
+resolved **"covering" to cooking**, having scored 0.56 Sørensen–Dice against the alias
+"catering". Two words differing by two letters are not related; they merely look alike. Worse, it
+*missed* real relationships like "garment finishing" → stitching, which shares almost no
+characters.
 
----
+**Solved** by separating the two jobs entirely (§6.1): meaning moved into a curated alias table
+grown from 25 to **109 entries** across the three registers people actually type in Kerala, and
+fuzzy matching was demoted to typo absorption with two independent thresholds.
 
-## 6a. Performance
+### 7.5 An unusable main screen — 21 seconds
 
-The app was slow enough to be unusable on its main screen. The cause was not the network: the
-API resolved relations in JS `for` loops rather than SQL joins, so latency scaled with row
-count — directory search issued roughly two queries per provider.
+The app was slow enough to be unusable on the screen customers land on. The cause was not the
+network: the API resolved relations in JavaScript `for` loops rather than SQL joins, so latency
+scaled with row count — the directory search issued roughly **two queries per provider**.
 
 Measured against production, before and after:
 
-| endpoint | before | after | change |
+| Endpoint | Before | After | Change |
 |---|---|---|---|
-| `providers/search` (Browse) | 21,008 ms | 1,350 ms | **15.6× faster** |
+| `providers/search` (Browse — the landing screen) | 21,008 ms | 1,350 ms | **15.6× faster** |
 | `chat/threads` | 2,315 ms | 952 ms | 2.4× faster |
 
-Two things were done. First, the hot paths were batched to a fixed number of queries
-regardless of result size — `hydrateCards` for provider cards, one query for every thread's
-last message, `distanceMap` in place of a per-row distance lookup, and PostgREST embedded
-joins for the team routes. Second, the function was moved from `iad1` to `bom1`: requests were
-entering at the Mumbai edge and executing in Washington, adding a round trip on every leg.
+Two changes. **First**, the hot paths were batched to a fixed number of queries regardless of
+result size — `hydrateCards` for provider cards, one query for every thread's last message,
+`distanceMap` in place of a per-row distance lookup, and PostgREST embedded joins for the team
+routes. **Second**, the function was moved from `iad1` to `bom1`: requests were entering at the
+Mumbai edge and executing in Washington, adding a round trip on every leg.
 
-Honest caveat on the numbers: they were taken from a high-latency client, where a single
-query costs ~1 s. The *relative* improvement is the meaningful figure; a user on a normal
-connection sees smaller absolute times throughout.
+*Honest caveat on these numbers:* they were taken from a high-latency client where a single query
+costs ~1 s. The **relative** improvement is the meaningful figure; a user on a normal connection
+sees smaller absolute times throughout.
 
-An index migration (`004_perf_indexes.sql`) is written but not applied — it needs Postgres
-credentials. Notably `bigserial` creates no index, so the `seq` columns the deterministic
-tiebreak sorts by were unindexed.
+### 7.6 Chat readable by anyone — four independent ways
 
-## 6b. Accessibility and language
-
-Voice existed nowhere in the app: `ListenButton` popped a `window.alert` showing the text,
-which is precisely the wrong affordance for a user who may not read fluently. It now speaks,
-in whichever language the user is reading, via the browser speech engine behind the adapter
-shape `docs/TDD.md §4` specifies, so Bhashini or Sarvam can replace it with a key.
-
-It refuses rather than substitutes when a device has no voice for the language — Malayalam
-read in an English voice is unintelligible, and would look like a broken app rather than an
-unsupported one.
-
-Two Malayalam-first commitments were also unmet: the app defaulted to English on every load
-and never persisted the choice, and the Malayalam font was named in CSS but never actually
-loaded, so text rendered in whatever face the device happened to carry. Both fixed; the font
-is now self-hosted (Malayalam subset, ~89 KB) rather than CDN-linked, because the app targets
-patchy connections.
-
----
-
-## 7. Security work
-
-A review of the chat feature found conversations were readable by anyone, in four independent
-ways. All four are fixed in code; one migration is pending (§8).
+A security review of the chat feature found conversations were exposed four separate ways. All
+four are fixed:
 
 | # | Issue | Fix |
 |---|---|---|
 | 1 | `chat_threads` and `messages` had `for select using (true)` RLS, so the anon key — which ships in the public JS bundle — could read **every message in the app** via PostgREST | Policies dropped; no Supabase client ships to the browser at all |
-| 2 | `GET /api/chat/threads` returned the 50 most recent threads system-wide to any signed-in user, with each one's last message | Scoped to threads the caller participates in |
-| 3 | `GET /api/chat/messages` served any thread to anyone holding its id | Participation checked; non-participants get 404, so a thread id cannot be confirmed by probing |
+| 2 | `GET /api/chat/threads` returned the 50 most recent threads **system-wide** to any signed-in user, each with its last message | Scoped to threads the caller participates in |
+| 3 | `GET /api/chat/messages` served any thread to anyone holding its id | Participation checked; non-participants get **404, not 403**, so a thread id cannot be confirmed by probing |
 | 4 | Provider chats were keyed on the provider id alone, so every customer contacting the same provider shared one thread and read the others' messages | Keyed on both parties |
 
-The root cause of #1 is worth recording: the permissive policy existed so a browser-side
-Supabase client could receive Realtime updates. **RLS cannot express "only participants"
-here** — the app does not use Supabase Auth, so to Postgres every browser caller is the same
-anonymous role, with no identity to filter on. The fix was to stop the browser talking to the
-database entirely and move the check into the API, which knows the user via the `sessions`
-table. Chat now polls instead of subscribing. Removing `@supabase/supabase-js` from the
-browser also **halved the bundle, 438 KB → 221 KB**.
+The root cause of #1 is worth recording. The permissive policy existed so a browser-side Supabase
+client could receive Realtime updates. **RLS cannot express "only participants" here** — the app
+does not use Supabase Auth, so to Postgres every browser caller is the same anonymous role, with
+no identity to filter on. The fix was to stop the browser talking to the database entirely and
+move the check into the API, which knows the user via the `sessions` table.
+
+Chat now polls every 7 seconds instead of subscribing — a deliberate, stated cost. Removing
+`@supabase/supabase-js` from the browser also **halved the bundle, 438 KB → 221 KB**, which
+matters on the connections our users have.
+
+Migration `005_enable_rls_everywhere.sql` subsequently enabled RLS on **all 24 tables**, not just
+the chat ones.
+
+### 7.7 Six database writes that failed silently
+
+Nobody could sign in. `request-otp` still wrote a `role` column that migration `001` had dropped,
+so the insert failed with `PGRST204` — but that upsert was the one Supabase call in the file whose
+result was never checked. The handler carried on and returned a freshly generated code **that had
+never been stored**. The user saw an OTP on screen, and `verify-otp` then correctly told them to
+request one.
+
+Auditing for the same pattern found five more, each turning a failure into a plausible-looking
+success:
+
+```
+providers/update-profile   a profile save that appears to work and does not
+auth/sign-out              leaves a live session while reporting sign-out
+auth/verify-otp            a code that cannot be consumed can be replayed
+chat/threads, chat/create  rollback deletes leaving orphan threads
+```
+
+All six now surface the error. **Pattern learned: an unchecked write is a bug that reports
+success** — the same class as §7.2's green deployments.
+
+### 7.8 Accessibility that existed in name only
+
+Three commitments were stated in the design docs and unmet in the build:
+
+- `ListenButton` popped a `window.alert` showing the text — precisely the wrong affordance for a
+  user who may not read fluently. **It now speaks**, in whichever language the user is reading,
+  behind the adapter shape `docs/TDD.md §4` specifies, so Bhashini or Sarvam can replace the
+  browser engine with an API key. It **refuses rather than substitutes** when a device has no
+  Malayalam voice — Malayalam read in an English voice is unintelligible and would look like a
+  broken app rather than an unsupported one.
+- The app **defaulted to English** on every load and never persisted the choice. Fixed.
+- The Malayalam font was named in CSS but **never actually loaded**, so text rendered in whatever
+  face the device happened to carry. Now self-hosted as an ~89 KB subset.
+- Text controls were **20 px tall against our own 56 px touch-target floor**. Found by running the
+  runbook; fixed.
 
 ---
 
-## 8. Known gaps / next steps
+## 8 · User interface
 
-- **Pending migration.** `supabase/migrations/003_private_chat_rls.sql` drops the permissive
-  policies on the live database. It needs Postgres credentials, so it is not applied
-  automatically. **Until it runs, existing messages remain publicly readable**, and the anon
-  key should be rotated afterwards since it was public while the policies existed.
-  Migrations `001` and `002` drop two now-vestigial columns (`otps.role`, `skills.icon_key`).
-- **Auth is demo-grade.** Sessions are bearer tokens in `localStorage` against our own
-  `sessions` table, not Supabase Auth. OTP delivery is real when Twilio is configured;
-  without it the code is shown on screen.
-- **Externals.** Text-to-speech is real (browser Web Speech, ml-IN/en-IN) but depends on the
-  device having a Malayalam voice. Speech-to-text and embeddings are not implemented. Matching
-  is fully deterministic by design and does not depend on them.
-- **Admin surface** is not built.
-- **Lint debt.** A number of `no-misused-promises` warnings in `src/`; not in the deploy path.
+<!-- ─────────────────────────────────────────────────────────────────────────────
+     SCREENSHOTS GO HERE — capture from https://loom-lovat-phi.vercel.app
+     Take each on a phone-width window (375 px). The runbook step that produces
+     each screen is named, so the shot is reproducible.
+     ───────────────────────────────────────────────────────────────────────── -->
+
+| # | Screen | What it must show | Runbook step |
+|---|---|---|---|
+| 1 | Sign-in | Opens **in Malayalam** — `ലൂം`, `ഫോൺ നമ്പർ`. Phone field only, no password | A1 |
+| 2 | Onboarding — skill confirmation | `sewing → തയ്യൽ`, `catering → പാചകം`. *The canonicalisation claim, visible* | A7 |
+| 3 | Provider "Find work" | Ranked matches, with the Malayalam explanation sheet open on one | A9–A10 |
+| 4 | Customer "Browse" | Skill chips + distance + price filters applied, cards obeying both | B3–B4 |
+| 5 | **Team assembly result** | Members drawn from **more than one SHG**, with the coverage rationale — the headline shot | C2–C3 |
+| 6 | Team confirmation / provider invitation | Invitation appearing on the provider's "My work" only *after* the customer confirms | C7–C8 |
+| 7 | Communities | A private thread with the composer above the tab bar | D2–D3 |
+
+**[ SCREENSHOT 1 — Sign-in, Malayalam ]**
+
+*Caption:* The app opens in Malayalam and remembers the choice. Sign-in is phone + OTP only — no
+password, no name, no role asked before verification.
+
+**[ SCREENSHOT 2 — Skill canonicalisation ]**
+
+*Caption:* Typed free text resolves to canonical skills. `sewing` and `catering` become `തയ്യൽ`
+and `പാചകം` — the same nodes a customer searches, so nothing fragments.
+
+**[ SCREENSHOT 3 — Provider "Find work", explanation sheet open ]**
+
+*Caption:* Matches ranked by the deterministic score in §6.2, each explained in a Malayalam
+sentence built from the logged match record — and readable aloud.
+
+**[ SCREENSHOT 4 — Customer Browse with filters ]**
+
+*Caption:* Skill, distance and price filters over available providers only.
+
+**[ SCREENSHOT 5 — Team assembly result ]**
+
+*Caption:* A 30-unit, three-skill uniform order assembled into a team of 18 across **6 different
+SHGs**, with coverage reported. This is the capability a single-listing job board cannot express.
+
+**[ SCREENSHOT 6 — Provider receives the team invitation ]**
+
+*Caption:* Nothing reaches a provider until the customer confirms. Before confirmation her "My
+work" is empty; after it, the invitation appears.
+
+**[ SCREENSHOT 7 — Communities, private thread ]**
+
+*Caption:* Conversations are visible only to participants; a third provider sees the thread not at
+all.
 
 ---
 
-## 9. Evidence
+## 9 · Testing and verification
 
-- **Live app:** https://loom-lovat-phi.vercel.app — sign in with any phone number; the OTP is
-  shown on screen in demo mode.
-- **Repository:** https://github.com/nidheerakesh/loom
-- **Design docs:** `docs/PRD.md`, `docs/TDD.md`, `docs/USER_FLOWS.md`, `docs/UI_UX_DESIGN.md`
-- **Architecture notes:** `app/README.md` records the three deployment constraints above, each
-  with the symptom it produces, since all of them fail while reporting success.
+Two layers: an automated end-to-end suite that drives the deployed API, and a manual runbook
+that drives the screens.
 
-### Demo data seeded
+### 9.1 Automated end-to-end suite — 78 checks, 0 failures
 
-40 providers (Ernakulam SHG members with real names, rates and Malayalam skills), 5 customers,
-5 requests spanning open / assembling / assigned / completed, 8 portfolio items, 8 bilingual
-ratings, and a seeded conversation.
+`app/scripts/e2e.mjs` (`npm run test:e2e`) signs **three provider accounts and two customer
+accounts** in through the real phone + OTP flow and drives the complete product against
+production — no fixtures, no mocks, no direct database access. Three providers and two
+customers are the minimum that can express the interesting cases: two providers competing for
+one job, a customer choosing between them, a team whose members accept and decline
+independently, and a non-participant who must be locked out of a conversation.
 
-### Screenshots
+**Run of 15 August 2026 against production: 78 passed, 0 failed.**
 
-> **TODO:** capture and add before submission —
-> sign-in (phone step), first-time onboarding, provider dashboard with ranked matches,
-> customer Browse with skill/distance/price filters, team assembly result, Malayalam narration.
+| Section | Checks | What it proves |
+|---|---|---|
+| A · Authentication | 6 | Signup, returning sign-in, `auth/me`, wrong OTP rejected, bogus token yields no session |
+| B · Skill canonicalisation | 7 | `sewing`→`തയ്യൽ` and `catering`→`പാചകം` by alias; `stiching`→stitching by **typo**; `garment finishing`→stitching despite sharing almost no characters; a new phrase becomes its own skill and is reused, not duplicated; **`covering` no longer collapses into cooking** |
+| C · Profiles | 5 | Provider and customer profile writes persist and read back |
+| D · Browse and filters | 5 | 43 cards; skill filter 23/43; price filter 39 ≤ ₹400; distance filter 27 ≤ 5 km; combined 16 |
+| E · Individual lifecycle | 17 | Post → ranked feed → **Malayalam narration with score breakdown** → two providers apply → customer chooses → **loser auto-declined** → second choice rejected 409 → edit-after-assign rejected 409 → complete → double-complete rejected 409 → rate → re-rate revises rather than duplicates → appears in history |
+| F · Collective lifecycle | 19 | Group order stays **out** of the individual feed → team assembled, coverage complete → **units split 4 + 2 = 6 respecting capacity** → **determinism: re-assembly yields the identical team** → re-assembly replaces the draft, no orphans → **provider sees nothing before confirm**, and cannot accept even by calling the API directly (409) → swap before confirm → confirm → invitations appear → one accepts, one declines → **declined member replaced on a confirmed team** → **accepted member cannot be swapped out (409)** |
+| G · Chat and privacy | 7 | Participant reads; **non-participant gets 404, not 403**; her thread list excludes it; re-opening reuses the thread; confirming a team creates the team chat |
+| H · Authorisation | 7 | Request detail 401 without a session; no cross-customer edit (403); no assembling someone else's order (403); customer cannot read the provider feed; grievances scoped to their author |
+| I · Teardown | 2 | Sign-out kills the token |
+
+Selected output, verbatim:
+
+```
+✅ 'stiching' (typo) resolves to stitching via typo tier — → stitching via typo
+✅ 'covering' does NOT collapse into cooking — covering → covering via exact
+✅ the losing applicant is declined automatically — Test Provider Three state=declined
+✅ units are split across members, respecting capacity — Three:4 + Two:2 = 6 units
+✅ DETERMINISM — re-assembling the same request yields the identical team
+✅ provider cannot accept before confirmation, even via direct API call — 409 This team is not confirmed yet
+✅ a DECLINED member can be replaced on a confirmed team — her slot was already vacant
+✅ an ACCEPTED member cannot be swapped out — 409 only a provider who declined can be replaced
+✅ NON-participant gets 404, not 403 — status=404
+
+  78 passed, 0 failed, 78 checks total
+```
+
+Two behaviours the suite pinned down that are worth stating, because both look like bugs and
+are not: re-assembling a request **replaces** the previous draft rather than accumulating
+teams, and request detail is readable by any signed-in user — the guard is the session, not
+ownership, because a provider must read a request to decide whether to apply.
+
+### 9.2 Manual runbook — 52 checks, 6/6 sections pass
+
+`docs/DEMO_RUNBOOK.md` — 52 checks in six sections, each stated as **action → expect →
+why it matters**, with the claim it demonstrates, so a failure tells us exactly which claim we can
+no longer make. A full pass takes ~15 minutes.
+
+**Result of the full pass against production, 8 August 2026:**
+
+| Section | Result | Notes |
+|---|---|---|
+| A · Provider journey | ✅ Pass | **Found and fixed:** group orders were appearing in the individual work feed |
+| B · Customer journey | ✅ Pass | Availability filter verified by ratio — 44 total, 4 unavailable, 40 returned |
+| C · Collective journey | ✅ Pass | **18 members across 6 SHGs**, coverage complete; invitation correctly withheld until confirm |
+| D · Communities | ✅ Pass | Members read the thread, an outsider gets 404 and an empty list |
+| E · Cross-cutting | ✅ Pass | **Found and fixed:** text controls at 20 px against the 56 px floor |
+| F · Negative checks | ✅ Pass | 18 team audit rows written; swap-after-confirm returns 409; unauthenticated request detail now 401 |
+
+Section F exists because **each of those failures is silent** — the app looks fine and the data is
+wrong. It checks that the anon key returns `[]` against `sessions`, `providers` and `messages`;
+that a request detail cannot be read without a token; that a thread id cannot be confirmed by
+probing; that a request cannot be edited after assignment; that a provider cannot accept a team
+invite before the customer confirms, even by replaying the API call directly; and that audit rows
+are actually written.
+
+**Test accounts** (live, sign in with the number; the OTP prints on screen):
+
+| Role | Phone | Name |
+|---|---|---|
+| Provider | 9000000101 | Test Provider One |
+| Provider | 9000000102 | Test Provider Two |
+| Provider | 9000000103 | Test Provider Three |
+| Customer | 9000000201 | Test Customer One |
+| Customer | 9000000202 | Test Customer Two |
+
+**Demo data seeded:** 40 providers (Ernakulam SHG members with real-looking names, rates, capacity
+and Malayalam skills), 6 customers, 5 requests spanning `open` / `assembling` / `assigned` /
+`completed`, 8 portfolio items, 9 bilingual ratings, and a seeded conversation.
+
+---
+
+## 10 · Milestones achieved — measurable
+
+| Milestone | Measure |
+|---|---|
+| Working, publicly reachable deployment | Live at a URL anyone can open, no install |
+| Collective matching proven end to end | 18 providers across 6 SHGs assembled for one 30-unit order |
+| Determinism proven | Same request → same team, enforced by explicit tiebreak columns |
+| Canonical vocabulary | 109 alias phrases over 6 skills in 3 registers; typo tier separated from meaning |
+| Malayalam-first proven | App opens in Malayalam, persists the choice, self-hosted font loads |
+| Landing screen made usable | 21,008 ms → 1,350 ms (**15.6×**) |
+| Payload halved for low-bandwidth users | 438 KB → 221 KB |
+| Chat privacy | 4 vulnerabilities closed; RLS on 24/24 tables |
+| Silent-failure class eliminated | 6 unchecked writes fixed |
+| Verification discipline | 78-check automated suite (0 failures) **and** a 52-check manual runbook, both against production |
+
+---
+
+## 11 · Known gaps — stated plainly
+
+We would rather a mentor read this from us than find it in the demo.
+
+**Not yet implemented**
+
+- **Speech-to-text.** Skill entry is typed. Spoken *output* works; spoken *input* does not, so the
+  voice-first goal for low-literacy users is only half met. **This is our top priority.**
+- **Learned embeddings.** Skill matching uses a curated alias table, not vector similarity. It is
+  deterministic and explainable, but does not generalise to phrases nobody has listed.
+- **Real locations.** A provider's location is assigned deterministically rather than captured, so
+  distances are computed correctly over placeholder coordinates — "3.2 km" is correct arithmetic
+  over data that does not mean anything yet.
+- **Graph visualisation.** The justification for a match is text, not an animated traversal.
+- **Admin surface.** Grievances are collected; there is no moderation screen.
+
+**Operational caveats**
+
+- **Auth is demo-grade.** Sessions are bearer tokens in `localStorage` against our own `sessions`
+  table, not Supabase Auth. OTP delivery is real when Twilio is configured; without it the code is
+  shown on screen — that is the demo path, not a bug.
+- **New skills are not translated** unless `BHASHINI_API_KEY` is set; they fall back to the English
+  word in the Malayalam field.
+- **Chat polls at 7 seconds** rather than pushing live — the deliberate cost of closing the privacy
+  hole in §7.6.
+- **Anon key rotation pending.** The Supabase anon key was public while the permissive policies of
+  §7.6 existed. The policies are gone and verified gone, but the key should still be rotated.
+- **Lint debt.** Some `no-misused-promises` warnings in `src/`; not in the deploy path.
+
+**Next four weeks, in order**
+
+1. Capture real locations (browser geolocation + a panchayat-level fallback picker).
+2. Speech-to-text for skill entry — the other half of voice-first.
+3. Admin/moderation surface for grievances.
+4. A graph view of the match justification.
+5. Ingest live opportunities from panchayat, federation and local-enterprise feeds.
+6. Pilot with one Kudumbashree CDS cluster, and start collecting match-outcome data — including
+   whether assembled teams completed their orders — which is the training set a learned model
+   would need later.
+
+---
+
+## 12 · Evidence and links
+
+| What | Where |
+|---|---|
+| **Live application** | https://loom-lovat-phi.vercel.app — sign in with any phone number; the OTP prints on screen in demo mode |
+| **Repository** | https://github.com/nidheerakesh/loom |
+| Full project submission document | `docs/SUBMISSION.md` |
+| Product requirements | `docs/PRD.md` |
+| Technical design | `docs/TDD.md` |
+| User flows · UI/UX spec | `docs/USER_FLOWS.md` · `docs/UI_UX_DESIGN.md` |
+| **Demo runbook + results** | `docs/DEMO_RUNBOOK.md` |
+| **Automated end-to-end suite** | `app/scripts/e2e.mjs` — `npm run test:e2e` |
+| Deployment constraints and their symptoms | `app/README.md` |
+| Matching engine | `app/api/_lib/scoring.ts` · `app/api/_routes/team-assembly/assemble.ts` |
+| Skill canonicalisation | `app/api/_routes/skills/resolve.ts` · `app/api/_lib/text.ts` |
+| Schema and migrations | `app/supabase/schema.sql` · `app/supabase/migrations/` |
+
+---
+
+## 13 · Team contributions
+
+<!-- FILL THIS IN — mentors ask for it, and an empty table reads worse than an honest one. -->
+
+| Member | Focus this month |
+|---|---|
+| Nidhi Rakesh | *[ fill in ]* |
+| Niveditha G. S. | *[ fill in ]* |
+| Anjana Nandakumar | *[ fill in ]* |
+
+---
+
+## 14 · In one line
+
+India has built the world's largest network of women's self-help groups and given them credit.
+What is missing is the intelligence to route income through that network. Loom is that layer — and
+this month it went from a planning document to a deployed, secured, measured system that assembles
+an 18-woman team across 6 SHGs for an order none of them could have taken alone.
