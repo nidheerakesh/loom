@@ -1,0 +1,305 @@
+<title>Loom — Weaving skills into income</title>
+
+<style>
+  /* Kasavu: the gold border woven into off-white Kerala cotton. The whole palette is that
+     cloth — ground, thread, and the single gold line that makes it a kasavu and not a rag. */
+  :root {
+    --cotton:   #F3EFE6;
+    --paper:    #FBF9F4;
+    --deep:     #E8E1D1;
+    --indigo:   #26364F;
+    --soft:     #5A6A80;
+    --kasavu:   #B08D18;
+    --gold:     #C9A227;
+    --madder:   #9C3B36;
+    --leaf:     #55734F;
+
+    --bg: var(--cotton); --surface: var(--paper); --ink: var(--indigo);
+    --muted: var(--soft); --accent: var(--kasavu); --line: #DCD3C0;
+
+    --display: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --body: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --ml: "Manjari", "Gayathri", "Noto Sans Malayalam", "Lohit Malayalam", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10161F; --surface: #17202C; --ink: #ECE5D6; --muted: #97A3B4;
+      --accent: #D9B443; --gold: #D9B443; --line: #2A3442; --deep: #1E2734;
+      --madder: #C96A65; --leaf: #82A37C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10161F; --surface: #17202C; --ink: #ECE5D6; --muted: #97A3B4;
+    --accent: #D9B443; --gold: #D9B443; --line: #2A3442; --deep: #1E2734;
+    --madder: #C96A65; --leaf: #82A37C;
+  }
+  :root[data-theme="light"] {
+    --bg: var(--cotton); --surface: var(--paper); --ink: var(--indigo); --muted: var(--soft);
+    --accent: var(--kasavu); --gold: #C9A227; --line: #DCD3C0; --deep: #E8E1D1;
+    --madder: #9C3B36; --leaf: #55734F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--body); font-size: 18px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .ml { font-family: var(--ml); }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+  /* The gold thread: one kasavu line running the height of the page, as it runs the
+     length of the cloth. Structural, not decorative — it marks where each section begins. */
+  .thread { position: fixed; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, transparent, var(--gold) 12%, var(--gold) 88%, transparent); opacity: .5; }
+  @media (max-width: 780px) { .thread { display: none; } }
+
+  /* ---------- hero ---------- */
+  header { padding: 88px 0 72px; }
+  .lockup { display: flex; align-items: center; gap: 20px; margin-bottom: 46px; }
+  .lockup svg { width: 60px; height: 60px; flex: none; }
+  .lockup b {
+    font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: -.03em;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(38px, 7.2vw, 74px); line-height: 1.02; letter-spacing: -.035em;
+    margin: 0 0 26px; max-width: 15ch; text-wrap: balance;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .sub { font-size: clamp(19px, 2.3vw, 23px); color: var(--muted); max-width: 46ch; margin: 0 0 38px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    font-family: var(--display); font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+    text-decoration: none; padding: 14px 26px; border-radius: 2px; display: inline-block;
+    min-height: 52px; line-height: 24px;
+  }
+  .btn-primary { background: var(--ink); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent); color: #1A1206; }
+  .btn-ghost { color: var(--ink); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .cta small { font-family: var(--display); font-size: 13px; color: var(--muted); }
+
+  /* ---------- weave animation ---------- */
+  .warp, .weft { opacity: 0; }
+  .woven .warp { animation: drop .55s cubic-bezier(.2,.7,.3,1) forwards; }
+  .woven .weft { animation: draw .5s cubic-bezier(.2,.7,.3,1) forwards; }
+  .woven .warp:nth-of-type(1) { animation-delay: .05s } .woven .warp:nth-of-type(2) { animation-delay: .11s }
+  .woven .warp:nth-of-type(3) { animation-delay: .17s } .woven .warp:nth-of-type(4) { animation-delay: .23s }
+  .woven .warp:nth-of-type(5) { animation-delay: .29s }
+  .woven .weft:nth-of-type(1) { animation-delay: .42s } .woven .weft:nth-of-type(2) { animation-delay: .54s }
+  .woven .over { opacity: 0; animation: fade .3s .62s forwards; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-14px) } to { opacity: 1; transform: none } }
+  @keyframes draw { from { opacity: 0; transform: translateX(-26px) } to { opacity: 1; transform: none } }
+  @keyframes fade { to { opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) {
+    .warp, .weft, .woven .over { opacity: 1 !important; animation: none !important; transform: none !important; }
+  }
+
+  /* ---------- sections ---------- */
+  section { padding: 62px 0; border-top: 1px solid var(--line); }
+  .eyebrow {
+    font-family: var(--display); font-size: 11px; font-weight: 650; letter-spacing: .17em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 14px;
+  }
+  h2 {
+    font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 38px);
+    letter-spacing: -.025em; line-height: 1.12; margin: 0 0 18px; max-width: 20ch; text-wrap: balance;
+  }
+  section > p { max-width: 62ch; margin: 0 0 18px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 28px; margin: 34px 0 0; }
+  .stat b {
+    display: block; font-family: var(--display); font-size: clamp(30px, 4.4vw, 42px);
+    font-weight: 700; letter-spacing: -.03em; line-height: 1; margin-bottom: 7px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat span { font-family: var(--display); font-size: 13.5px; color: var(--muted); line-height: 1.45; display: block; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 30px; }
+  @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 26px; }
+  .card.lead { border-left: 3px solid var(--gold); }
+  .card h3 { font-family: var(--display); font-size: 18px; font-weight: 650; margin: 0 0 9px; letter-spacing: -.01em; }
+  .card p { margin: 0; font-size: 16.5px; color: var(--muted); }
+  .card p strong { color: var(--ink); font-weight: 600; }
+
+  .demo {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 3px;
+    padding: 26px 28px; margin-top: 30px; font-family: var(--display);
+  }
+  .demo .rationale {
+    font-size: 17px; color: var(--ink); border-left: 3px solid var(--gold);
+    padding-left: 15px; margin: 0 0 20px; line-height: 1.5;
+  }
+  .members { display: grid; gap: 9px; }
+  .member {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: baseline;
+    padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 15px;
+  }
+  .member:last-child { border-bottom: 0; }
+  .member .grp { color: var(--muted); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+  .member .u { font-variant-numeric: tabular-nums; font-weight: 650; }
+
+  .steps { list-style: none; padding: 0; margin: 26px 0 0; counter-reset: s; }
+  .steps li {
+    counter-increment: s; position: relative; padding: 0 0 22px 46px; max-width: 62ch;
+  }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: -2px;
+    font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--accent);
+    width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 50%;
+    display: grid; place-items: center;
+  }
+  .steps b { font-family: var(--display); font-size: 16px; display: block; margin-bottom: 3px; }
+  .steps span { color: var(--muted); font-size: 16.5px; }
+
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 26px; margin-top: 28px; }
+  .status h4 { font-family: var(--display); font-size: 12px; font-weight: 650; letter-spacing: .13em; text-transform: uppercase; margin: 0 0 12px; }
+  .status ul { list-style: none; padding: 0; margin: 0; font-size: 16px; }
+  .status li { padding: 6px 0 6px 22px; position: relative; color: var(--muted); }
+  .status li::before { position: absolute; left: 0; font-family: var(--display); font-weight: 700; }
+  .yes li::before { content: "·"; color: var(--leaf); font-size: 26px; line-height: 20px; }
+  .yes h4 { color: var(--leaf); }
+  .not li::before { content: "·"; color: var(--madder); font-size: 26px; line-height: 20px; }
+  .not h4 { color: var(--madder); }
+
+  footer { border-top: 1px solid var(--line); padding: 44px 0 72px; font-family: var(--display); font-size: 14px; color: var(--muted); }
+  footer a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
+  footer a:hover { color: var(--accent); border-color: var(--accent); }
+  .team { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 20px; }
+  .team b { font-weight: 600; color: var(--ink); }
+</style>
+
+<div class="thread" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <header>
+    <div class="lockup">
+      <svg id="mark" class="woven" viewBox="0 0 96 96" aria-label="Loom">
+        <g fill="currentColor" style="color:var(--ink)">
+          <rect class="warp" x="8"  y="6" width="9" height="84" rx="4.5"/>
+          <rect class="warp" x="25" y="6" width="9" height="84" rx="4.5"/>
+          <rect class="warp" x="42" y="6" width="9" height="84" rx="4.5"/>
+          <rect class="warp" x="59" y="6" width="9" height="84" rx="4.5"/>
+          <rect class="warp" x="76" y="6" width="9" height="84" rx="4.5"/>
+        </g>
+        <g fill="var(--gold)">
+          <rect class="weft" x="4" y="30" width="88" height="9" rx="4.5"/>
+          <rect class="weft" x="4" y="57" width="88" height="9" rx="4.5"/>
+        </g>
+        <g fill="currentColor" class="over" style="color:var(--ink)">
+          <rect x="8"  y="30" width="9" height="9"/>
+          <rect x="42" y="30" width="9" height="9"/>
+          <rect x="76" y="30" width="9" height="9"/>
+          <rect x="25" y="57" width="9" height="9"/>
+          <rect x="59" y="57" width="9" height="9"/>
+        </g>
+      </svg>
+      <b>Loom <span class="ml" style="color:var(--muted);font-weight:600">ലൂം</span></b>
+    </div>
+
+    <h1>The income that was <em>unreachable alone</em>.</h1>
+    <p class="sub">Kerala has 4.5 million women in self-help groups. They have credit, and they have skills. What they don't have is the market.</p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="https://loom-lovat-phi.vercel.app">Open the live app</a>
+      <a class="btn btn-ghost" href="https://github.com/nidheerakesh/loom">Read the code</a>
+      <small>Any phone number works — the code appears on screen.</small>
+    </div>
+  </header>
+
+  <section>
+    <p class="eyebrow">The problem</p>
+    <h2>Microfinance solved money. Nobody solved demand.</h2>
+    <p>A woman who stitches cannot see a paid job three kilometres away, because work travels by word of mouth. That is the small problem.</p>
+    <p>The large one is the order that would actually change her income — two hundred school uniforms, a wedding sadya for three hundred. It needs cutting, stitching and packaging, and more hands than any one woman has. So it goes to a factory in the city, and the money leaves the district. Not because the skill isn't there. Because nothing assembles it.</p>
+
+    <div class="stats">
+      <div class="stat"><b>8.5M+</b><span>women's self-help groups in India</span></div>
+      <div class="stat"><b>4.5M</b><span>women in Kerala's Kudumbashree network</span></div>
+      <div class="stat"><b>13.9%</b><span>of women have ICT skills, against 22.8% of men</span></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">What Loom does</p>
+    <h2>Two kinds of matching. One of them doesn't exist anywhere else.</h2>
+    <div class="two">
+      <div class="card">
+        <h3>Individual</h3>
+        <p>Ranks nearby work for one woman by skill fit, distance and pay. This part is a job board, and job boards exist.</p>
+      </div>
+      <div class="card lead">
+        <h3>Collective</h3>
+        <p><strong>Takes an order too large for anyone and builds a team across different self-help groups.</strong> Capacity-aware, distance-aware, and it tells you honestly when it cannot cover the order.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">A real assembly</p>
+    <h2>Thirty uniforms, three skills, nobody who could take it alone.</h2>
+    <p>One tap on a group order produces this — and states its own reasoning, rather than just its answer.</p>
+
+    <div class="demo">
+      <p class="rationale">All skills covered · <strong>4 providers across 2 groups cover stitching.</strong> Coverage complete.</p>
+      <div class="members">
+        <div class="member"><span>Kudumbashree Tailoring Unit</span><span class="grp">SHG 4</span><span class="u">5 units</span></div>
+        <div class="member"><span>Ponnu Tailoring</span><span class="grp">SHG 2</span><span class="u">3 units</span></div>
+        <div class="member"><span>Remya Suresh</span><span class="grp">SHG 4</span><span class="u">1 unit</span></div>
+        <div class="member"><span>Anju Haridas</span><span class="grp">SHG 4</span><span class="u">1 unit</span></div>
+      </div>
+    </div>
+    <p style="margin-top:20px;font-size:16px;color:var(--muted)">Nobody is allocated more than she declared she can deliver. And nothing reaches any of them until the customer confirms — then each woman still decides for herself.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">How it works</p>
+    <h2>Deterministic, in the language she reads.</h2>
+    <ol class="steps">
+      <li><b>She types her skills, however she says them</b><span><code>sewing</code>, <code>thayyal</code>, <code>തയ്യൽ</code> and even <code>stiching</code> all resolve to one canonical skill. Without that, the marketplace fragments into synonyms and quietly stops working.</span></li>
+      <li><b>The engine ranks, or assembles</b><span>A weighted score for individual work; a capacity-aware covering search for teams. The same order always produces the same team — no model, no training data, no inference cost.</span></li>
+      <li><b>It explains itself, and can say it aloud</b><span>Every decision is written to an audit table <em>before</em> a word of explanation is rendered, so the explanation cannot contradict the engine. Then it's read out in Malayalam.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <p class="eyebrow">Honest status</p>
+    <h2>Built, deployed, measured — and not yet in anyone's hands.</h2>
+    <div class="status">
+      <div class="yes">
+        <h4>Working today</h4>
+        <ul>
+          <li>Live, public, no install</li>
+          <li>Malayalam-first, with spoken explanations</li>
+          <li>Individual and collective matching</li>
+          <li>78 automated checks against production</li>
+          <li>Landing screen: 21.0s → 1.35s</li>
+        </ul>
+      </div>
+      <div class="not">
+        <h4>Not yet</h4>
+        <ul>
+          <li>Speech <em>input</em> — she can hear it, not speak to it</li>
+          <li>Real GPS locations</li>
+          <li>Admin and moderation surface</li>
+          <li><strong style="color:var(--ink)">No pilot user yet</strong></li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:26px"><strong>Next: one real order, from one real group.</strong> That is the milestone — not another feature.</p>
+  </section>
+
+  <footer>
+    <div class="team">
+      <span><b>Nidhi Rakesh</b> · backend, matching engine, deployment</span>
+      <span><b>Niveditha G. S.</b> · frontend, Malayalam-first interface</span>
+      <span><b>Anjana Nandakumar</b> · research, flows, testing</span>
+    </div>
+    <p style="margin:0">IIIT Kottayam · Girlathon, GDG On Campus MACE · BharatNext: Building for Tier-2 and Tier-3 India<br>
+      <a href="https://loom-lovat-phi.vercel.app">loom-lovat-phi.vercel.app</a> · <a href="https://github.com/nidheerakesh/loom">github.com/nidheerakesh/loom</a></p>
+  </footer>
+</div>
