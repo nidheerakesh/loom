@@ -2,10 +2,14 @@
 
 **For whoever is building the deck. Presentation: 16 August 2026.**
 
-Read this first: **11 slides, 6 minutes.** That is roughly 30 seconds per slide, and the demo
-eats 2 minutes of it. So slides carry *almost no text* — the speaker carries the words, and the
-script (`2-SCRIPT.md`) is written to match these slides in this order. If you change the order,
-tell the speaker.
+Read this first: **15 slides for a 9-minute talk**, inside a 15-minute slot — the rest is Q&A,
+which `4-VIVA-QA.md` covers. That is roughly 35 seconds per slide, and the demo eats 3 minutes
+of it. So slides carry *almost no text* — the speaker carries the words, and the script
+(`2-SCRIPT.md`) is written to match these slides in this order. If you change the order, tell
+the speaker.
+
+**Budget:** 9 min talk · 5 min Q&A · 1 min of walking to the front and plugging in. Do not build
+to fill 15 — a talk that ends early and answers well beats one that gets cut off.
 
 **The one rule.** A judge should be able to follow the argument with the sound off, and the
 speaker should never read a slide aloud. If a slide has a sentence the speaker also says, cut
@@ -92,7 +96,18 @@ The speaker switches to the browser here. Have this slide up when they switch ba
 
 ---
 
-### 7 · How the matching works
+### 7 · Under the hood
+The architecture diagram from `docs/PROGRESS.md` §5, redrawn cleanly. Four boxes, top to bottom:
+
+`Browser (Malayalam-first)` → `one serverless function, 42 routes` → `matching · geo · skills ·
+chat authorisation` → `Postgres, 24 tables, RLS on all`
+
+One line under it: **The browser never touches the database.** *(Speaker explains why — it's a
+security answer, not an architecture one.)*
+
+---
+
+### 8 · How the matching works
 Three boxes, left to right, with an arrow:
 
 `skill fit 0.5` → `proximity 0.3` → `pay 0.2`
@@ -102,7 +117,7 @@ Small, at the bottom: *no model, no training data, no inference cost*
 
 ---
 
-### 8 · The hard problem you didn't expect
+### 9 · The hard problem you didn't expect
 Title: **"covering" is not "cooking"**
 
 Show the failure and the fix as two lines:
@@ -120,7 +135,32 @@ Bottom: **Meaning lives in a curated table. Similarity only catches typos.**
 
 ---
 
-### 9 · Built and measured
+### 10 · Team assembly, as an algorithm
+Three lines, monospace, one per sort key:
+
+```
+1. proficiency   (best at the skill)
+2. distance      (nearest)
+3. creation order (so ties never reorder)
+```
+
+Under it: **Capacity-aware. Reports honestly when it cannot cover an order.**
+
+---
+
+### 11 · Security — what we found in our own app
+Four rows, `madder` for the problem, `indigo` for the fix:
+
+| Found | Fixed |
+|---|---|
+| Anyone could read every message in the app | Browser no longer touches the database |
+| Chat list returned everyone's threads | Scoped to participants |
+| Any thread readable by ID | 404, not 403 — so IDs can't be probed |
+| One shared thread per provider | Keyed on both parties |
+
+---
+
+### 12 · Built and measured
 Table, six rows, nothing else:
 
 | | |
@@ -136,7 +176,7 @@ Put `21.0s → 1.35s` and `78/78` in `kasavu`. They are the two numbers a judge 
 
 ---
 
-### 10 · Where we are, honestly
+### 13 · Where we are, honestly
 Two columns:
 
 **Working today** — deployed, Malayalam-first, individual + collective matching, spoken
@@ -150,7 +190,18 @@ Then, large, in `kasavu`: **Next: one real order, from one real group.**
 
 ---
 
-### 11 · Close
+### 14 · Roadmap
+Five items, numbered, no dates except the first:
+
+1. **Pilot with one Kudumbashree cluster** — next
+2. Real GPS locations
+3. Speech *input* in Malayalam
+4. Admin surface for grievances
+5. Live opportunity feeds from panchayat and enterprise
+
+---
+
+### 15 · Close
 **Loom**
 *It finds the work that was invisible, and the income that was unreachable alone.*
 
@@ -160,7 +211,6 @@ QR code to `loom-lovat-phi.vercel.app`, and the repo URL.
 
 ## Backup slides — after slide 11, not shown unless asked
 
-- **B1** Architecture diagram (`docs/PROGRESS.md` §5 — the ASCII one, redrawn cleanly)
 - **B2** The three deployment faults that each reported success (§7.2)
 - **B3** Chat privacy: the four holes and the RLS root cause (§7.6)
 - **B4** UML: use case + class diagram (`docs/images/15`, `17`)
@@ -174,8 +224,8 @@ If a judge asks something technical, going to a backup slide instead of talking 
 
 | Who | What | Done by |
 |---|---|---|
-| Slide builder | Slides 1–4, 7, 9, 11 + backups | tonight |
-| Whoever owns the demo | Slides 5, 6, 10 — these depend on the app state | tonight |
-| Speaker | Rehearse against `2-SCRIPT.md` twice, out loud, timed | tonight + morning |
+| Slide builder | Slides 1–4, 7–12, 14, 15 + backups | tonight |
+| Whoever owns the demo | Slides 5, 6, 13 — these depend on the app state | tonight |
+| Speaker | Rehearse `2-SCRIPT.md` twice out loud, timed; read `4-VIVA-QA.md` once | tonight + morning |
 
 **Export to PDF as well as PPTX.** Fonts do not survive strange laptops; PDF does.
