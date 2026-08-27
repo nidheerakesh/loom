@@ -110,6 +110,8 @@ Then, by hand:
 - [ ] Browse shows real-looking names — no `probe`, no `Test Provider`
 - [ ] New Request skill chips show 9 clean skills — no `loomtest reed weaving`
 - [ ] Laptop charged, phone charged, hotspot on, deck exported as **PDF and PPTX**
+- [ ] Each of you can answer, cold: *why deterministic and not ML* · *how many users* · *what
+      was the hardest bug*
 
 ---
 
@@ -147,7 +149,8 @@ If you have spare energy, spend it on **rehearsing section C again**, not on cod
 | B2 · Record the 2-min fallback video | demo driver | tonight | ☐ |
 | C · Confirm Malayalam voice on the demo device | demo driver | tonight | ☐ |
 | Slides 1–11 + backups | slide builder | tonight | ☐ |
-| Script rehearsed aloud, timed, twice | speaker | tonight | ☐ |
+| Script rehearsed aloud, timed, twice — must land at 9:00 | speaker | tonight | ☐ |
+| `4-VIVA-QA.md` read once end to end | all three | tonight | ☐ |
 | Repo made public | *(repo owner)* | tonight | ☐ |
 | D · Hotspot + fallback slides ready | anyone | morning | ☐ |
 | E · Final checks | all three, together | morning | ☐ |

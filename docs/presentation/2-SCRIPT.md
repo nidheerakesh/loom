@@ -1,7 +1,11 @@
 # Loom — Speaking Script
 
-**6 minutes.** Timings are cumulative. `[CUT]` marks what to drop if you are given 4 minutes;
-`[ADD]` marks what to say if you are given 8 or 10.
+**9 minutes of talking, inside a 15-minute slot.** The remaining time is Q&A — prepare that from
+`4-VIVA-QA.md`, which matters at least as much as this.
+
+Timings are cumulative. `[CUT]` marks what to drop if you are running long; `[TRIM]` marks a
+paragraph you can shorten without losing the thread. **Aim to finish at 9:00, not 14:00.** A talk
+that ends early and answers questions well beats one that gets cut off mid-demo.
 
 Read this out loud twice before tomorrow. Not in your head — out loud, with a timer. The
 sentences are written to be *spoken*, so they will feel slightly short on the page and correct
@@ -74,7 +78,7 @@ watch it for three seconds.
 
 ---
 
-## 2:15 — Slide 6 · **DEMO** *(2 minutes — rehearse this until it is boring)*
+## 2:15 — Slide 6 · **DEMO** *(3 minutes — rehearse this until it is boring)*
 
 *Switch to the browser. Two windows already open and signed in — customer left, provider right.*
 
@@ -91,7 +95,7 @@ watch it for three seconds.
 > Malayalam. If it didn't do this, "sewing", "tailoring" and "thayyal" would become three
 > different skills, and the marketplace would quietly stop working.
 
-**Beat 3 — the collective match** *(50s — this is the demo)*
+**Beat 3 — the collective match** *(70s — this is the demo)*
 *Customer window. Open the 30-uniform order. Tap Assemble team.*
 > One tap.
 
@@ -103,14 +107,16 @@ watch it for three seconds.
 > Different groups. That's the thing a job board cannot express.
 
 *Tap Replace on one member.*
-> And the customer stays in control — she can swap anyone before she commits.
+> And the customer stays in control — she can swap anyone before she commits. These alternatives
+> are ranked the same way, and anyone already on the team is excluded.
 
-**Beat 4 — consent** *(25s)*
+**Beat 4 — consent** *(35s)*
 *Switch to the provider window, My work — empty.*
 > Now look at the provider's screen. Nothing. The team is still a draft.
 
-*Back to customer, Confirm. Then provider window, refresh.*
-> Now the invitation appears. **Nobody is assigned work she hasn't agreed to.**
+*Back to customer, Confirm. Then provider window, wait for the poll.*
+> Now the invitation appears. **Nobody is assigned work she hasn't agreed to** — and once she
+> accepts, the customer can no longer swap her out. Only someone who declined can be replaced.
 
 **Beat 5 — voice** *(10s)*
 *Tap Listen.*
@@ -124,7 +130,17 @@ than reading Malayalam in an English accent." Then move on. Do not apologise twi
 
 ---
 
-## 4:15 — Slide 7 · How it decides
+## 5:15 — Slide 7 · Under the hood
+
+> Architecturally this is deliberately boring. The browser talks only to our API, on the same
+> origin. That's one serverless function routing to forty-two handlers, over Postgres with
+> row-level security on all twenty-four tables.
+>
+> The one line worth noticing: **the browser never touches the database.** I'll come back to why.
+
+---
+
+## 5:45 — Slide 8 · How it decides
 
 > The ranking is a weighted score — skill fit, distance, pay. And the team assembly is a
 > capacity-aware covering search.
@@ -133,13 +149,12 @@ than reading Malayalam in an English accent." Then move on. Do not apologise twi
 > system decides who earns money — and a black box that can't explain itself has no business
 > doing that.
 
-**[ADD if you have time]**
-> It also means no model to train, no inference cost, and every match is auditable after the
-> fact. We write the reasoning to a table before we render a single word of it.
+> It also means no model to train and no inference cost — and every match is auditable, because
+> we write the reasoning to a table before rendering a single word of it.
 
 ---
 
-## 4:45 — Slide 8 · The unexpected hard part
+## 6:15 — Slide 9 · The unexpected hard part
 
 > One thing we got wrong, because it's the interesting part.
 >
@@ -153,7 +168,36 @@ than reading Malayalam in an English accent." Then move on. Do not apologise twi
 
 ---
 
-## 5:15 — Slide 9 · Built and measured
+## 6:45 — Slide 10 · How the team gets built
+
+> The assembly itself is a capacity-aware covering search. Candidates sort by proficiency, then
+> distance, then creation order — that third key exists because Postgres IDs are random, and
+> without it two identical runs could return different teams.
+>
+> It's greedy, not optimal — set cover is NP-hard and an exact solver would buy milliseconds of
+> quality for seconds of latency. And when it *can't* cover an order, it says so, rather than
+> handing back a partial team that looks complete.
+
+**[CUT the second paragraph if running long. Keep the tiebreak sentence — it's the one that
+sounds like engineering.]**
+
+---
+
+## 7:15 — Slide 11 · What we found in our own app
+
+> We audited our own chat and found conversations were readable four different ways — including
+> through the anonymous database key that ships inside every browser bundle.
+>
+> The root cause is the interesting part. Row-level security couldn't express "only participants"
+> for us, because we don't use Supabase's own auth — so to Postgres, every browser visitor is the
+> same anonymous role with no identity to filter on. The fix was to stop the browser talking to
+> the database at all and move the check into the API, which knows who's asking.
+>
+> We lost live updates and now poll every seven seconds. We'd make that trade again.
+
+---
+
+## 7:55 — Slide 12 · Built and measured
 
 > Forty-two API routes. Twenty-four tables, row-level security on every one.
 >
@@ -168,7 +212,7 @@ than reading Malayalam in an English accent." Then move on. Do not apologise twi
 
 ---
 
-## 5:45 — Slide 10 · Honest status
+## 8:20 — Slide 13 · Honest status
 
 > What's not done: speech *input* — she can hear it, she can't speak to it yet. Locations are
 > placeholders. There's no admin screen.
@@ -182,16 +226,30 @@ than reading Malayalam in an English accent." Then move on. Do not apologise twi
 
 ---
 
-## 6:00 — Slide 11 · Close
+## 8:45 — Slide 14 · Roadmap
+
+> Pilot first — one cluster, one real order. Then real locations, then speech input, then an
+> admin surface, then ingesting opportunities directly from panchayat and enterprise feeds so
+> demand arrives without anyone typing it in.
+
+---
+
+## 9:00 — Slide 15 · Close
 
 > Loom finds the work that was invisible, and the income that was unreachable alone.
 >
-> Thank you.
+> Thank you — happy to take questions.
 
 ---
+
+## Then: ~5 minutes of Q&A
+
+The full preparation is in **`4-VIVA-QA.md`** — read it once tonight and once in the morning. The
+eight answers below are the ones most likely to come first.
+
 ---
 
-# Q&A — prepared answers
+# Q&A — the eight most likely
 
 **"How is this different from a job board / Urban Company / Apna?"**
 > Every one of those matches one person to one listing. None of them can represent an order that
