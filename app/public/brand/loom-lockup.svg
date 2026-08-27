@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" width="420" height="96" role="img" aria-label="Loom — weaving skills into income">
+  <title>Loom</title>
+  <g>
+    <g fill="#26364F">
+      <rect x="8"  y="6" width="9" height="84" rx="4.5"/>
+      <rect x="25" y="6" width="9" height="84" rx="4.5"/>
+      <rect x="42" y="6" width="9" height="84" rx="4.5"/>
+      <rect x="59" y="6" width="9" height="84" rx="4.5"/>
+      <rect x="76" y="6" width="9" height="84" rx="4.5"/>
+    </g>
+    <g fill="#C9A227">
+      <rect x="4" y="30" width="88" height="9" rx="4.5"/>
+      <rect x="4" y="57" width="88" height="9" rx="4.5"/>
+    </g>
+    <g fill="#26364F">
+      <rect x="8"  y="30" width="9" height="9"/>
+      <rect x="42" y="30" width="9" height="9"/>
+      <rect x="76" y="30" width="9" height="9"/>
+      <rect x="25" y="57" width="9" height="9"/>
+      <rect x="59" y="57" width="9" height="9"/>
+    </g>
+  </g>
+  <text x="118" y="52" fill="#26364F"
+        font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="44" font-weight="700"
+        letter-spacing="-1.6">Loom</text>
+  <text x="120" y="74" fill="#5A6A80"
+        font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="14.5" font-weight="500"
+        letter-spacing="0.2">Weaving skills into income</text>
+</svg>
