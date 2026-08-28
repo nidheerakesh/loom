@@ -23,26 +23,69 @@ demo as a 40-second beat. Cut the second paragraph of slide 10 to pay for it.
 
 ---
 
-## Setup — do this before you leave tonight
+## Setup
 
-Twilio's WhatsApp sandbox needs no approval and takes about ten minutes.
+The bot speaks two networks. Use whichever is working on the day — the conversation and the
+replies are identical either way, because both adapters call the same engine.
+
+### Option A · Meta Cloud API — a real WhatsApp number, no join code
+
+Better for a demo: judges can message it without sending a join code first.
+
+**Do this tonight, not in the morning.** Meta's temporary token lasts 24 hours, so one generated
+tonight is still valid through tomorrow's slot — and doing it now leaves time to debug a console
+that does not cooperate. Generating it in the morning buys nothing and risks doing Meta's
+onboarding under time pressure.
+
+1. **developers.facebook.com** → Create App → type **Business** → add the **WhatsApp** product.
+2. **WhatsApp → API Setup** gives you three things:
+
+   | Value | Where on the page |
+   |---|---|
+   | Temporary access token | top of the page → `WHATSAPP_TOKEN` |
+   | Phone number ID | under "From" → `WHATSAPP_PHONE_NUMBER_ID` |
+   | Test number | Meta provides it free |
+
+3. Still on that page, under **To**, add your own phone as a recipient and verify the code.
+   **A test number can only message numbers you have added.**
+4. **Vercel → Settings → Environment Variables**, add three. **Order matters: do this before
+   step 5.** Meta verifies by calling the webhook, and the webhook compares against
+   `WHATSAPP_VERIFY_TOKEN` — if it is not set yet, verification fails and the console shows an
+   unhelpful error. Environment variables need a **redeploy** to take effect:
+   ```
+   WHATSAPP_TOKEN            = <temporary access token>
+   WHATSAPP_PHONE_NUMBER_ID  = <phone number ID>
+   WHATSAPP_VERIFY_TOKEN     = loom-verify-2026     ← any string; you retype it in step 5
+   ```
+5. **WhatsApp → Configuration → Webhook → Edit**
+   - Callback URL: `https://loom-lovat-phi.vercel.app/api/whatsapp/webhook`
+   - Verify token: `loom-verify-2026` — must match exactly
+   - **Verify and save** should go green immediately.
+6. **Manage → subscribe to the `messages` field.** Easy to miss, and nothing arrives without it.
+
+Check the verification endpoint yourself before touching the console:
+
+```bash
+curl "https://loom-lovat-phi.vercel.app/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=loom-verify-2026&hub.challenge=hello"
+# expect: hello
+```
+
+A wrong token returns `403 Verification failed` — that is the check working, not a fault.
+
+### Option B · Twilio sandbox — faster, but needs a join code
 
 1. Twilio Console → **Messaging → Try it out → Send a WhatsApp message**
 2. Sandbox settings → **When a message comes in**:
    `https://loom-lovat-phi.vercel.app/api/whatsapp/webhook` · **HTTP POST**
-3. From the phone you will demo with, WhatsApp **`join <your-sandbox-code>`** to
-   **+1 415 523 8886**
-4. Send `work` and confirm you get a reply
+3. From your demo phone, WhatsApp **`join <your-sandbox-code>`** to **+1 415 523 8886**
 
-> **The catch, and plan for it.** The sandbox replies to *your* number, and Loom identifies a
-> provider *by* her number. So the phone you demo from must be one of the seeded providers, or
-> the bot will correctly tell you the number isn't registered.
->
-> **Fix it in one minute:** sign up on the live app with your own number as a **provider**, add
-> the skill `stitching`, and set a rate. Then the bot knows you. Do this tonight, and re-do it
-> after the morning reseed, because the reseed deletes it.
+### Either way: the phone you demo from must be a registered provider
 
----
+Loom identifies a provider **by** her number, so if yours isn't in the database the bot will
+correctly tell you it isn't registered.
+
+**One minute to fix:** sign up on the live app with your own number as a **provider**, add the
+skill `stitching`, set a rate. **Re-do it after the morning reseed**, which deletes it.
 
 ## The conversation — exactly what to type
 
