@@ -110,9 +110,13 @@ is running" and continue. Judges forgive a network; they remember a team that pa
 > again before you walk in.**
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://loom-lovat-phi.vercel.app   # expect 200
-cd app && node scripts/e2e.mjs                                              # expect 78/78
+cd app
+node scripts/demo-preflight.mjs   # every device account + the headline order, read-only
+node scripts/e2e.mjs              # expect 78/78
 ```
+
+`demo-preflight.mjs` never assembles a team, so it is safe to run immediately before you walk
+in. Device assignment and the three-phone choreography are in `6-DEMO-DEVICES.md`.
 
 Then, by hand:
 
@@ -160,6 +164,8 @@ If you have spare energy, spend it on **rehearsing section C again**, not on cod
 | B · Rehearse runbook A, B, C ×4 | demo driver | tonight | ☐ |
 | B2 · Record the 2-min fallback video | demo driver | tonight | ☐ |
 | C · Confirm Malayalam voice on the demo device | demo driver | tonight | ☐ |
+| Rehearse the three-phone handoff once (`6-DEMO-DEVICES.md`) | all three | tonight | ☐ |
+| Phones: screen timeout 5 min+, Do Not Disturb on | all three | before presenting | ☐ |
 | Slides 1–11 + backups | slide builder | tonight | ☐ |
 | Script rehearsed aloud, timed, twice — must land at 9:00 | speaker | tonight | ☐ |
 | `4-VIVA-QA.md` read once end to end | all three | tonight | ☐ |
