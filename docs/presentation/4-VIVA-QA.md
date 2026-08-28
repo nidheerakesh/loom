@@ -128,11 +128,27 @@ something. Know the reasoning, not just the choice.*
 
 ### Why Supabase and not Convex, which you started on?
 
-> **We hit Convex's limits on a free plan and wanted plain Postgres.**
+> **Postgres was always the target. Convex was a deliberate scaffold to get something runnable
+> fast, and we migrated when we needed to deploy publicly.**
 >
-> The migration cost us a week and taught us the tiebreak lesson. What we gained is a relational
-> model we can query directly, row-level security as a real enforcement layer, and no vendor
-> lock-in on the data. Given again, we'd start on Postgres.
+> Our technical design document specifies PostgreSQL, and says in as many words that the Convex
+> build is "the fast path to a locally runnable demo" while "the design below remains the target
+> production architecture". So the migration was returning to the plan, not escaping a problem.
+> What forced the timing was deployment: we needed a public URL a judge could open, and that
+> meant the real stack.
+>
+> It cost us about a week and taught us the most useful lesson of the project — Convex IDs are
+> creation-ordered, Postgres UUIDs are random, so our deterministic ranking silently started
+> returning different teams on identical runs, with nothing in any log. That is where the
+> explicit `seq` tiebreak columns come from.
+
+**Follow-up, and worth volunteering — "what did you lose?"**
+> Realtime. Convex gives live updates for free. We replaced it with Supabase Realtime, which
+> needed a database client in the browser, which needed a public-read policy on the messages
+> table — and that policy turned out to expose every conversation in the app to anyone holding
+> the anonymous key, which ships in the JavaScript bundle. We found it in our own security
+> review, removed browser database access entirely, and went to seven-second polling. So we lost
+> live updates twice over, and we would make that trade again.
 
 ### Why not a graph database, given you keep saying "network"?
 
