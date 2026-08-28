@@ -23,73 +23,36 @@ demo as a 40-second beat. Cut the second paragraph of slide 10 to pay for it.
 
 ---
 
-## Setup
+## Setup — there isn't any
 
-The bot speaks two networks. Use whichever is working on the day — the conversation and the
-replies are identical either way, because both adapters call the same engine.
+**https://loom-lovat-phi.vercel.app/whatsapp-demo.html**
 
-### Option A · Meta Cloud API — a real WhatsApp number, no join code
+Open it. That is the whole setup. No Meta app, no Twilio, no dev account, no token that
+expires, nothing to configure at the venue.
 
-Better for a demo: judges can message it without sending a join code first.
+It is a WhatsApp-shaped window onto the real bot: it posts the exact payload Twilio posts, to
+the exact route Meta posts to, and renders the reply. **The engine, the database, the matching
+and the Malayalam are all live.** Only the delivery network is simulated — and a banner on the
+page says so, because overstating the plumbing would put the honest parts of this project in
+doubt for nothing.
 
-**Do this tonight, not in the morning.** Meta's temporary token lasts 24 hours, so one generated
-tonight is still valid through tomorrow's slot — and doing it now leaves time to debug a console
-that does not cooperate. Generating it in the morning buys nothing and risks doing Meta's
-onboarding under time pressure.
+Two things it gives you that a real WhatsApp number would not:
 
-1. **developers.facebook.com** → Create App → type **Business** → add the **WhatsApp** product.
-2. **WhatsApp → API Setup** gives you three things:
+- **A sender dropdown.** Identity here *is* the phone number, so switching sender is switching
+  person. That makes the identity model visible instead of something you have to assert.
+- **No dependency on venue wifi reaching Meta, a 24-hour token, or a recipient allow-list.**
 
-   | Value | Where on the page |
-   |---|---|
-   | Temporary access token | top of the page → `WHATSAPP_TOKEN` |
-   | Phone number ID | under "From" → `WHATSAPP_PHONE_NUMBER_ID` |
-   | Test number | Meta provides it free |
+Open it on the presenting laptop *and* on a phone. On a phone it simply looks like WhatsApp.
 
-3. Still on that page, under **To**, add your own phone as a recipient and verify the code.
-   **A test number can only message numbers you have added.**
-4. **Vercel → Settings → Environment Variables**, add three. **Order matters: do this before
-   step 5.** Meta verifies by calling the webhook, and the webhook compares against
-   `WHATSAPP_VERIFY_TOKEN` — if it is not set yet, verification fails and the console shows an
-   unhelpful error. Environment variables need a **redeploy** to take effect:
-   ```
-   WHATSAPP_TOKEN            = <temporary access token>
-   WHATSAPP_PHONE_NUMBER_ID  = <phone number ID>
-   WHATSAPP_VERIFY_TOKEN     = loom-verify-2026     ← any string; you retype it in step 5
-   ```
-5. **WhatsApp → Configuration → Webhook → Edit**
-   - Callback URL: `https://loom-lovat-phi.vercel.app/api/whatsapp/webhook`
-   - Verify token: `loom-verify-2026` — must match exactly
-   - **Verify and save** should go green immediately.
-6. **Manage → subscribe to the `messages` field.** Easy to miss, and nothing arrives without it.
+### If you do want a real number as well
 
-Check the verification endpoint yourself before touching the console:
-
-```bash
-curl "https://loom-lovat-phi.vercel.app/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=loom-verify-2026&hub.challenge=hello"
-# expect: hello
-```
-
-A wrong token returns `403 Verification failed` — that is the check working, not a fault.
-
-### Option B · Twilio sandbox — faster, but needs a join code
-
-1. Twilio Console → **Messaging → Try it out → Send a WhatsApp message**
-2. Sandbox settings → **When a message comes in**:
-   `https://loom-lovat-phi.vercel.app/api/whatsapp/webhook` · **HTTP POST**
-3. From your demo phone, WhatsApp **`join <your-sandbox-code>`** to **+1 415 523 8886**
-
-### Either way: the phone you demo from must be a registered provider
-
-Loom identifies a provider **by** her number, so if yours isn't in the database the bot will
-correctly tell you it isn't registered.
-
-**One minute to fix:** sign up on the live app with your own number as a **provider**, add the
-skill `stitching`, set a rate. **Re-do it after the morning reseed**, which deletes it.
+Both paths still work and need no code changes — the handler already speaks Meta's Cloud API and
+Twilio. Steps are in git history for `5-WHATSAPP-DEMO.md`, but **do not attempt either the night
+before**. The console demonstrates the same claim with none of the risk.
 
 ## The conversation — exactly what to type
 
-Rehearse it once. It is four messages.
+Rehearse it once. Four messages, and one dropdown change that does the real work.
 
 ### 1 · Prove the identity claim
 
@@ -110,7 +73,8 @@ Lakshmi, 1 ജോലി കണ്ടെത്തി / 1 job found:
 > has already verified this number, and that's the same number the account is keyed on, so
 > there's nothing to log into. No password, no OTP, no app.
 
-*(Use whatever name it returns — it will be yours, not Lakshmi's.)*
+*Sender dropdown is set to Lakshmi. The quick-reply chips under the input send these
+exact messages, so you never have to type Malayalam on stage.*
 
 ### 2 · Apply
 
@@ -144,7 +108,23 @@ and we'll message you either way.
 > Same data as the app, same wording. This is a second front door onto one system, not a second
 > product.
 
-### 4 · Close the point
+### 4 · Switch person — the beat that proves the identity claim
+
+**Change the sender dropdown to `Unregistered number`, then send `ജോലി` again.**
+
+**It replies:**
+```
+ഈ നമ്പർ ലൂമിൽ രജിസ്റ്റർ ചെയ്തിട്ടില്ല.
+
+This number isn't registered as a provider yet.
+Sign up once at loom-lovat-phi.vercel.app, then message here — no password needed.
+```
+
+**Say:**
+> Same message, different number, completely different answer. The number *is* the account —
+> that's why there's nothing to log into, and why a stranger can't read someone else's work.
+
+### 5 · Close the point
 
 **Say, without typing anything:**
 > There's deliberately no language model in this. Replies are templates over the same
@@ -169,9 +149,10 @@ plainly instead of inventing. Let them.
 
 ---
 
-## If WhatsApp fails on the day
+## If it fails on the day
 
-The sandbox depends on Twilio, your signal, and the venue's network. Have this ready:
+The console needs the Loom API, which is the same thing the rest of the demo needs — if that is
+down you have larger problems. As a second layer, the terminal simulator needs no browser:
 
 ```bash
 cd app && node scripts/whatsapp-test.mjs "ജോലി" "1" "എന്റെ ജോലി"
@@ -187,10 +168,11 @@ screenshot and keep talking.
 
 ## What to say if asked why not the official WhatsApp Business API
 
-> The sandbox is a Twilio number, so it needs a join code — fine for a demo, not for a
-> grandmother. Production would be WhatsApp Business Cloud API with a verified business number,
-> which needs Meta business verification and takes days. The webhook we wrote doesn't change:
-> same handler, same identity model. What changes is the number it hangs off.
+> What you're seeing is the real handler and the real engine — we simulated the transport so the
+> demo doesn't depend on a conference network reaching Meta. The code already speaks both Meta's
+> Cloud API and Twilio; we've tested both payload shapes against this endpoint. Production is a
+> verified business number, which is Meta paperwork rather than engineering. The handler doesn't
+> change — only the number it hangs off does.
 
 ---
 
