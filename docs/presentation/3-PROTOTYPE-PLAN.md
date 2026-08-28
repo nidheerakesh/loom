@@ -97,6 +97,18 @@ is running" and continue. Judges forgive a network; they remember a team that pa
 
 ### E · Final checks *(15 min)*
 
+> ### Reseed first. This one is blocking.
+> ```bash
+> cd app && npm run seed
+> ```
+> Rehearsal and testing leave state behind that breaks the headline beat. Assembling a team
+> moves the 30-uniform order from `open` to `assembling`, and no route puts it back — so the
+> "one tap and the team appears" moment simply will not happen on a request someone has
+> already assembled. The WhatsApp demo also writes an application per job it applies to.
+>
+> Two minutes, and the demo phone numbers stay the same. **Do it after the last rehearsal and
+> again before you walk in.**
+
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://loom-lovat-phi.vercel.app   # expect 200
 cd app && node scripts/e2e.mjs                                              # expect 78/78
@@ -153,12 +165,16 @@ If you have spare energy, spend it on **rehearsing section C again**, not on cod
 | `4-VIVA-QA.md` read once end to end | all three | tonight | ☐ |
 | Repo made public | *(repo owner)* | tonight | ☐ |
 | D · Hotspot + fallback slides ready | anyone | morning | ☐ |
+| **Reseed immediately before presenting** | demo driver | morning | ☐ |
 | E · Final checks | all three, together | morning | ☐ |
+| WhatsApp: sandbox joined, own number registered as provider | demo driver | tonight + re-do after reseed | ☐ |
 
 ---
 
 ## If you only do three things
 
-1. **Reseed the database** — it removes every embarrassing string on screen in two minutes.
+1. **Reseed the database, last thing before you present** — it removes every embarrassing
+   string on screen *and* restores the 30-uniform order to `open`, which the headline beat
+   needs. Two minutes.
 2. **Rehearse section C until it is boring** — it is the only part of the demo that matters.
 3. **Make the repo public.**
