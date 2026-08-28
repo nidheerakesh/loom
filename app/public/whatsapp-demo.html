@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Loom on WhatsApp — demo console</title>
+<style>
+  /* A WhatsApp-shaped window onto the real bot. Every reply below is fetched live from
+     /api/whatsapp/webhook — the same handler Meta and Twilio post to, the same matching
+     engine, the same database. Only the transport is simulated, which is exactly what a
+     conference network and a 24-hour Meta token cannot be trusted to provide. */
+  :root {
+    --wa-bg: #ECE5DD; --wa-header: #075E54; --wa-teal: #128C7E;
+    --wa-out: #DCF8C6; --wa-in: #FFFFFF; --wa-ink: #111B21; --wa-muted: #667781;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Roboto, sans-serif;
+    background: #111; display: grid; place-items: center; color: var(--wa-ink);
+  }
+  .phone {
+    width: min(430px, 100vw); height: min(880px, 100vh);
+    display: flex; flex-direction: column; background: var(--wa-bg);
+    box-shadow: 0 24px 70px rgba(0,0,0,.55); overflow: hidden; position: relative;
+  }
+  header {
+    background: var(--wa-header); color: #fff; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; flex: none;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; background: #25D366; flex: none;
+    display: grid; place-items: center; font-weight: 700; color: #06341f; font-size: 17px;
+  }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-size: 16px; font-weight: 600; }
+  .who span { font-size: 12.5px; opacity: .8; }
+  select {
+    appearance: none; background: rgba(255,255,255,.15); color: #fff; border: 0;
+    font: inherit; font-size: 12px; padding: 6px 9px; border-radius: 5px; max-width: 46%;
+  }
+  select option { color: #111; }
+
+  #log { flex: 1; overflow-y: auto; padding: 16px 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+  .msg {
+    max-width: 82%; padding: 7px 10px 6px; border-radius: 8px; font-size: 15px;
+    line-height: 1.45; white-space: pre-wrap; word-wrap: break-word;
+    box-shadow: 0 1px .5px rgba(0,0,0,.13); position: relative;
+  }
+  .out { align-self: flex-end; background: var(--wa-out); border-top-right-radius: 2px; }
+  .in  { align-self: flex-start; background: var(--wa-in);  border-top-left-radius: 2px; }
+  .time { font-size: 10.5px; color: var(--wa-muted); float: right; margin: 6px 0 -2px 8px; }
+  .typing { align-self: flex-start; background: var(--wa-in); padding: 12px 14px; border-radius: 8px; }
+  .typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #9aa4ab; margin: 0 1.5px; animation: b 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .18s } .typing i:nth-child(3) { animation-delay: .36s }
+  @keyframes b { 0%,60%,100% { opacity:.3; transform: translateY(0) } 30% { opacity:1; transform: translateY(-3px) } }
+
+  footer { flex: none; padding: 8px; display: flex; gap: 8px; background: #F0F0F0; align-items: center; }
+  #text {
+    flex: 1; border: 0; border-radius: 22px; padding: 11px 16px; font: inherit; font-size: 15px;
+    background: #fff; min-height: 44px; outline: none;
+  }
+  #send {
+    width: 46px; height: 46px; flex: none; border: 0; border-radius: 50%;
+    background: var(--wa-teal); color: #fff; font-size: 19px; cursor: pointer;
+  }
+  #send:disabled { opacity: .5; cursor: default; }
+  .quick { display: flex; gap: 6px; padding: 0 8px 8px; flex-wrap: wrap; background: #F0F0F0; }
+  .quick button {
+    border: 1px solid #cfd4d6; background: #fff; border-radius: 14px; padding: 6px 12px;
+    font: inherit; font-size: 13px; cursor: pointer; color: #333;
+  }
+  .quick button:hover { background: #f3f3f3; }
+  .banner {
+    background: #FFF3CD; color: #6b5310; font-size: 11.5px; text-align: center;
+    padding: 5px 10px; flex: none; letter-spacing: .01em;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="avatar">ലൂ</div>
+    <div class="who">
+      <b>Loom</b>
+      <span id="status">online</span>
+    </div>
+    <select id="as" aria-label="Send as"></select>
+  </header>
+
+  <div class="banner">Simulated transport · replies come from the live Loom API</div>
+
+  <div id="log"></div>
+
+  <div class="quick">
+    <button data-send="ജോലി">ജോലി</button>
+    <button data-send="1">1</button>
+    <button data-send="എന്റെ ജോലി">എന്റെ ജോലി</button>
+    <button data-send="hello">hello</button>
+  </div>
+
+  <footer>
+    <input id="text" placeholder="Message" autocomplete="off">
+    <button id="send" title="Send">➤</button>
+  </footer>
+</div>
+
+<script>
+  // Seeded providers, from `npm run seed` output. providerPhone(i) = 98765(30001+i).
+  const PEOPLE = [
+    ["9876530001", "Lakshmi"],
+    ["9876530002", "Sujatha Pillai"],
+    ["9876530005", "Fathima Beevi"],
+    ["9876530006", "Sheeba Thomas"],
+    ["9999999999", "Unregistered number"],
+  ];
+
+  const log = document.getElementById("log");
+  const asSel = document.getElementById("as");
+  const input = document.getElementById("text");
+  const send = document.getElementById("send");
+
+  for (const [num, name] of PEOPLE) {
+    const o = document.createElement("option");
+    o.value = num; o.textContent = `${name} · ${num}`;
+    asSel.appendChild(o);
+  }
+
+  const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  function bubble(text, cls) {
+    const el = document.createElement("div");
+    el.className = "msg " + cls;
+    el.textContent = text;
+    const t = document.createElement("span");
+    t.className = "time"; t.textContent = clock();
+    el.appendChild(t);
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  function typing() {
+    const el = document.createElement("div");
+    el.className = "typing";
+    el.innerHTML = "<i></i><i></i><i></i>";
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  async function post(message) {
+    bubble(message, "out");
+    const dots = typing();
+    document.getElementById("status").textContent = "typing…";
+    try {
+      // Exactly the payload Twilio posts, to the exact route Meta posts to.
+      const res = await fetch("/api/whatsapp/webhook", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          From: "whatsapp:+91" + asSel.value,
+          To: "whatsapp:+14155238886",
+          Body: message,
+        }),
+      });
+      const xml = await res.text();
+      // TwiML in, plain text out.
+      const doc = new DOMParser().parseFromString(xml, "text/xml");
+      const reply = doc.querySelector("Message")?.textContent
+        ?? "Something went wrong at our end.";
+      dots.remove();
+      bubble(reply, "in");
+    } catch (e) {
+      dots.remove();
+      bubble("Could not reach Loom. Check the connection and try again.", "in");
+    } finally {
+      document.getElementById("status").textContent = "online";
+    }
+  }
+
+  function submit() {
+    const v = input.value.trim();
+    if (!v) return;
+    input.value = "";
+    void post(v);
+  }
+
+  send.addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  for (const b of document.querySelectorAll(".quick button")) {
+    b.addEventListener("click", () => void post(b.dataset.send));
+  }
+
+  bubble("ലൂം / Loom\n\nSend ജോലി to see work near you.", "in");
+  input.focus();
+</script>
+</body>
+</html>
