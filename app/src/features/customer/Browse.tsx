@@ -83,9 +83,11 @@ export function Browse() {
                 <Stars value={p.rating} count={p.ratingCount} />
               </div>
               <div className="text-sm text-loom-indigoSoft">
-                {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"} · {p.deliveryDays ?? "?"}d · {p.experienceYears}
+                {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"}
+                {p.deliveryDays !== null ? ` · ${p.deliveryDays}d` : ""} · {p.experienceYears}
                 {t("yrs")}
-                {p.distanceKm !== null ? ` · ${p.distanceKm} ${t("km")}` : ""} · {p.capacity} {t("people")}
+                {p.distanceKm !== null ? ` · ${p.distanceKm} ${t("km")}` : ""} · {p.capacity}{" "}
+                {p.capacity === 1 ? t("person") : t("people")}
               </div>
               <div className="text-sm mt-1 text-loom-indigoSoft">{p.skills.map((s) => pickLang(lang, s.canonicalName, s.canonicalNameMl)).join(" · ")}</div>
             </button>
@@ -177,8 +179,9 @@ function ProviderDetail({
               <Stars value={p.rating} count={p.ratingCount} />
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">
-              {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"} · {p.deliveryDays ?? "?"}d · {p.experienceYears}
-              {t("yrs")} · {p.capacity} {t("people")}
+              {p.rate ? `₹${p.rate}/${p.rateUnit ?? ""}` : "—"}
+              {p.deliveryDays !== null ? ` · ${p.deliveryDays}d` : ""} · {p.experienceYears}
+              {t("yrs")} · {p.capacity} {p.capacity === 1 ? t("person") : t("people")}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {p.skills.map((s) => (

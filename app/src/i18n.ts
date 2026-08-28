@@ -26,6 +26,7 @@ const DICT: Record<string, { ml: string; en: string }> = {
   finish: { ml: "പൂർത്തിയാക്കുക", en: "Finish" },
   skipForNow: { ml: "ഇപ്പോൾ വേണ്ട", en: "Skip for now" },
   people: { ml: "പേർ", en: "people" },
+  person: { ml: "പേർ", en: "person" },
   interestedCount: { ml: "താൽപ്പര്യം", en: "interested" },
   acceptedCount: { ml: "സ്വീകരിച്ചു", en: "accepted" },
   coverageComplete: { ml: "എല്ലാ വൈദഗ്ധ്യവും ലഭിച്ചു", en: "All skills covered" },
