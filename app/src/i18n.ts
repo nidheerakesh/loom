@@ -54,6 +54,7 @@ const DICT: Record<string, { ml: string; en: string }> = {
   status_proposed: { ml: "നിർദ്ദേശിച്ചു", en: "Proposed" },
   status_confirmed: { ml: "സ്ഥിരീകരിച്ചു", en: "Confirmed" },
   status_invited: { ml: "ക്ഷണിച്ചു", en: "Invited" },
+  status_notyet: { ml: "ഇതുവരെ ക്ഷണിച്ചിട്ടില്ല", en: "Not invited yet" },
   status_accepted: { ml: "സ്വീകരിച്ചു", en: "Accepted" },
   status_declined: { ml: "നിരസിച്ചു", en: "Declined" },
   status_interested: { ml: "താൽപ്പര്യം", en: "Interested" },
