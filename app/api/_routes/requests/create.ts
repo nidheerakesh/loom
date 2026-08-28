@@ -9,10 +9,16 @@ const Body = z.object({
   title: z.string().min(1),
   description: z.string(),
   mode: z.enum(["individual", "group"]),
-  units: z.number(),
-  pay: z.number().optional(),
+  // requests/update has always validated these and create never did, so an order could be
+  // posted with zero, negative or fractional units and then refuse to be edited back into a
+  // legal state. The ceiling is arbitrary but finite: far beyond any real SHG order, and it
+  // stops a typo asking the assembler to cover a million pieces.
+  units: z.number().int().positive().max(10000),
+  pay: z.number().nonnegative().max(10_000_000).optional(),
   deadline: z.string().optional(),
-  skills: z.array(z.object({ skillId: z.string().min(1), quantity: z.number() })),
+  skills: z.array(
+    z.object({ skillId: z.string().min(1), quantity: z.number().int().positive().max(10000) }),
+  ),
 });
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
