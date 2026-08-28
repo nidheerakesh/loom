@@ -235,7 +235,13 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                           : "text-loom-indigoSoft"
                     }`}
                   >
-                    {t(`status_${m.state}`)}
+                    {/* A member of a draft team carries state "invited" in the database from the
+                        moment the team is assembled, but nothing has been sent to her yet — the
+                        provider sees nothing until the customer confirms. Saying "Invited" here
+                        contradicts that on the customer's own screen. */}
+                    {team.status === "proposed" && m.state === "invited"
+                      ? t("status_notyet")
+                      : t(`status_${m.state}`)}
                     {m.state === "declined" && ` — ${t("slotNeedsFilling")}`}
                   </div>
                 </div>
