@@ -142,6 +142,27 @@ something. Know the reasoning, not just the choice.*
 > returning different teams on identical runs, with nothing in any log. That is where the
 > explicit `seq` tiebreak columns come from.
 
+**Follow-up: "Why did you need Postgres at all?"**
+> Three jobs the design gave it, and one we found out afterwards.
+>
+> **The audit log.** Every match is written to a `matches` row — score breakdown and all —
+> *before* any explanation is rendered. That ordering is what makes the explanation unable to
+> contradict the engine, and it wants an immutable relational record.
+>
+> **The data is genuinely relational.** Providers, skills, requests, teams, members, interests —
+> 24 tables with foreign keys between them. Team assembly is a join problem, and we later found
+> out how much: the landing screen took 21 seconds because we were resolving relations in
+> JavaScript loops instead of SQL. Doing it as joins is what took it to 1.3.
+>
+> **pgvector.** The design specifies 768-dimension embeddings for semantic skill matching. We
+> haven't built that — the alias table does that job today — but Postgres is where it lands when
+> we do, without another datastore.
+>
+> **And the one we didn't plan: row-level security.** It's on all 24 tables now, and it's a real
+> second line of defence. The API checks who is asking; the database independently refuses.
+> After we found four ways our chat leaked, having a layer that doesn't depend on our own code
+> being right mattered.
+
 **Follow-up, and worth volunteering — "what did you lose?"**
 > Realtime. Convex gives live updates for free. We replaced it with Supabase Realtime, which
 > needed a database client in the browser, which needed a public-read policy on the messages
