@@ -113,7 +113,10 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field label={t("units")} type="number" value={units} onChange={(e) => setUnits(Number(e.target.value))} />
+          {/* The server enforces the same bounds — a number input is a suggestion, not a
+              constraint — but clamping here means the form cannot show an illegal value. */}
+          <Field label={t("units")} type="number" min={1} max={10000} value={units}
+            onChange={(e) => setUnits(Math.min(10000, Math.max(1, Math.floor(Number(e.target.value)) || 1)))} />
           <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
         </div>
         <Button className="w-full" onClick={() => void submit()} disabled={!title || selected.size === 0}>

@@ -7,6 +7,24 @@ import { PROVIDERS, PORTFOLIO_CAPTIONS, RATING_COMMENTS, CUSTOMERS, REQUESTS, CH
 // DESTRUCTIVE — clears every user table first (including `sessions`, so everyone currently
 // signed in is logged out). For a clean slate that keeps your own account, use reset-users.ts.
 // Run: npm run seed
+
+// Demo accounts must be sign-in-able, or half the product cannot be demonstrated at all.
+// These used to hash an arbitrary string — `hash("seedcustomer" + i)` — which is not the hash
+// of any phone number, so nobody could ever log in as one. That locked the demo out of its own
+// data: the 30-uniform group order belongs to a seeded customer, and the team it assembles is
+// made of seeded providers, so neither the order nor the invitations it produces could be
+// reached from the app.
+//
+// auth/request-otp derives the account from `fnv1a("phone:" + e164)`, so seeding that exact
+// value against a known number makes these accounts reachable through the ordinary OTP flow —
+// no bypass, no special case in the app.
+//
+// The ranges deliberately avoid 98765-1xxxx and 98765-2xxxx, which the demo runbook uses for
+// first-time sign-ups, so "returning user" and "new user" journeys stay separable.
+const providerPhone = (i: number) => `98765${30001 + i}`;
+const customerPhone = (i: number) => `98765${40001 + i}`;
+const phoneHash = (phone: string) => hash("phone:+91" + phone);
+
 async function main() {
   await clearTables(USER_TABLES);
   const { skillId, groupIds, locIds } = await seedReference();
@@ -23,7 +41,7 @@ async function main() {
       .insert({
         name: p.name,
         shop_name: p.shopName,
-        phone_hash: hash("seedprovider" + i),
+        phone_hash: phoneHash(providerPhone(i)),
         available: i % 11 !== 0, // a few unavailable, so the availability filter has an effect
         capacity: p.capacity,
         rate: p.rate,
@@ -71,7 +89,7 @@ async function main() {
       .insert({
         name: c.name,
         company: c.company,
-        phone_hash: hash("seedcustomer" + i),
+        phone_hash: phoneHash(customerPhone(i)),
         location_id: locIds[i % locIds.length],
       })
       .select("id")
@@ -148,6 +166,22 @@ async function main() {
       `${requestIds.length} requests, ${portfolioRows.length} portfolio items, ` +
       `${ratingRows.length} ratings, ${CHAT.messages.length} chat messages.`,
   );
+
+  // Printed rather than written down somewhere that can go stale: whoever runs the seed is
+  // about to demo it, and these are the numbers they sign in with. The OTP prints on screen.
+  console.log("\nSign in with any of these — the code appears above the input:\n");
+  console.log("  CUSTOMERS");
+  CUSTOMERS.forEach((c, i) => {
+    const owns = REQUESTS.filter((r) => r.customerIndex === i).map((r) => r.title);
+    console.log(
+      `    ${customerPhone(i)}  ${c.name.padEnd(16)}${owns.length ? "→ " + owns.join("; ") : ""}`,
+    );
+  });
+  console.log("\n  PROVIDERS (first 6 of " + PROVIDERS.length + ")");
+  PROVIDERS.slice(0, 6).forEach((p, i) => {
+    console.log(`    ${providerPhone(i)}  ${p.name.padEnd(22)}${p.skills.join(", ")}`);
+  });
+  console.log(`    …provider i is ${providerPhone(0).slice(0, 5)}${30001}+i\n`);
 }
 
 main().catch((e) => {
