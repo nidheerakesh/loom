@@ -226,12 +226,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (/\b(work|job|jobs|ജോലി)\b/.test(text) && !/my|എന്റെ/.test(text)) {
+    // `\b` is defined against Latin word characters, so `\bജോലി\b` can never match and the
+    // Malayalam command silently fell through to the menu — the flagship claim of a
+    // Malayalam-first product failing in Malayalam. Latin words keep their boundaries so
+    // "network" doesn't read as "work"; Malayalam is matched by substring.
+    const wantsMine = /\b(my|status)\b/.test(text) || text.includes("എന്റെ");
+    const wantsWork = /\b(work|job|jobs)\b/.test(text) || text.includes("ജോലി");
+
+    if (wantsWork && !wantsMine) {
       res.status(200).send(twiml(listing(first, await offersFor(provider))));
       return;
     }
 
-    if (/my|status|എന്റെ/.test(text)) {
+    if (wantsMine) {
       const { data: mine } = await supabaseAdmin
         .from("interests")
         .select("state, requests(title, status)")
