@@ -292,6 +292,37 @@ async function main() {
     ok("customer swaps a member before confirming", false, "no candidates available to swap in");
   }
 
+  // Editing a draft team — add and remove, and the coverage claim that must follow both.
+  const beforeEdit = (await get("team-assembly/get", { teamId })).data;
+  const dropped = beforeEdit.members[0];
+  const removed = await post("team-assembly/remove-member", {
+    token: A.c2.token, teamId, providerId: dropped.providerId,
+  });
+  const afterRemove = (await get("team-assembly/get", { teamId })).data;
+  ok("a member can be removed without naming a replacement",
+    removed.status === 200 && afterRemove.members.length === beforeEdit.members.length - 1,
+    `${beforeEdit.members.length} → ${afterRemove.members.length}`);
+  ok("coverage is recomputed — the team stops claiming to cover units that left with her",
+    afterRemove.complete === false && /INCOMPLETE/.test(afterRemove.rationale),
+    afterRemove.rationale);
+
+  const readded = await post("team-assembly/add-member", {
+    token: A.c2.token, teamId, providerId: dropped.providerId, skillId: dropped.skillId,
+  });
+  const afterAdd = (await get("team-assembly/get", { teamId })).data;
+  ok("she can be added back", readded.status === 200, `${readded.data?.assignedUnits} units`);
+  ok("coverage returns to complete", afterAdd.complete === true && /complete\./i.test(afterAdd.rationale));
+  ok("never assigned more units than the order still needed",
+    (readded.data?.assignedUnits ?? 0) <= dropped.coveredUnits);
+  ok("adding the same person twice is refused",
+    (await post("team-assembly/add-member", {
+      token: A.c2.token, teamId, providerId: dropped.providerId, skillId: dropped.skillId,
+    })).status === 409);
+  ok("another customer cannot edit this team",
+    (await post("team-assembly/remove-member", {
+      token: A.c1.token, teamId, providerId: dropped.providerId,
+    })).status === 403);
+
   const conf = await post("team-assembly/confirm", { token: A.c2.token, teamId });
   ok("customer confirms the team", conf.status === 200);
 
