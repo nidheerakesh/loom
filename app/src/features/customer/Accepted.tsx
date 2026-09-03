@@ -158,6 +158,13 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
       setSwapping(null);
     },
   });
+  const removeMember = useMutation({
+    mutationFn: (providerId: string) =>
+      apiPost("/api/team-assembly/remove-member", { token, teamId, providerId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
+    },
+  });
   const rate = useMutation({
     mutationFn: (body: { providerId: string; stars: number; comment: string }) =>
       apiPost("/api/ratings/rate", { token, ...body }),
@@ -254,6 +261,19 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                       onClick={() => setSwapping(m)}
                     >
                       {t("swapMember")}
+                    </Button>
+                  )}
+                  {/* Replace insists on a replacement. A customer who wants a smaller team, or
+                      can see no suitable alternative, needs to be able to simply remove — the
+                      engine recomputes coverage and the team stops claiming to cover her
+                      units. Same permission rule as Replace. */}
+                  {token && (team.status === "proposed" || m.state === "declined") && (
+                    <Button
+                      variant="ghost"
+                      disabled={removeMember.isPending}
+                      onClick={() => removeMember.mutate(m.providerId)}
+                    >
+                      {t("removeMember")}
                     </Button>
                   )}
                   {token && team.status === "confirmed" && rating?.providerId !== m.providerId && (
