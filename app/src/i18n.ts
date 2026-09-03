@@ -87,6 +87,7 @@ const DICT: Record<string, { ml: string; en: string }> = {
   price: { ml: "വില", en: "Price" },
   rate: { ml: "നിരക്ക്", en: "Rate" },
   delivery: { ml: "ഡെലിവറി", en: "Delivery" },
+  deliveryDaysLabel: { ml: "എത്ര ദിവസം കൊണ്ട് തീർക്കും", en: "Days to finish" },
   capacity: { ml: "ആളുകളുടെ എണ്ണം", en: "No. of people" },
   shopName: { ml: "കടയുടെ പേര്", en: "Shop name" },
   languages: { ml: "ഭാഷകൾ", en: "Languages" },

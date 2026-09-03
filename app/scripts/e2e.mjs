@@ -402,6 +402,46 @@ async function main() {
   ok("public skill catalogue reachable", skills.status === 200 && Array.isArray(skills.data) && skills.data.length > 0,
     `${skills.data?.length} skills`);
 
+  // ── J · LOCATION ────────────────────────────────────────────────────────────
+  section("J · Location — capture without storing where she lives");
+
+  const areas = await get("locations/list", {});
+  ok("named areas offered for the manual path", Array.isArray(areas.data) && areas.data.length > 0,
+    (areas.data ?? []).slice(0, 4).map((a) => a.label).join(", "));
+  ok("raw-coordinate rows are never offered as a choice",
+    !(areas.data ?? []).some((a) => /^-?\d+\.\d+/.test(a.label)));
+
+  const nearKnown = await post("accounts/set-location", { token: A.p1.token, lat: 9.9612, lng: 76.2999 });
+  ok("a reading near a known area snaps to that area, storing nothing new",
+    nearKnown.status === 200 && !/^-?\d+\.\d+/.test(nearKnown.data?.label ?? ""),
+    `→ ${nearKnown.data?.label}`);
+
+  const faraway = await post("accounts/set-location", { token: A.p1.token, lat: 8.5241, lng: 76.9366 });
+  ok("a reading with nothing nearby is rounded to a ~1km grid, not stored exactly",
+    faraway.status === 200 && /^\d+\.\d{2}, \d+\.\d{2}$/.test(faraway.data?.label ?? ""),
+    `→ ${faraway.data?.label}`);
+
+  const jittered = await post("accounts/set-location", { token: A.p1.token, lat: 8.52436, lng: 76.93688 });
+  ok("a second reading 30m away reuses the same row — no exact-position trail",
+    jittered.data?.locationId === faraway.data?.locationId);
+
+  const manual = await post("accounts/set-location", { token: A.p1.token, locationId: areas.data[0]._id });
+  ok("choosing an area from the list works", manual.status === 200 && manual.data?.label === areas.data[0].label,
+    `→ ${manual.data?.label}`);
+
+  ok("an unknown locationId is refused",
+    (await post("accounts/set-location", { token: A.p1.token, locationId: "00000000-0000-0000-0000-000000000000" })).status === 404);
+  ok("impossible coordinates are refused",
+    (await post("accounts/set-location", { token: A.p1.token, lat: 999, lng: 999 })).status === 400);
+  ok("sending neither coordinates nor an area is refused",
+    (await post("accounts/set-location", { token: A.p1.token })).status === 400);
+  ok("no session, no write",
+    (await post("accounts/set-location", { token: "nope", lat: 9.96, lng: 76.3 })).status === 401);
+
+  const feedAfter = await get("matching/feed", { token: A.p1.token });
+  ok("the work feed still ranks after a location change", Array.isArray(feedAfter.data),
+    `${feedAfter.data?.length} matches`);
+
   // ── I · SESSION TEARDOWN ────────────────────────────────────────────────────
   section("I · Session teardown");
   const so = await post("auth/sign-out", { token: A.c2.token });

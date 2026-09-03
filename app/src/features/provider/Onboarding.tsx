@@ -27,6 +27,7 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
   const [readback, setReadback] = useState<Readback[] | null>(null);
   const [rate, setRate] = useState("");
   const [experience, setExperience] = useState("");
+  const [delivery, setDelivery] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -62,6 +63,10 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
         patch.rateUnit = "piece";
       }
       if (experience.trim() && Number.isFinite(expNum)) patch.experienceYears = expNum;
+      // Never asked for before, so every provider who signed up through the app had none and
+      // her card rendered an empty delivery field where the seeded rows showed a number.
+      const dayNum = Number(delivery);
+      if (delivery.trim() && Number.isFinite(dayNum) && dayNum > 0) patch.deliveryDays = dayNum;
       if (Object.keys(patch).length > 1) {
         await apiPost("/api/providers/update-profile", patch);
       }
@@ -143,6 +148,13 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
               inputMode="numeric"
               placeholder="5"
               onChange={(e) => setExperience(e.target.value)}
+            />
+            <Field
+              label={t("deliveryDaysLabel")}
+              value={delivery}
+              inputMode="numeric"
+              placeholder="3"
+              onChange={(e) => setDelivery(e.target.value)}
             />
             {/* Asked here rather than left to a hash of her phone number, which is what
                 assigned it before — distances were arithmetic over coordinates that meant
