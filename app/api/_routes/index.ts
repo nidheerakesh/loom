@@ -13,7 +13,9 @@ import r_chat_threads from "./chat/threads.js";
 import r_customers_history from "./customers/history.js";
 import r_customers_my_requests from "./customers/my-requests.js";
 import r_customers_update_profile from "./customers/update-profile.js";
+import r_grievances_list from "./grievances/list.js";
 import r_grievances_mine from "./grievances/mine.js";
+import r_grievances_set_status from "./grievances/set-status.js";
 import r_grievances_submit from "./grievances/submit.js";
 import r_locations_list from "./locations/list.js";
 import r_matching_feed from "./matching/feed.js";
@@ -69,7 +71,9 @@ export const routes: Record<string, Handler> = {
   "customers/history": r_customers_history,
   "customers/my-requests": r_customers_my_requests,
   "customers/update-profile": r_customers_update_profile,
+  "grievances/list": r_grievances_list,
   "grievances/mine": r_grievances_mine,
+  "grievances/set-status": r_grievances_set_status,
   "grievances/submit": r_grievances_submit,
   "locations/list": r_locations_list,
   "matching/feed": r_matching_feed,

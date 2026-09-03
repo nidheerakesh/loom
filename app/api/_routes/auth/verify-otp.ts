@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { fnv1a } from "../../_lib/text.js";
-import { toE164, testCodeFor, twilioConfigured, checkVerification } from "../../_lib/sms.js";
+import { toE164, testCodeFor, twilioConfigured, checkVerification, isAdminPhone } from "../../_lib/sms.js";
 import { accountId, createSession, rolesForPhone } from "../../_lib/accounts.js";
 import { issueTicket } from "../../_lib/ticket.js";
 
@@ -54,6 +54,13 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     if (!approved) throw new HttpError(401, "Wrong code");
   } else {
     await verifyMockOtp(phoneHash, code);
+  }
+
+  // An admin has no provider or customer row to look up — the allowlist is the account.
+  if (isAdminPhone(e164)) {
+    const token = await createSession(phoneHash, "admin", `admin:${phoneHash}`);
+    res.status(200).json({ status: "session", token, role: "admin", userId: `admin:${phoneHash}` });
+    return;
   }
 
   const roles = await rolesForPhone(phoneHash);

@@ -3,6 +3,7 @@ import { useAuth } from "./auth";
 import { SignIn } from "./features/SignIn";
 import { ProviderApp } from "./features/provider/ProviderApp";
 import { CustomerApp } from "./features/customer/CustomerApp";
+import { AdminApp } from "./features/admin/AdminApp";
 
 export default function App() {
   const { token, setToken, me } = useAuth();
@@ -17,5 +18,5 @@ export default function App() {
   if (me === null) return <SignIn />;
   if (me.role === "provider") return <ProviderApp />;
   if (me.role === "customer") return <CustomerApp />;
-  return <div className="p-8">Admin (not built in demo).</div>;
+  return <AdminApp />;
 }
