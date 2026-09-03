@@ -135,6 +135,7 @@ const DICT: Record<string, { ml: string; en: string }> = {
   cancel: { ml: "വേണ്ട", en: "Cancel" },
   markFinished: { ml: "ജോലി പൂർത്തിയായി", en: "Mark finished" },
   swapMember: { ml: "മാറ്റി നിയമിക്കുക", en: "Replace" },
+  removeMember: { ml: "ഒഴിവാക്കുക", en: "Remove" },
   noAlternatives: { ml: "മറ്റാരും ലഭ്യമല്ല", en: "No one else is available for this skill" },
   newConversation: { ml: "പുതിയ സംഭാഷണം", en: "New conversation" },
   conversationName: { ml: "സംഭാഷണത്തിന്റെ പേര്", en: "Conversation name" },

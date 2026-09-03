@@ -37,11 +37,13 @@ import r_requests_update from "./requests/update.js";
 import r_skills_list from "./skills/list.js";
 import r_skills_mine from "./skills/mine.js";
 import r_skills_resolve from "./skills/resolve.js";
+import r_team_assembly_add_member from "./team-assembly/add-member.js";
 import r_team_assembly_assemble from "./team-assembly/assemble.js";
 import r_team_assembly_candidates from "./team-assembly/candidates.js";
 import r_team_assembly_confirm from "./team-assembly/confirm.js";
 import r_team_assembly_get from "./team-assembly/get.js";
 import r_team_assembly_my_teams from "./team-assembly/my-teams.js";
+import r_team_assembly_remove_member from "./team-assembly/remove-member.js";
 import r_team_assembly_respond_invite from "./team-assembly/respond-invite.js";
 import r_team_assembly_swap_member from "./team-assembly/swap-member.js";
 import r_whatsapp_webhook from "./whatsapp/webhook.js";
@@ -91,11 +93,13 @@ export const routes: Record<string, Handler> = {
   "skills/list": r_skills_list,
   "skills/mine": r_skills_mine,
   "skills/resolve": r_skills_resolve,
+  "team-assembly/add-member": r_team_assembly_add_member,
   "team-assembly/assemble": r_team_assembly_assemble,
   "team-assembly/candidates": r_team_assembly_candidates,
   "team-assembly/confirm": r_team_assembly_confirm,
   "team-assembly/get": r_team_assembly_get,
   "team-assembly/my-teams": r_team_assembly_my_teams,
+  "team-assembly/remove-member": r_team_assembly_remove_member,
   "team-assembly/respond-invite": r_team_assembly_respond_invite,
   "team-assembly/swap-member": r_team_assembly_swap_member,
   // Twilio posts here; it replies TwiML rather than JSON, so it is not a `withHandler` route.
