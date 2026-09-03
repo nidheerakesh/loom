@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
+import { LocationPicker } from "../shared/LocationPicker";
 import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
 import { RoleSwitch } from "../shared/RoleSwitch";
@@ -101,6 +102,11 @@ export function ProviderProfile() {
           <Field label={t("rate")} type="number" defaultValue={provider.rate ?? ""} onBlur={(e) => saveField({ rate: Number(e.target.value) })} />
           <Field label={t("delivery")} type="number" defaultValue={provider.deliveryDays ?? ""} onBlur={(e) => saveField({ deliveryDays: Number(e.target.value) })} />
         </div>
+      </Card>
+
+      <Card>
+        <h2 className="font-semibold text-loom-indigo mb-2">{t("yourArea")}</h2>
+        <LocationPicker />
       </Card>
 
       <Card>

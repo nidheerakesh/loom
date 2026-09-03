@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiPost, ApiError } from "../../lib/api";
 import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
+import { LocationPicker } from "../shared/LocationPicker";
 import { Button, Card, Field, ListenButton, TextButton } from "../../ui";
 
 type Readback = {
@@ -143,6 +144,14 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
               placeholder="5"
               onChange={(e) => setExperience(e.target.value)}
             />
+            {/* Asked here rather than left to a hash of her phone number, which is what
+                assigned it before — distances were arithmetic over coordinates that meant
+                nothing. Skipping is still allowed; she keeps the assigned area until she says
+                otherwise, so onboarding never becomes a wall. */}
+            <div className="mb-3">
+              <div className="text-sm font-medium text-loom-indigo mb-1">{t("yourArea")}</div>
+              <LocationPicker />
+            </div>
             <Button className="w-full" onClick={() => void save()} disabled={busy || !confirmed}>
               {t("finish")}
             </Button>

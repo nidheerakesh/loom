@@ -76,3 +76,62 @@ export function haversine(lat1: number, lng1: number, lat2: number, lng2: number
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return Math.round(2 * R * Math.asin(Math.sqrt(s)) * 10) / 10;
 }
+
+// How far from a known area a captured point can be and still be called that area.
+const SNAP_KM = 3;
+// ~1.1km at this latitude. Coordinates are rounded to this before anything is stored.
+const GRID_DP = 2;
+
+// Turn a captured GPS reading into a location row, without ever storing where she actually is.
+//
+// A provider's distance to work is shown to customers. If we stored her exact coordinates, a
+// handful of queries from different points would triangulate her house — in a product built for
+// her safety. So a reading is never persisted as given:
+//
+//   1. If it falls within SNAP_KM of an area we already know, she *is* at that area. Nothing new
+//      is written and she shares a row with her neighbours, which is also what the seeded data
+//      does. Her position within the area is unrecoverable because it was never recorded.
+//   2. Otherwise the reading is rounded to a ~1km grid and stored as a new area. Still not her
+//      house, and the label says so.
+//
+// Matching is unaffected: SNAP_KM is well inside the distances the score cares about, and
+// `proximity` is 1/(1+km), which is deliberately smooth rather than banded.
+export async function resolveLocationId(lat: number, lng: number): Promise<string> {
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    throw new HttpError(400, "Invalid coordinates");
+  }
+
+  const { data: known, error } = await supabaseAdmin
+    .from("locations")
+    .select("id, lat, lng")
+    .limit(500);
+  if (error) throw new HttpError(500, error.message);
+
+  let nearest: { id: string; km: number } | null = null;
+  for (const l of known ?? []) {
+    const km = haversine(lat, lng, l.lat, l.lng);
+    if (!nearest || km < nearest.km) nearest = { id: l.id, km };
+  }
+  if (nearest && nearest.km <= SNAP_KM) return nearest.id;
+
+  const gLat = Number(lat.toFixed(GRID_DP));
+  const gLng = Number(lng.toFixed(GRID_DP));
+
+  // Two people in the same new cell must land on the same row rather than racing to create two.
+  const { data: existing, error: exErr } = await supabaseAdmin
+    .from("locations")
+    .select("id")
+    .eq("lat", gLat)
+    .eq("lng", gLng)
+    .maybeSingle();
+  if (exErr) throw new HttpError(500, exErr.message);
+  if (existing) return existing.id;
+
+  const { data: created, error: insErr } = await supabaseAdmin
+    .from("locations")
+    .insert({ lat: gLat, lng: gLng, label: `${gLat.toFixed(2)}, ${gLng.toFixed(2)}` })
+    .select("id")
+    .single();
+  if (insErr) throw new HttpError(500, insErr.message);
+  return created.id;
+}
