@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { RoleSwitch } from "../shared/RoleSwitch";
 import { useAuth } from "../../auth";
+import { LocationPicker } from "../shared/LocationPicker";
 import { Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "../provider/Current";
 
@@ -29,6 +30,10 @@ export function CustomerProfile() {
       <Card>
         <Field label={t("name")} defaultValue={customer.name} onBlur={(e) => update.mutate({ name: e.target.value })} />
         <Field label={t("company")} defaultValue={customer.company ?? ""} onBlur={(e) => update.mutate({ company: e.target.value })} />
+      </Card>
+      <Card>
+        <h2 className="font-semibold text-loom-indigo mb-2">{t("yourArea")}</h2>
+        <LocationPicker />
       </Card>
       <Card>
         <h2 className="font-semibold text-loom-indigo mb-2">{t("history")}</h2>

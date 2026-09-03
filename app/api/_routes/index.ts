@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+import r_accounts_set_location from "./accounts/set-location.js";
 import r_auth_complete_login from "./auth/complete-login.js";
 import r_auth_me from "./auth/me.js";
 import r_auth_request_otp from "./auth/request-otp.js";
@@ -14,6 +15,7 @@ import r_customers_my_requests from "./customers/my-requests.js";
 import r_customers_update_profile from "./customers/update-profile.js";
 import r_grievances_mine from "./grievances/mine.js";
 import r_grievances_submit from "./grievances/submit.js";
+import r_locations_list from "./locations/list.js";
 import r_matching_feed from "./matching/feed.js";
 import r_narration_get from "./narration/get.js";
 import r_providers_get from "./providers/get.js";
@@ -52,6 +54,7 @@ export type Handler = (req: VercelRequest, res: VercelResponse) => Promise<void>
 // Imports are static on purpose — Vercel's bundler traces dependencies at build time
 // and a dynamic `import(variable)` would leave the handlers out of the bundle.
 export const routes: Record<string, Handler> = {
+  "accounts/set-location": r_accounts_set_location,
   "auth/complete-login": r_auth_complete_login,
   "auth/me": r_auth_me,
   "auth/request-otp": r_auth_request_otp,
@@ -66,6 +69,7 @@ export const routes: Record<string, Handler> = {
   "customers/update-profile": r_customers_update_profile,
   "grievances/mine": r_grievances_mine,
   "grievances/submit": r_grievances_submit,
+  "locations/list": r_locations_list,
   "matching/feed": r_matching_feed,
   "narration/get": r_narration_get,
   "providers/get": r_providers_get,
