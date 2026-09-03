@@ -424,6 +424,16 @@ async function main() {
   ok("a customer cannot read the provider work feed", custFeed.status >= 400 || (Array.isArray(custFeed.data) && custFeed.data.length === 0),
     `status=${custFeed.status} body=${JSON.stringify(custFeed.data).slice(0, 60)}`);
 
+  // The moderation surface must be shut to everyone by default. ADMIN_PHONES is unset in
+  // production, so these assert the closed state — which is the state that matters, since an
+  // open one would expose every complaint in the system.
+  ok("a provider cannot read everyone's grievances",
+    (await get("grievances/list", { token: A.p1.token })).status === 403);
+  ok("a provider cannot change a grievance status",
+    (await post("grievances/set-status", { token: A.p1.token, grievanceId: "x", status: "resolved" })).status === 403);
+  ok("the moderation list refuses an unauthenticated caller",
+    (await get("grievances/list", {})).status === 401);
+
   const gv = await post("grievances/submit", { token: A.p1.token, subject: "E2E", body: "automated test grievance" });
   const gvMine = await get("grievances/mine", { token: A.p1.token });
   ok("grievance submitted and readable by its author", gv.status === 200 && Array.isArray(gvMine.data) && gvMine.data.length > 0,
