@@ -38,6 +38,16 @@ export function testCodeFor(e164: string): string | null {
   return null;
 }
 
+// Numbers that get an admin session instead of a provider/customer one, e.g.
+//   npx vercel env add ADMIN_PHONES     # "+919876500000,+919876500001"
+// Unset means nobody is an admin, which is the right default for a moderation surface: the
+// alternative is a route that can promote its own caller.
+export function isAdminPhone(e164: string): boolean {
+  const raw = process.env.ADMIN_PHONES;
+  if (!raw) return false;
+  return raw.split(",").map((n) => n.trim()).filter(Boolean).includes(e164);
+}
+
 function authHeader(): string {
   const sid = process.env.TWILIO_ACCOUNT_SID!;
   const token = process.env.TWILIO_AUTH_TOKEN!;
