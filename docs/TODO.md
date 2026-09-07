@@ -78,14 +78,20 @@ Right now the highest-rated nearby provider wins repeatedly, which concentrates 
 system built to spread it. This is the exploitation risk we would be asked about, and we have no
 answer yet.
 
-### 14 · "Add member" has a route but no button
+### 14 · WhatsApp: registration and notifications
+A woman who is not registered is told to go to the website — which is the wall this channel
+exists to remove. Signing up over WhatsApp needs no stored conversation state: what is missing
+from her account *is* the state. Notifications need outbound credentials, so the trigger logic
+can be built before the number exists.
+
+### 15 · "Add member" has a route but no button
 `team-assembly/add-member` is built and tested; only Remove and Replace are wired into the
 screen. A customer cannot yet add somebody the engine did not pick.
 
-### 15 · Backfill delivery days
+### 16 · Backfill delivery days
 Now collected at onboarding, but every provider who signed up before it exists has none.
 
-### 16 · Graph view of the match justification
+### 17 · Graph view of the match justification
 The last item from the original design that is still text-only.
 
 ---
@@ -104,5 +110,5 @@ The last item from the original design that is still text-only.
 ## Done
 
 GPS with a manual fallback and grid-snapped storage · delivery days at onboarding · add/remove
-team members with coverage recomputation · admin moderation surface · WhatsApp on two networks ·
-99 automated checks against production
+team members with coverage recomputation · admin moderation surface · WhatsApp on two networks,
+now including team invitations answered in Malayalam · 103 automated checks against production

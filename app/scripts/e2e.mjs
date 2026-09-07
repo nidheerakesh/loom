@@ -443,6 +443,32 @@ async function main() {
   ok("public skill catalogue reachable", skills.status === 200 && Array.isArray(skills.data) && skills.data.length > 0,
     `${skills.data?.length} skills`);
 
+  // ── K · WHATSAPP ────────────────────────────────────────────────────────────
+  section("K · WhatsApp — the same rules, a different front door");
+
+  const waSay = async (phone, body) => {
+    const r = await fetch(`${BASE}/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ From: `whatsapp:+91${phone}`, Body: body }).toString(),
+    });
+    return (await r.text()).replace(/<\/?[^>]+>/g, "").replace(/<\?xml.*?\?>/, "").trim();
+  };
+
+  const waMenu = await waSay(A.p1.phone, "hello");
+  ok("an unrecognised message gets the menu, never a guess", /ലൂം/.test(waMenu));
+
+  const waWork = await waSay(A.p1.phone, "ജോലി");
+  ok("the Malayalam word for work lists jobs", /ജോലി കണ്ടെത്തി|പുതിയ ജോലി ഇല്ല/.test(waWork),
+    waWork.split("\n")[0]);
+
+  const waTeam = await waSay(A.p1.phone, "ടീം");
+  ok("TEAM answers in Malayalam", /ക്ഷണ/.test(waTeam), waTeam.split("\n")[0]);
+
+  const waStranger = await waSay("9999999999", "ജോലി");
+  ok("an unregistered number is refused, and told where to sign up",
+    /രജിസ്റ്റർ ചെയ്തിട്ടില്ല/.test(waStranger));
+
   // ── J · LOCATION ────────────────────────────────────────────────────────────
   section("J · Location — capture without storing where she lives");
 
