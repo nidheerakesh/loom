@@ -123,6 +123,63 @@ async function offersFor(provider: { id: string; home_location_id: string }): Pr
   return ranked.slice(0, MAX_OFFERS);
 }
 
+
+type Invite = { teamId: string; title: string; skill: string; units: number };
+
+// Team invitations she has not answered yet.
+//
+// Mirrors my-teams.ts exactly, including the rule that matters: a team the customer has not
+// confirmed is still a draft and must not be shown, or a woman could accept a slot on work
+// nobody has committed to. The collective half of the product was invisible here until now —
+// she had to open the app to answer, which is the wall this channel exists to remove.
+async function invitesFor(providerId: string): Promise<Invite[]> {
+  const { data } = await supabaseAdmin
+    .from("team_members")
+    .select("team_id, covered_units, state, skills(canonical_name, canonical_name_ml), teams(id, status, requests(title, status))")
+    .eq("provider_id", providerId)
+    .eq("state", "invited");
+
+  type Row = {
+    team_id: string;
+    covered_units: number;
+    skills: { canonical_name: string; canonical_name_ml: string | null } | null;
+    teams: { id: string; status: string; requests: { title: string; status: string } | null } | null;
+  };
+
+  const out: Invite[] = [];
+  for (const m of (data ?? []) as unknown as Row[]) {
+    if (m.teams?.status !== "confirmed") continue;
+    if (m.teams.requests?.status === "completed") continue;
+    out.push({
+      teamId: m.teams.id,
+      title: m.teams.requests?.title ?? "",
+      skill: m.skills?.canonical_name_ml ?? m.skills?.canonical_name ?? "",
+      units: m.covered_units,
+    });
+  }
+  // Same tiebreak discipline as everywhere else: a stable order, so "yes 2" means the same
+  // thing between two messages without anything being remembered.
+  out.sort((a, b) => a.teamId.localeCompare(b.teamId));
+  return out;
+}
+
+function inviteList(name: string, invites: Invite[]): string {
+  if (invites.length === 0) {
+    return `${name}, ഇപ്പോൾ ടീം ക്ഷണങ്ങളൊന്നുമില്ല.\nNo team invitations waiting.`;
+  }
+  const lines = invites.map(
+    (v, i) => `${i + 1}. ${v.title}\n   ${v.skill} · ${v.units} എണ്ണം`,
+  );
+  return [
+    `${name}, ${invites.length} ടീം ക്ഷണം / ${invites.length} team invitation${invites.length > 1 ? "s" : ""}:`,
+    "",
+    ...lines,
+    "",
+    "സ്വീകരിക്കാൻ: അതെ 1 — to accept, send: YES 1",
+    "വേണ്ടെങ്കിൽ: വേണ്ട 1 — to decline, send: NO 1",
+  ].join("\n");
+}
+
 function listing(name: string, offers: Offer[]): string {
   if (offers.length === 0) {
     return `${name}, ഇപ്പോൾ പുതിയ ജോലി ഇല്ല.\nNo open work matching your skills right now. We'll message you when there is.`;
@@ -144,6 +201,7 @@ const MENU = [
   "",
   "ജോലി — send WORK to see jobs near you",
   "എന്റെ ജോലി — send MY WORK for what you applied to",
+  "ടീം — send TEAM for team invitations",
   "",
   "Reply 1, 2 or 3 after a list to apply.",
 ].join("\n");
@@ -193,6 +251,37 @@ async function replyFor(e164: string, raw: string): Promise<string> {
       "",
       "Applied. This registers interest — the customer chooses who gets the work, and we'll message you either way.",
     ].join("\n");
+  }
+
+  // Answering a team invitation. Checked before the work commands because "അതെ 1" contains a
+  // bare number, and before the bare-number branch because that means something else entirely.
+  const answer = /^(അതെ|yes|y|വേണ്ട|no|n)\s*([1-9])?$/.exec(text);
+  if (answer) {
+    const accept = /^(അതെ|yes|y)$/.test(answer[1]);
+    const invites = await invitesFor(provider.id);
+    if (invites.length === 0) return `ഇപ്പോൾ ടീം ക്ഷണങ്ങളൊന്നുമില്ല.\nNothing to answer right now.`;
+    // With one invitation waiting, a bare "yes" is unambiguous and asking for a number is
+    // pedantry. With several it is a coin toss, so refuse and re-list.
+    const idx = answer[2] ? Number(answer[2]) - 1 : invites.length === 1 ? 0 : -1;
+    const chosen = invites[idx];
+    if (!chosen) {
+      return `${answer[2] ? `There is no invitation ${answer[2]}.` : "Which one?"}\n\n${inviteList(first, invites)}`;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("team_members")
+      .update({ state: accept ? "accepted" : "declined" })
+      .eq("team_id", chosen.teamId)
+      .eq("provider_id", provider.id);
+    if (error) throw new Error(error.message);
+
+    return accept
+      ? [`✓ "${chosen.title}" — സ്വീകരിച്ചു.`, "", `You're on the team for ${chosen.units} ${chosen.skill}. The customer can no longer replace you.`].join("\n")
+      : [`"${chosen.title}" — വേണ്ടെന്ന് അറിയിച്ചു.`, "", "Declined. The customer can fill your place with someone else."].join("\n");
+  }
+
+  if (/\b(team|teams)\b/.test(text) || text.includes("ടീം")) {
+    return inviteList(first, await invitesFor(provider.id));
   }
 
   // `\b` is defined against Latin word characters, so `\bജോലി\b` can never match. Latin words
