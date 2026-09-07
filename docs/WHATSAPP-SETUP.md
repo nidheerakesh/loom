@@ -10,6 +10,42 @@ notifications would be paid; nothing built today sends one.
 
 ---
 
+## Do it in two phases
+
+Everything except the last step works without the new SIM, so build and test the whole thing
+tonight on Meta's free test number and swap to the real number tomorrow. Swapping is one
+environment variable.
+
+That order also means a console that fights you gets discovered tonight, rather than while
+holding a fresh SIM and a waiting user.
+
+| Tonight — no number needed | Tomorrow — needs the SIM |
+|---|---|
+| Meta Business portfolio | Add the new number in WhatsApp Manager |
+| Developer app + WhatsApp product | Verify it by SMS or call |
+| Free test number, own number as recipient | Update `WHATSAPP_PHONE_NUMBER_ID`, redeploy |
+| Permanent token, webhook, subscription | |
+| **Test the bot end to end** | |
+
+### Two things about the new SIM, before you touch it
+
+**Do not install WhatsApp on it.** A number registered to the Cloud API cannot be used in the
+WhatsApp app, and if it already has an account you must delete that first and lose its history.
+A clean SIM avoids the whole problem — so leave it clean.
+
+**It must be able to receive an SMS or a voice call**, since that is how Meta verifies it.
+
+### Business verification is not required
+
+A "Meta Business portfolio" is a name and an email — no documents. That is all this needs.
+
+**Business *verification*** — the one wanting registration documents — is separate, and you do
+not need it. An unverified account can message **250 unique recipients per 24 hours** across up
+to 2 numbers, which is far beyond a pilot. Verification raises that to 1,000; come back to it if
+you ever need to.
+
+---
+
 ## 0 · Register your own number as a provider first
 
 The bot identifies a woman *by* her number, so if yours is not in the database it will
