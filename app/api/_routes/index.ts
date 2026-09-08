@@ -20,6 +20,7 @@ import r_grievances_submit from "./grievances/submit.js";
 import r_locations_list from "./locations/list.js";
 import r_matching_feed from "./matching/feed.js";
 import r_narration_get from "./narration/get.js";
+import r_narration_speak from "./narration/speak.js";
 import r_providers_get from "./providers/get.js";
 import r_providers_portfolio from "./providers/portfolio/index.js";
 import r_providers_portfolio_delete from "./providers/portfolio/delete.js";
@@ -78,6 +79,7 @@ export const routes: Record<string, Handler> = {
   "locations/list": r_locations_list,
   "matching/feed": r_matching_feed,
   "narration/get": r_narration_get,
+  "narration/speak": r_narration_speak,
   "providers/get": r_providers_get,
   "providers/portfolio": r_providers_portfolio,
   "providers/portfolio/delete": r_providers_portfolio_delete,

@@ -4,6 +4,7 @@ import { fnv1a, normalize } from "../../_lib/text.js";
 import { toE164 } from "../../_lib/sms.js";
 import { distanceMap } from "../../_lib/geo.js";
 import { score, skillFit } from "../../_lib/scoring.js";
+import { transcribe, sttConfigured } from "../../_lib/speech.js";
 
 // Loom over WhatsApp.
 //
@@ -206,6 +207,49 @@ const MENU = [
   "Reply 1, 2 or 3 after a list to apply.",
 ].join("\n");
 
+
+// A voice note is how a woman who does not type actually communicates, so the channel that
+// exists to remove the app is not much use if it only accepts text. WhatsApp sends audio as a
+// media id, which has to be exchanged for a short-lived URL and then downloaded with the same
+// token.
+async function transcribeVoiceNote(mediaId: string): Promise<string | null> {
+  const token = process.env.WHATSAPP_TOKEN;
+  if (!token || !sttConfigured()) return null;
+
+  try {
+    const metaRes = await fetch(`${GRAPH}/${mediaId}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!metaRes.ok) {
+      console.error(`[whatsapp] media lookup ${metaRes.status}`);
+      return null;
+    }
+    const meta = await metaRes.json();
+    if (typeof meta?.url !== "string") return null;
+
+    // The media URL is on a Meta CDN and still requires the token — fetching it unauthenticated
+    // returns a 401 that looks like an expired media id.
+    const audioRes = await fetch(meta.url, { headers: { authorization: `Bearer ${token}` } });
+    if (!audioRes.ok) {
+      console.error(`[whatsapp] media download ${audioRes.status}`);
+      return null;
+    }
+    const buf = Buffer.from(await audioRes.arrayBuffer());
+    const result = await transcribe(buf, typeof meta.mime_type === "string" ? meta.mime_type : "audio/ogg");
+    return result?.text ?? null;
+  } catch (e) {
+    console.error("[whatsapp] voice note ", e);
+    return null;
+  }
+}
+
+const CANNOT_HEAR = [
+  "ഇപ്പോൾ ശബ്ദ സന്ദേശം കേൾക്കാൻ കഴിയില്ല.",
+  "",
+  "Voice messages aren't working yet — please type instead.",
+  "ജോലി — for work · ടീം — for team invitations",
+].join("\n");
+
 // What to say back. Knows nothing about which network delivered the message.
 async function replyFor(e164: string, raw: string): Promise<string> {
   const text = normalize(raw);
@@ -366,9 +410,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const value = body.entry[0]?.changes?.[0]?.value;
       const msg = value?.messages?.[0];
       // Delivery receipts and read receipts arrive here too and must be acknowledged silently.
-      if (msg?.type === "text" && typeof msg.from === "string") {
+      if (typeof msg?.from === "string" && (msg.type === "text" || msg.type === "audio")) {
         const e164 = senderNumber(msg.from);
-        if (e164) await sendViaMeta(msg.from, await replyFor(e164, String(msg.text?.body ?? "")));
+        if (e164) {
+          const said: string | null =
+            msg.type === "text" ? String(msg.text?.body ?? "") : await transcribeVoiceNote(String(msg.audio?.id ?? ""));
+
+          // Transcription that failed must not be treated as an empty message, which would
+          // silently answer with the menu and leave her thinking she was understood.
+          if (msg.type === "audio" && !said) {
+            await sendViaMeta(msg.from, CANNOT_HEAR);
+          } else {
+            const reply = await replyFor(e164, said ?? "");
+            // Reading back what we heard is not politeness — it is the only way she can catch a
+            // mistranscription before it becomes an application for the wrong job.
+            await sendViaMeta(
+              msg.from,
+              msg.type === "audio" ? `🎤 "${said}"\n\n${reply}` : reply,
+            );
+          }
+        }
       }
       res.status(200).send("ok");
       return;

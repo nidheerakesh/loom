@@ -1,6 +1,7 @@
-import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useState } from "react";
+import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { canSpeak, onVoicesReady, speak, stopSpeaking } from "./lib/speech";
+import { apiPost } from "./lib/api";
 
 export function Button({
   variant = "primary",
@@ -77,9 +78,10 @@ export function Stars({ value, count }: { value: number; count?: number }) {
 // Falls back to showing the text only when the device has no voice for that language —
 // reading Malayalam aloud in an English voice would be worse than not speaking at all.
 export function ListenButton({ text }: { text: string }) {
-  const { lang, t } = useAuth();
+  const { lang, t, token } = useAuth();
   const [available, setAvailable] = useState(() => canSpeak(lang));
   const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Chrome populates its voice list asynchronously, so the first render can wrongly
   // conclude the language is unsupported.
@@ -89,9 +91,37 @@ export function ListenButton({ text }: { text: string }) {
   const onClick = () => {
     if (speaking) {
       stopSpeaking();
+      audioRef.current?.pause();
       setSpeaking(false);
       return;
     }
+
+    // Try the server voice first — it does not care what the device has installed, which is
+    // the whole point. If no key is configured the route says `available: false` and this
+    // falls through to the browser engine that has always been here.
+    void (async () => {
+      if (!token) return;
+      try {
+        const res = await apiPost<{ available: boolean; audio?: string; mime?: string }>(
+          "/api/narration/speak",
+          { token, text, lang },
+        );
+        if (res.available && res.audio) {
+          const el = new Audio(`data:${res.mime ?? "audio/wav"};base64,${res.audio}`);
+          audioRef.current = el;
+          el.onended = () => setSpeaking(false);
+          setSpeaking(true);
+          await el.play();
+          return;
+        }
+      } catch {
+        // Network trouble is not a reason to stay silent when the device can speak.
+      }
+      speakOnDevice();
+    })();
+  };
+
+  const speakOnDevice = () => {
     const result = speak(text, lang);
     if (result === "spoken") {
       setSpeaking(true);
@@ -106,11 +136,10 @@ export function ListenButton({ text }: { text: string }) {
     }
   };
 
-  // Render nothing when the device cannot speak this language. The old fallback offered
-  // "Show text", which popped an alert containing the very text already displayed beside it —
-  // every chat message carried a pointless link. A control that cannot do anything useful is
-  // better absent than present and inert.
-  if (!available) return null;
+  // Shown whenever there is any chance of being heard. The device voice is no longer the only
+  // source — the server may have one — so hiding on `!available` would hide a button that
+  // works. It stays hidden only when signed out, where neither path can run.
+  if (!available && !token) return null;
 
   return (
     <button
