@@ -37,6 +37,7 @@ import r_requests_my_accepted from "./requests/my-accepted.js";
 import r_requests_my_incoming from "./requests/my-incoming.js";
 import r_requests_respond from "./requests/respond.js";
 import r_requests_update from "./requests/update.js";
+import r_speech_transcribe from "./speech/transcribe.js";
 import r_skills_list from "./skills/list.js";
 import r_skills_mine from "./skills/mine.js";
 import r_skills_resolve from "./skills/resolve.js";
@@ -97,6 +98,7 @@ export const routes: Record<string, Handler> = {
   "requests/respond": r_requests_respond,
   "requests/update": r_requests_update,
   "skills/list": r_skills_list,
+  "speech/transcribe": r_speech_transcribe,
   "skills/mine": r_skills_mine,
   "skills/resolve": r_skills_resolve,
   "team-assembly/add-member": r_team_assembly_add_member,
