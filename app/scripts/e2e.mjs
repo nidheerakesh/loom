@@ -465,6 +465,26 @@ async function main() {
   const waTeam = await waSay(A.p1.phone, "ടീം");
   ok("TEAM answers in Malayalam", /ക്ഷണ/.test(waTeam), waTeam.split("\n")[0]);
 
+  // A voice note is the point of the channel, so its failure mode matters more than its happy
+  // path: with no ASR key it must say it cannot hear, never answer the menu as though it
+  // understood silence, and never make Meta retry.
+  const waVoice = await fetch(`${BASE}/whatsapp/webhook`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      entry: [{ changes: [{ value: { messages: [{ from: "919876530001", type: "audio", audio: { id: "no-such-media" } }] } }] }],
+    }),
+  });
+  ok("a voice note is acknowledged, not retried forever",
+    waVoice.status === 200 && (await waVoice.text()) === "ok");
+
+  const speak = await post("narration/speak", { token: A.p1.token, text: "തയ്യൽ ജോലി", lang: "ml" });
+  ok("the speak route answers 200 whether or not a voice is configured", speak.status === 200,
+    JSON.stringify(speak.data));
+  ok("…and says plainly when there is none, so the client keeps the device voice",
+    typeof speak.data?.available === "boolean");
+  ok("synthesising requires a session", (await post("narration/speak", { text: "hi" })).status >= 400);
+
   const waStranger = await waSay("9999999999", "ജോലി");
   ok("an unregistered number is refused, and told where to sign up",
     /രജിസ്റ്റർ ചെയ്തിട്ടില്ല/.test(waStranger));

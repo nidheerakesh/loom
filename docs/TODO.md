@@ -69,9 +69,15 @@ A support number that reaches a human, and a named person who reads the grievanc
 
 ## 🟢 Product — after the pilot starts
 
-### 12 · Speech-to-text
-The stated top priority and the other half of voice-first. Needs a Malayalam ASR key and a
-budget. Output already works.
+### 12 · Turn on a speech key
+Speech in and out are **built**; neither has a key. Until one exists the app uses the device
+voice as before, and a WhatsApp voice note is answered with "please type instead".
+
+One key switches both on:
+- `SARVAM_API_KEY` — Indian, handles Manglish, ₹1,000 free credit, works today
+- or `BHASHINI_API_KEY` + `BHASHINI_USER_ID` — government, free, better Malayalam, more setup
+
+Then send a voice note to the bot and it answers.
 
 ### 13 · Fair rotation
 Right now the highest-rated nearby provider wins repeatedly, which concentrates income in a
