@@ -478,12 +478,29 @@ async function main() {
   ok("a voice note is acknowledged, not retried forever",
     waVoice.status === 200 && (await waVoice.text()) === "ok");
 
+  // One short phrase only: these two calls cost Sarvam credits, and the suite runs often.
   const speak = await post("narration/speak", { token: A.p1.token, text: "തയ്യൽ ജോലി", lang: "ml" });
-  ok("the speak route answers 200 whether or not a voice is configured", speak.status === 200,
-    JSON.stringify(speak.data));
-  ok("…and says plainly when there is none, so the client keeps the device voice",
-    typeof speak.data?.available === "boolean");
+  ok("the speak route answers 200 whether or not a voice is configured", speak.status === 200);
+  ok("…and reports which of the two states it is in, so a missing key is not mistaken for a bug",
+    typeof speak.data?.available === "boolean" &&
+      (speak.data.available || typeof speak.data.reason === "string"),
+    speak.data?.available ? `speaking via ${speak.data.source}` : speak.data?.reason);
   ok("synthesising requires a session", (await post("narration/speak", { text: "hi" })).status >= 400);
+
+  if (speak.data?.available && speak.data.audio) {
+    // Speak a phrase and transcribe that exact audio. Proves both directions on real Malayalam
+    // without shipping a recorded asset — and it is the only check here whose output is not
+    // expected to be exact, because transcription is not deterministic.
+    const heard = await post("speech/transcribe", {
+      token: A.p1.token, audio: speak.data.audio, mime: "audio/wav", lang: "ml",
+    });
+    ok("audio spoken by the app can be transcribed back by it",
+      heard.status === 200 && heard.data?.available === true && /[ഀ-ൿ]/.test(heard.data?.text ?? ""),
+      `heard "${heard.data?.text ?? heard.data?.reason}"`);
+  }
+
+  ok("transcribing requires a session", (await post("speech/transcribe", { audio: "AA==" })).status >= 400);
+  ok("empty audio is refused", (await post("speech/transcribe", { token: A.p1.token, audio: "" })).status === 400);
 
   const waStranger = await waSay("9999999999", "ജോലി");
   ok("an unregistered number is refused, and told where to sign up",

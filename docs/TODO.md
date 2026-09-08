@@ -12,9 +12,7 @@ Ordered by what unblocks the most.
 
 ### Tonight
 - [ ] **Meta WhatsApp setup** — `docs/WHATSAPP-SETUP.md`, steps 1–8. ~20 min, free
-- [ ] **`SARVAM_API_KEY`** in Vercel — ₹1,000 free credit, and it turns on *both* speech
-      directions at once. Without it voice notes are refused and the Listen button falls back to
-      the device
+- [x] ~~`SARVAM_API_KEY`~~ — done. Both directions verified on production
 - [ ] **Make the repository public** — two clicks; three links in the report 404 today
 - [ ] **Fix the deck**: slide 06 says RLS caused the 1.35s and claims zero vulnerabilities.
       Neither is true. Slides 02 and 03 cite sources that do not exist
@@ -111,15 +109,19 @@ A support number that reaches a human, and a named person who reads the grievanc
 
 ## 🟢 Product — after the pilot starts
 
-### 12 · Turn on a speech key
-Speech in and out are **built**; neither has a key. Until one exists the app uses the device
-voice as before, and a WhatsApp voice note is answered with "please type instead".
+### 12 · Voice input in the app's own screens
+Speech works both ways in production. What is not wired is the microphone in skill entry —
+`speech/transcribe` exists and is tested, but the onboarding screen still only takes typing.
+WhatsApp voice notes already work.
 
-One key switches both on:
-- `SARVAM_API_KEY` — Indian, handles Manglish, ₹1,000 free credit, works today
-- or `BHASHINI_API_KEY` + `BHASHINI_USER_ID` — government, free, better Malayalam, more setup
+**Transcription is not exact, and that is now measured.** Round-tripping the same phrase twice
+gave `പാചകം` once and `പഞ്ചകം` — a non-word — the next time. So the transcript must never act
+on its own: the bot quotes back what it heard, and the app must make her confirm before a word
+becomes a skill. A mistranscription that reaches skill entry puts a skill she never said into
+the shared vocabulary.
 
-Then send a voice note to the bot and it answers.
+Bhashini may transcribe Malayalam better and is free; adding `BHASHINI_API_KEY` +
+`BHASHINI_USER_ID` puts it ahead of Sarvam in the chain automatically, with no code change.
 
 ### 13 · Fair rotation
 Right now the highest-rated nearby provider wins repeatedly, which concentrates income in a
@@ -159,4 +161,5 @@ The last item from the original design that is still text-only.
 
 GPS with a manual fallback and grid-snapped storage · delivery days at onboarding · add/remove
 team members with coverage recomputation · admin moderation surface · WhatsApp on two networks,
-now including team invitations answered in Malayalam · 103 automated checks against production
+now including team invitations answered in Malayalam · Malayalam speech in and out,
+verified by round trip on production · 110 automated checks
