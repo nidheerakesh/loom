@@ -5,6 +5,48 @@ signs up; everything below can ship while the pilot runs.
 
 ---
 
+## Only you can do these
+
+Everything else on this page I can build. These need a console, a card, a person, or a decision.
+Ordered by what unblocks the most.
+
+### Tonight
+- [ ] **Meta WhatsApp setup** — `docs/WHATSAPP-SETUP.md`, steps 1–8. ~20 min, free
+- [ ] **`SARVAM_API_KEY`** in Vercel — ₹1,000 free credit, and it turns on *both* speech
+      directions at once. Without it voice notes are refused and the Listen button falls back to
+      the device
+- [ ] **Make the repository public** — two clicks; three links in the report 404 today
+- [ ] **Fix the deck**: slide 06 says RLS caused the 1.35s and claims zero vulnerabilities.
+      Neither is true. Slides 02 and 03 cite sources that do not exist
+
+### Before she signs up
+- [ ] **Twilio** — `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`.
+      Free trial credit is plenty. Until this exists, knowing her number is enough to become her
+- [ ] **Decide: does she see the seeded demo data?** A real woman applying to a fake order that
+      nobody answers is a worse first experience than an empty app. Either give her a real
+      customer with a real order, or say the word and I will clear production
+- [ ] **Rotate the Supabase anon key** — it was public while the permissive policies existed
+- [ ] **Stop the database pausing** — it already died once and took the app with it. Paid tier,
+      or a scheduled ping plus an alert that reaches a person
+
+### Tomorrow, with the SIM
+- [ ] Add the number in WhatsApp Manager, verify by SMS, update `WHATSAPP_PHONE_NUMBER_ID`
+- [ ] **Do not install WhatsApp on the new SIM first**
+
+### Things that unblock me
+- [ ] **Her real area names** — the pilot cluster's actual places. I will seed them; right now
+      every distance is measured against invented Ernakulam geography
+- [ ] **`ADMIN_PHONES`** in Vercel — any number. The moderation screen is built and shut
+- [ ] **Whether `004_perf_indexes.sql` was ever applied** — I cannot see the database. If not,
+      run it; the `seq` columns the deterministic tiebreak sorts by may be unindexed
+
+### Nobody can do for you
+- [ ] The coordinator conversation
+- [ ] Sitting with her while she uses it, and not helping
+- [ ] Writing down what success means before you see the data
+
+---
+
 ## 🔴 Blocking — before a single real user
 
 ### 1 · Turn on real OTP delivery
