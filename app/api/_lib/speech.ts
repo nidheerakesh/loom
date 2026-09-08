@@ -73,7 +73,10 @@ async function sttSarvam(
   try {
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array(audio)], { type: mime }), "audio");
-    form.append("model", process.env.SARVAM_STT_MODEL ?? "saarika:v2");
+    // saarika:* is the older family and is rejected outright; the current models are
+    // saaras:v3 (default) and saaras:v4. Both fields are optional, but naming the language
+    // measurably helps Malayalam.
+    form.append("model", process.env.SARVAM_STT_MODEL ?? "saaras:v3");
     form.append("language_code", lang === "ml" ? "ml-IN" : "en-IN");
 
     const res = await fetch(SARVAM_STT, {
