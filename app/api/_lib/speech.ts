@@ -124,10 +124,14 @@ async function ttsSarvam(text: string, lang: string): Promise<Clip | null> {
       method: "POST",
       headers: { "api-subscription-key": key, "content-type": "application/json" },
       body: JSON.stringify({
+        // `language_code`, not `target_language_code` — the latter is the translate endpoint's
+        // field name and silently fails validation here.
         text: text.slice(0, 2000),
-        target_language_code: lang === "ml" ? "ml-IN" : "en-IN",
-        speaker: process.env.SARVAM_TTS_SPEAKER ?? "anushka",
-        model: process.env.SARVAM_TTS_MODEL ?? "bulbul:v2",
+        language_code: lang === "ml" ? "ml-IN" : "en-IN",
+        // Speaker names are model-specific and lowercase: v2's set (anushka, manisha…) is
+        // rejected by v3. A female voice by default, for a product whose users are women.
+        speaker: process.env.SARVAM_TTS_SPEAKER ?? "kavitha",
+        model: process.env.SARVAM_TTS_MODEL ?? "bulbul:v3",
         // Instructional content in a language she may be hearing read aloud for the first
         // time. The app's own browser voice is slowed for the same reason.
         pace: 0.9,
