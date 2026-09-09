@@ -52,17 +52,15 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   // `status` filtered in SQL rather than skipped in JS after fetching every candidate.
   //
-  // Individual work only. Group orders are staffed by team assembly, which selects providers
-  // itself and never reads `interests` — so a provider who applied to one waited on a customer
-  // who had no way to answer: choose-provider rejects group requests, and the customer's
-  // "choose who does it" control does not render for them. The job sat in My work as "waiting"
-  // permanently. my-incoming already filtered this way; this feed did not.
+  // Both individual and group requests. A group order is an open call now: any provider who
+  // can do the work applies here exactly as for individual work, and the customer picks from
+  // applicants (requests/select-team.ts) rather than the matching engine assembling a team for
+  // her. Group cards additionally carry headcount and the interest deadline.
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, title, mode, units, pay, status, location_id")
+    .select("id, title, mode, units, pay, status, location_id, headcount, interest_deadline")
     .in("id", requestIds)
-    .eq("status", "open")
-    .eq("mode", "individual");
+    .eq("status", "open");
   if (reqErr) throw new HttpError(500, reqErr.message);
   if (!requests || requests.length === 0) {
     res.status(200).json([]);
@@ -128,6 +126,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       matchedSkill: matchedSkill?.canonical_name ?? "",
       matchedSkillMl: matchedSkill?.canonical_name_ml ?? null,
       total: sc.total,
+      headcount: r.headcount ?? null,
+      interestDeadline: r.interest_deadline ?? null,
     });
   }
 

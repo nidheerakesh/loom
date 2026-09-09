@@ -198,7 +198,12 @@ create table requests (
   deadline text,
   location_id uuid not null references locations (id),
   status request_status_enum not null,
-  customer_id uuid not null references customers (id) on delete cascade
+  customer_id uuid not null references customers (id) on delete cascade,
+  -- Group orders only (migration 007): how many people the customer wants, and when the
+  -- interest window closes. Null on individual requests and on group requests predating the
+  -- open-call model.
+  headcount integer check (headcount is null or headcount > 0),
+  interest_deadline timestamptz
 );
 create index requests_customer_id_idx on requests (customer_id);
 create index requests_status_idx on requests (status);

@@ -4,8 +4,8 @@ import { supabaseAdmin } from "../../_lib/supabase.js";
 import { sessionByToken } from "../../_lib/auth.js";
 import { distanceMap } from "../../_lib/geo.js";
 
-// Provider "Requests" tab — open individual requests matching this provider's skills
-// that they have not yet responded to. Ported from convex/requests.ts's `myIncoming`.
+// Provider "Requests" tab — open requests matching this provider's skills that they have not
+// yet responded to, individual or group. Ported from convex/requests.ts's `myIncoming`.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const token = typeof req.query.token === "string" ? req.query.token : undefined;
   const s = token ? await sessionByToken(token) : null;
@@ -54,13 +54,13 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
-  // status/mode filtered in SQL rather than discarded in JS after fetching.
+  // status filtered in SQL rather than discarded in JS after fetching. Both individual and
+  // group requests — a group order is an open call, so it belongs on this list too.
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, title, units, pay, status, mode, location_id")
+    .select("id, title, units, pay, status, mode, location_id, headcount, interest_deadline")
     .in("id", requestIds)
-    .eq("status", "open")
-    .eq("mode", "individual");
+    .eq("status", "open");
   if (reqErr) throw new HttpError(500, reqErr.message);
   if (!requests || requests.length === 0) {
     res.status(200).json([]);
@@ -78,6 +78,9 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     title: r.title,
     units: r.units,
     pay: r.pay ?? null,
+    mode: r.mode,
+    headcount: r.headcount ?? null,
+    interestDeadline: r.interest_deadline ?? null,
     distanceKm: distances.get(r.location_id) ?? Number.POSITIVE_INFINITY,
   }));
   out.sort((a, b) => a.distanceKm - b.distanceKm);

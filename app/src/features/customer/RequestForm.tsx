@@ -18,11 +18,10 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
       mode: "individual" | "group";
       units: number;
       pay: number | undefined;
+      headcount: number | undefined;
+      interestDeadline: string | undefined;
       skills: { skillId: string; quantity: number }[];
     }) => apiPost<{ requestId: string; teamSuggested: boolean }>("/api/requests/create", { token, ...body }),
-  });
-  const assemble = useMutation({
-    mutationFn: (requestId: string) => apiPost("/api/team-assembly/assemble", { token, requestId }),
   });
 
   const [title, setTitle] = useState("");
@@ -30,6 +29,12 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<"individual" | "group">("individual");
   const [units, setUnits] = useState(1);
   const [pay, setPay] = useState<number | "">("");
+  const [headcount, setHeadcount] = useState<number | "">("");
+  // <input type="datetime-local"> has no timezone of its own — this is read back as local time
+  // and sent to the server as a plain ISO string, which is what respond.ts compares against
+  // Date.now(). Good enough for a single-cluster deployment; not something to get clever about
+  // before Friday.
+  const [interestDeadline, setInterestDeadline] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [created, setCreated] = useState<{ requestId: string; group: boolean } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -50,6 +55,9 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
         mode,
         units,
         pay: pay === "" ? undefined : Number(pay),
+        headcount: mode === "group" && headcount !== "" ? headcount : undefined,
+        interestDeadline:
+          mode === "group" && interestDeadline ? new Date(interestDeadline).toISOString() : undefined,
         skills: [...selected].map((skillId) => ({ skillId, quantity: units })),
       });
       setCreated({ requestId: res.requestId, group: res.teamSuggested });
@@ -63,25 +71,10 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
       <Screen title={t("request")} right={<SignOut />}>
         <Card>
           <div className="text-loom-leaf font-semibold mb-2">{title}</div>
-          {created.group ? (
-            <>
-              <div className="text-sm text-loom-indigoSoft mb-2">{t("teamOrderNotice")}</div>
-              <Button
-                variant="gold"
-                className="w-full"
-                onClick={() => {
-                  void (async () => {
-                    if (token) await assemble.mutateAsync(created.requestId);
-                    onDone();
-                  })();
-                }}
-              >
-                {t("assembleTeam")}
-              </Button>
-            </>
-          ) : (
-            <Button className="w-full" onClick={onDone}>{t("ok")}</Button>
+          {created.group && (
+            <div className="text-sm text-loom-indigoSoft mb-2">{t("teamOrderNotice")}</div>
           )}
+          <Button className="w-full" onClick={onDone}>{t("ok")}</Button>
         </Card>
       </Screen>
     );
@@ -112,6 +105,26 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
             {t("group")}
           </Button>
         </div>
+        {mode === "group" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Field
+              label={t("headcountOptional")}
+              type="number"
+              min={1}
+              max={1000}
+              value={headcount}
+              onChange={(e) =>
+                setHeadcount(e.target.value === "" ? "" : Math.max(1, Math.floor(Number(e.target.value)) || 1))
+              }
+            />
+            <Field
+              label={t("interestDeadline")}
+              type="datetime-local"
+              value={interestDeadline}
+              onChange={(e) => setInterestDeadline(e.target.value)}
+            />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2">
           {/* The server enforces the same bounds — a number input is a suggestion, not a
               constraint — but clamping here means the form cannot show an illegal value. */}

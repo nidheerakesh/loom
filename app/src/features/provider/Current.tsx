@@ -15,6 +15,8 @@ type FeedCard = {
   matchedSkill: string;
   matchedSkillMl: string | null;
   total: number;
+  headcount: number | null;
+  interestDeadline: string | null;
 };
 
 export function ProviderCurrent() {
@@ -38,12 +40,14 @@ export function ProviderCurrent() {
       apiPost<{ text: string; path: string[][] }>("/api/narration/get", { token, requestId }),
   });
 
-  const [open, setOpen] = useState<{ requestId: string; title: string; text: string; path: string[][] } | null>(null);
+  const [open, setOpen] = useState<
+    { requestId: string; title: string; mode: "individual" | "group"; text: string; path: string[][] } | null
+  >(null);
 
-  const openMatch = async (requestId: string, title: string) => {
+  const openMatch = async (requestId: string, title: string, mode: "individual" | "group") => {
     if (!token) return;
     const res = await getNarration.mutateAsync(requestId);
-    setOpen({ requestId, title, text: res.text, path: res.path });
+    setOpen({ requestId, title, mode, text: res.text, path: res.path });
   };
 
   return (
@@ -57,13 +61,21 @@ export function ProviderCurrent() {
         <Card key={m.requestId} className="mb-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-semibold text-loom-indigo">{m.title}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-semibold text-loom-indigo">{m.title}</div>
+                {m.mode === "group" && (
+                  <span className="text-xs bg-loom-cottonDeep rounded-full px-2 py-1 text-loom-indigoSoft">
+                    {t("group")}
+                  </span>
+                )}
+              </div>
               <div className="text-sm text-loom-indigoSoft">
                 {pickLang(lang, m.matchedSkill, m.matchedSkillMl)} · {m.distanceKm} {t("km")}
                 {m.pay ? ` · ₹${m.pay}` : ""}
+                {m.mode === "group" && m.headcount !== null && ` · ${m.headcount} ${t("peopleWanted")}`}
               </div>
             </div>
-            <Button variant="gold" onClick={() => void openMatch(m.requestId, m.title)}>
+            <Button variant="gold" onClick={() => void openMatch(m.requestId, m.title, m.mode)}>
               ▶
             </Button>
           </div>
@@ -94,8 +106,11 @@ export function ProviderCurrent() {
                   })();
                 }}
               >
-                {t("accept")}
+                {open.mode === "group" ? t("expressInterest") : t("accept")}
               </Button>
+            )}
+            {respond.isError && (
+              <div className="text-loom-madder text-sm">{respond.error.message}</div>
             )}
           </div>
         </div>

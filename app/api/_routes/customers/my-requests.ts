@@ -15,7 +15,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   let query = supabaseAdmin
     .from("requests")
-    .select("id, title, mode, units, status")
+    .select("id, title, mode, units, status, headcount, interest_deadline")
     .eq("customer_id", s.userId)
     .order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
@@ -55,6 +55,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       mode: r.mode,
       units: r.units,
       status: r.status,
+      headcount: r.headcount ?? null,
+      interestDeadline: r.interest_deadline ?? null,
       interestedCount: counts.get(r.id)?.interested ?? 0,
       acceptedCount: counts.get(r.id)?.accepted ?? 0,
       teamId: teamByRequest.get(r.id) ?? null,

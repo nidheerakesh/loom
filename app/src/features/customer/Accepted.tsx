@@ -12,6 +12,8 @@ type MyRequest = {
   mode: "individual" | "group";
   units: number;
   status: string;
+  headcount: number | null;
+  interestDeadline: string | null;
   interestedCount: number;
   acceptedCount: number;
   teamId: string | null;
@@ -74,17 +76,17 @@ export function Accepted() {
     mutationFn: (requestId: string) => apiPost("/api/requests/complete", { token, requestId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
   });
-  const assemble = useMutation({
-    mutationFn: (requestId: string) => apiPost("/api/team-assembly/assemble", { token, requestId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] }),
-  });
   const [teamId, setTeamId] = useState<string | null>(null);
-  const [applicantsFor, setApplicantsFor] = useState<string | null>(null);
+  const [applicantsFor, setApplicantsFor] = useState<MyRequest | null>(null);
   const [editing, setEditing] = useState<MyRequest | null>(null);
 
   if (teamId) return <TeamDetail teamId={teamId} onBack={() => setTeamId(null)} />;
   if (applicantsFor)
-    return <Applicants requestId={applicantsFor} onBack={() => setApplicantsFor(null)} />;
+    return applicantsFor.mode === "group" ? (
+      <GroupApplicants request={applicantsFor} onBack={() => setApplicantsFor(null)} />
+    ) : (
+      <Applicants requestId={applicantsFor._id} onBack={() => setApplicantsFor(null)} />
+    );
   if (editing) return <EditRequest request={editing} onBack={() => setEditing(null)} />;
 
   return (
@@ -99,19 +101,22 @@ export function Accepted() {
           </div>
           <div className="text-sm text-loom-indigoSoft">
             {r.mode} · {r.units} {t("units")} · {r.interestedCount} {t("interestedCount")} · {r.acceptedCount} {t("acceptedCount")}
+            {r.mode === "group" && r.headcount !== null && ` · ${r.headcount} ${t("peopleWanted")}`}
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
-            {r.mode === "group" && !r.teamId && token && (
-              <Button variant="gold" onClick={() => assemble.mutate(r._id)}>
-                {t("assembleTeam")}
+            {r.teamId && <Button onClick={() => setTeamId(r.teamId)}>{t("teams")}</Button>}
+            {/* Both individual and group work are awarded by the customer, not claimed by
+                whoever taps first — this is where she sees who applied and picks. Group stays
+                reachable even at zero applicants, so the headcount/deadline she set is visible
+                without anyone having applied yet. */}
+            {r.mode === "individual" && r.interestedCount > 0 && (
+              <Button variant="gold" onClick={() => setApplicantsFor(r)}>
+                {t("chooseProvider")} ({r.interestedCount})
               </Button>
             )}
-            {r.teamId && <Button onClick={() => setTeamId(r.teamId)}>{t("teams")}</Button>}
-            {/* Individual work is awarded by the customer, not claimed by whoever taps
-                first — this is where they see who applied and pick one. */}
-            {r.mode === "individual" && r.interestedCount > 0 && (
-              <Button variant="gold" onClick={() => setApplicantsFor(r._id)}>
-                {t("chooseProvider")} ({r.interestedCount})
+            {r.mode === "group" && !r.teamId && r.status === "open" && (
+              <Button variant="gold" onClick={() => setApplicantsFor(r)}>
+                {t("viewApplicants")} ({r.interestedCount})
               </Button>
             )}
             {r.status === "open" && (
@@ -474,6 +479,127 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
 
       {choose.isError && (
         <div className="text-loom-madder text-sm">{(choose.error).message}</div>
+      )}
+    </Screen>
+  );
+}
+
+// The open call for a group order: everyone who applied, in one list, with a checkbox each.
+// Individual work has exactly one winner (Applicants above); a group order has none until the
+// customer says how many of the applicants she wants — so this is that screen's plural cousin,
+// not a copy of it with a bigger button.
+//
+// Once the request leaves 'open' (select-team.ts has run), this renders read-only: who was
+// picked, and who was not.
+function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () => void }) {
+  const { token, t } = useAuth();
+  const queryClient = useQueryClient();
+  const requestId = request._id;
+
+  const { data: applicants } = useQuery({
+    queryKey: ["requests/interested-providers", requestId, token],
+    queryFn: () =>
+      apiGet<InterestedProvider[]>("/api/requests/interested-providers", { token: token!, requestId }),
+    enabled: !!token,
+  });
+
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => {
+    const next = new Set(picked);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setPicked(next);
+  };
+
+  const selectTeam = useMutation({
+    mutationFn: () =>
+      apiPost("/api/requests/select-team", { token, requestId, providerIds: [...picked] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      onBack();
+    },
+  });
+
+  const decided = request.status !== "open";
+  const waiting = (applicants ?? []).filter((a) => a.state === "interested");
+  const chosen = (applicants ?? []).filter((a) => a.state === "accepted");
+  const deadlinePassed =
+    !!request.interestDeadline && new Date(request.interestDeadline).getTime() < Date.now();
+  const overHeadcount = !!request.headcount && picked.size > request.headcount;
+
+  return (
+    <Screen title={t("viewApplicants")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
+      <Card className="mb-2">
+        <div className="text-sm text-loom-indigoSoft">
+          {request.headcount !== null && `${request.headcount} ${t("peopleWanted")}`}
+          {request.headcount !== null && request.interestDeadline && " · "}
+          {request.interestDeadline &&
+            `${t("applyBy")} ${new Date(request.interestDeadline).toLocaleString()}`}
+        </div>
+        {!decided && deadlinePassed && (
+          <div className="text-sm text-loom-madder mt-1">{t("interestDeadlinePassed")}</div>
+        )}
+      </Card>
+
+      {applicants === undefined && <div className="text-loom-indigoSoft">…</div>}
+
+      {decided ? (
+        <>
+          {chosen.map((a) => (
+            <Card key={a.providerId} className="mb-2">
+              <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
+              <div className="text-sm text-loom-leaf">{t("status_accepted")}</div>
+            </Card>
+          ))}
+          {(applicants ?? [])
+            .filter((a) => a.state === "declined")
+            .map((a) => (
+              <Card key={a.providerId} className="mb-2">
+                <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
+                <div className="text-sm text-loom-indigoSoft">{t("status_declined")}</div>
+              </Card>
+            ))}
+        </>
+      ) : (
+        <>
+          {waiting.length === 0 && applicants !== undefined && (
+            <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
+          )}
+          {waiting.map((a) => (
+            <Card key={a.providerId} className="mb-2">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
+                  <Stars value={a.rating} />
+                </div>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6"
+                  checked={picked.has(a.providerId)}
+                  onChange={() => toggle(a.providerId)}
+                />
+              </label>
+            </Card>
+          ))}
+          {waiting.length > 0 && (
+            <>
+              <div className="text-sm text-loom-indigoSoft mb-2">
+                {picked.size} {request.headcount !== null && `${t("selectedOfHeadcount")} ${request.headcount}`}
+              </div>
+              {overHeadcount && <div className="text-sm text-loom-madder mb-2">{t("overHeadcount")}</div>}
+              <Button
+                variant="gold"
+                className="w-full"
+                disabled={picked.size === 0 || overHeadcount || selectTeam.isPending}
+                onClick={() => selectTeam.mutate()}
+              >
+                {t("selectTeam")} ({picked.size})
+              </Button>
+            </>
+          )}
+          {selectTeam.isError && (
+            <div className="text-loom-madder text-sm mt-2">{selectTeam.error.message}</div>
+          )}
+        </>
       )}
     </Screen>
   );

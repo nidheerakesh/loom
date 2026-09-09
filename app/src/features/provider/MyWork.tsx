@@ -64,8 +64,10 @@ export function ProviderMyWork() {
   const doneTeam = (teams ?? []).filter(
     (tm) => tm.state === "accepted" && tm.requestStatus === "completed",
   );
-  const activeSolo = (accepted ?? []).filter((r) => r.status !== "completed");
-  const doneSolo = (accepted ?? []).filter((r) => r.status === "completed");
+  const activeIndividual = (accepted ?? []).filter((r) => r.status !== "completed" && r.mode === "individual");
+  const doneIndividual = (accepted ?? []).filter((r) => r.status === "completed" && r.mode === "individual");
+  const activeGroup = (accepted ?? []).filter((r) => r.status !== "completed" && r.mode === "group");
+  const doneGroup = (accepted ?? []).filter((r) => r.status === "completed" && r.mode === "group");
   const loading = accepted === undefined || teams === undefined;
   const empty = !loading && (accepted?.length ?? 0) === 0 && (teams?.length ?? 0) === 0;
 
@@ -117,10 +119,10 @@ export function ProviderMyWork() {
         </section>
       )}
 
-      {activeSolo.length > 0 && (
+      {activeIndividual.length > 0 && (
         <section>
           <h2 className="font-semibold text-loom-indigo mb-2">{t("individualWork")}</h2>
-          {activeSolo.map((r) => (
+          {activeIndividual.map((r) => (
             <Card key={r._id} className="mb-2">
               <div className="font-semibold text-loom-indigo">{r.title}</div>
               {/* Applying no longer wins the job — the customer picks between everyone who
@@ -145,10 +147,42 @@ export function ProviderMyWork() {
           ))}
         </section>
       )}
+
+      {/* Group orders she applied to. Same two states as an individual application —
+          'interested' means still waiting on the customer's open call to close, 'accepted'
+          means she was one of the people picked — the open call just has room for more than
+          one winner. */}
+      {activeGroup.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-loom-indigo mb-2">{t("groupWork")}</h2>
+          {activeGroup.map((r) => (
+            <Card key={r._id} className="mb-2">
+              <div className="font-semibold text-loom-indigo">{r.title}</div>
+              <div
+                className={`text-sm font-medium ${
+                  r.interestState === "accepted" ? "text-loom-leaf" : "text-loom-turmeric"
+                }`}
+              >
+                {r.interestState === "accepted" ? t("status_accepted") : t("waitingForCustomer")}
+              </div>
+              <div className="text-sm text-loom-indigoSoft">
+                {statusLabel(r.status)}
+                {r.pay !== null && ` · ₹${r.pay}`}
+                {` · ${r.units} ${t("units")}`}
+                {r.distanceKm !== null && ` · ${r.distanceKm} ${t("km")}`}
+              </div>
+              {r.customerName && (
+                <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
+              )}
+            </Card>
+          ))}
+        </section>
+      )}
+
       {/* Finished work. Nothing told a provider their job had ended: completion sets
           requests.status only, and the team card read the TEAM's status, which stays
           'confirmed' forever. */}
-      {(doneTeam.length > 0 || doneSolo.length > 0) && (
+      {(doneTeam.length > 0 || doneIndividual.length > 0 || doneGroup.length > 0) && (
         <section>
           <h2 className="font-semibold text-loom-leaf mb-2">{t("completedWork")}</h2>
           {doneTeam.map((tm) => (
@@ -160,7 +194,7 @@ export function ProviderMyWork() {
               </div>
             </Card>
           ))}
-          {doneSolo.map((r) => (
+          {[...doneIndividual, ...doneGroup].map((r) => (
             <Card key={r._id} className="mb-2">
               <div className="font-semibold text-loom-indigo">{r.title}</div>
               <div className="text-sm text-loom-leaf font-medium">{t("workFinished")}</div>

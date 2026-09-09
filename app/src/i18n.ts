@@ -118,7 +118,28 @@ const DICT: Record<string, { ml: string; en: string }> = {
   any: { ml: "ഏതും", en: "Any" },
   back: { ml: "തിരികെ", en: "back" },
   ok: { ml: "ശരി", en: "OK" },
-  teamOrderNotice: { ml: "ഇത് ഒരു ടീം ഓർഡറാണ്.", en: "This is a team order." },
+  teamOrderNotice: {
+    ml: "ഇത് ഒരു ടീം ഓർഡറാണ്. നിങ്ങൾക്ക് ആവശ്യമുള്ള ആളുകളുടെ എണ്ണവും അപേക്ഷിക്കാനുള്ള അവസാന തീയതിയും സജ്ജമാക്കാം.",
+    en: "This is a group order. Set how many people you want and a deadline to apply, if you like.",
+  },
+  headcount: { ml: "എത്ര പേർ വേണം", en: "How many people" },
+  interestDeadline: { ml: "അപേക്ഷിക്കാനുള്ള അവസാന തീയതി", en: "Deadline to apply" },
+  headcountOptional: { ml: "എണ്ണം (ഇല്ലെങ്കിലും കുഴപ്പമില്ല)", en: "Headcount (optional)" },
+  viewApplicants: { ml: "അപേക്ഷകർ", en: "View applicants" },
+  selectTeam: { ml: "തിരഞ്ഞെടുക്കൂ", en: "Select" },
+  selectedOfHeadcount: { ml: "ൽ തിരഞ്ഞെടുത്തു", en: "of" },
+  peopleWanted: { ml: "പേർ വേണം", en: "people wanted" },
+  applyBy: { ml: "വരെ അപേക്ഷിക്കാം", en: "apply by" },
+  expressInterest: { ml: "താൽപ്പര്യം അറിയിക്കുക", en: "Express interest" },
+  interestDeadlinePassed: {
+    ml: "അപേക്ഷിക്കാനുള്ള സമയം കഴിഞ്ഞു.",
+    en: "The window to apply has closed.",
+  },
+  overHeadcount: {
+    ml: "നിങ്ങൾ ചോദിച്ച എണ്ണത്തിലും കൂടുതൽ പേരെ തിരഞ്ഞെടുത്തു.",
+    en: "You've selected more people than the headcount you asked for.",
+  },
+  groupWork: { ml: "ഗ്രൂപ്പ് ജോലി", en: "Group work" },
   demoOtp: { ml: "(ഡെമോ) OTP:", en: "(demo) OTP:" },
   // Sign-in failures, kept apart because they call for opposite actions: look again at the
   // SMS, or give up on it and ask for a new one.

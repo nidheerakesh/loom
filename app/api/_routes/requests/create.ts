@@ -16,13 +16,19 @@ const Body = z.object({
   units: z.number().int().positive().max(10000),
   pay: z.number().nonnegative().max(10_000_000).optional(),
   deadline: z.string().optional(),
+  // Group orders only. How many people she wants, and when the interest window closes. Both
+  // optional even for a group order — an older client, or a customer who does not want a cap
+  // or a cutoff, still works exactly as before.
+  headcount: z.number().int().positive().max(1000).optional(),
+  interestDeadline: z.string().datetime().optional(),
   skills: z.array(
     z.object({ skillId: z.string().min(1), quantity: z.number().int().positive().max(10000) }),
   ),
 });
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
-  const { token, title, description, mode, units, pay, deadline, skills } = Body.parse(req.body);
+  const { token, title, description, mode, units, pay, deadline, headcount, interestDeadline, skills } =
+    Body.parse(req.body);
   const s = await requireRole(token, "customer");
 
   const { data: customer, error: custErr } = await supabaseAdmin
@@ -42,6 +48,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       units,
       pay,
       deadline,
+      headcount: mode === "group" ? headcount : undefined,
+      interest_deadline: mode === "group" ? interestDeadline : undefined,
       location_id: customer.location_id,
       status: "open",
       customer_id: customer.id,
