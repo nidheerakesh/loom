@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { RoleSwitch } from "../shared/RoleSwitch";
+import { DeleteAccount } from "../shared/DeleteAccount";
 import { useAuth } from "../../auth";
 import { LocationPicker } from "../shared/LocationPicker";
 import { Card, Field, Screen, Stars } from "../../ui";
@@ -47,6 +48,7 @@ export function CustomerProfile() {
         ))}
       </Card>
       <RoleSwitch />
+      <DeleteAccount />
     </Screen>
   );
 }

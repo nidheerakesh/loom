@@ -270,6 +270,16 @@ create table team_members (
 create index team_members_team_id_idx on team_members (team_id);
 create index team_members_provider_id_idx on team_members (provider_id);
 
+-- Migration 008. Kept apart from providers/customers (see that migration's comment) — no FK,
+-- since a phone_hash can predate either row and can outlive both after account deletion.
+create table consents (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  phone_hash text not null,
+  version text not null
+);
+create index consents_phone_hash_idx on consents (phone_hash);
+
 create table narrations (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -388,6 +398,7 @@ alter table ratings           enable row level security;
 alter table grievances        enable row level security;
 alter table chat_threads      enable row level security;
 alter table messages          enable row level security;
+alter table consents          enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Performance indexes. Each corresponds to a filter/sort the API actually issues;

@@ -3,6 +3,7 @@ import { apiPost, ApiError } from "../lib/api";
 import { useAuth } from "../auth";
 import { Button, Card, Field, TextButton } from "../ui";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { Consent } from "./shared/Consent";
 
 type Role = "provider" | "customer";
 
@@ -10,13 +11,13 @@ type Role = "provider" | "customer";
 // The server resolves the account from the verified number and says what is still missing:
 //   session -> straight to the dashboard (the returning-user path)
 //   choose  -> the number holds both a provider and a customer account
-//   signup  -> new number, so collect a name and a role
+//   signup  -> new number, so collect consent, a name and a role
 type VerifyResult =
   | { status: "session"; token: string }
   | { status: "choose"; ticket: string; roles: Role[] }
   | { status: "signup"; ticket: string };
 
-type Step = "phone" | "code" | "choose" | "signup";
+type Step = "phone" | "code" | "choose" | "consent" | "signup";
 
 // The server's English message is the fallback; its `reason` is what gets translated. A woman
 // signing in reads Malayalam, and "wrong code" and "expired code" ask her to do different
@@ -88,16 +89,19 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
         setRoles(res.roles);
         setStep("choose");
       } else {
-        setStep("signup");
+        // Consent before name — a returning number never lands here at all, since the server
+        // only returns "signup" for a phone with no account yet.
+        setStep("consent");
       }
     });
 
-  const completeLogin = (chosen: Role, withName?: string) =>
+  const completeLogin = (chosen: Role, withName?: string, consent?: true) =>
     run(async () => {
       const res = await apiPost<{ token: string }>("/api/auth/complete-login", {
         ticket,
         role: chosen,
         name: withName,
+        consent,
       });
       setToken(res.token);
     });
@@ -194,6 +198,10 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
           </>
         )}
 
+        {step === "consent" && (
+          <Consent onAgree={() => setStep("signup")} onBack={() => setStep("code")} />
+        )}
+
         {step === "signup" && (
           <>
             <div className="mb-3 text-loom-indigo font-medium">{t("welcome")}</div>
@@ -222,7 +230,7 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
             </div>
             <Button
               className="w-full"
-              onClick={() => void completeLogin(role, name.trim())}
+              onClick={() => void completeLogin(role, name.trim(), true)}
               disabled={!name.trim() || busy}
             >
               {t("continue")}

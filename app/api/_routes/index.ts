@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+import r_accounts_delete from "./accounts/delete.js";
 import r_accounts_set_location from "./accounts/set-location.js";
 import r_auth_complete_login from "./auth/complete-login.js";
 import r_auth_me from "./auth/me.js";
@@ -61,6 +62,7 @@ export type Handler = (req: VercelRequest, res: VercelResponse) => Promise<void>
 // Imports are static on purpose — Vercel's bundler traces dependencies at build time
 // and a dynamic `import(variable)` would leave the handlers out of the bundle.
 export const routes: Record<string, Handler> = {
+  "accounts/delete": r_accounts_delete,
   "accounts/set-location": r_accounts_set_location,
   "auth/complete-login": r_auth_complete_login,
   "auth/me": r_auth_me,

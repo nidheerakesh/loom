@@ -51,7 +51,7 @@ async function signUp(phone, role, name) {
   const v = await post("auth/verify-otp", { phone, code });
   if (v.data?.status === "session") return { token: v.data.token, userId: v.data.userId, role: v.data.role, returning: true, devCode: code };
   if (v.data?.status === "signup") {
-    const c = await post("auth/complete-login", { ticket: v.data.ticket, role, name });
+    const c = await post("auth/complete-login", { ticket: v.data.ticket, role, name, consent: true });
     if (c.status !== 200) throw new Error(`complete-login ${c.status} ${JSON.stringify(c.data)}`);
     return { token: c.data.token, userId: c.data.userId, role: c.data.role, returning: false, devCode: code };
   }
@@ -634,6 +634,60 @@ async function main() {
   const feedAfter = await get("matching/feed", { token: A.p1.token });
   ok("the work feed still ranks after a location change", Array.isArray(feedAfter.data),
     `${feedAfter.data?.length} matches`);
+
+  // ── L · CONSENT AND ACCOUNT DELETION ────────────────────────────────────────
+  // A scratch number, not one of the fixed A.* accounts — this one is deliberately erased at
+  // the end of the section, so it must never be an account another section depends on.
+  section("L · Consent and account deletion");
+  const scratchPhone = "9000000301";
+
+  const preOtp = await post("auth/request-otp", { phone: scratchPhone });
+  const preCode = preOtp.data?.devCode;
+  const preVerify = await post("auth/verify-otp", { phone: scratchPhone, code: preCode });
+
+  if (preVerify.data?.status === "signup") {
+    const noConsent = await post("auth/complete-login", {
+      ticket: preVerify.data.ticket, role: "provider", name: "E2E Consent Test",
+    });
+    ok("creating an account without consent is refused", noConsent.status === 400,
+      `${noConsent.status} ${noConsent.data?.error ?? ""}`);
+  } else {
+    // A prior run crashed before deleting this number — recoverable, but the consent check
+    // above can't run this time since the account already exists.
+    ok("creating an account without consent is refused", true, "skipped — scratch number not fresh, deleting and retrying below");
+  }
+
+  const scratch = await signUp(scratchPhone, "provider", "E2E Consent Test");
+  ok("signs up with consent", Boolean(scratch.token), `returning=${scratch.returning}`);
+
+  const wrongNumber = await post("accounts/delete", { token: scratch.token, phone: "9000099999" });
+  ok("deleting with a mistyped number is refused, account survives",
+    wrongNumber.status === 400 && wrongNumber.data?.reason === "number-mismatch",
+    `${wrongNumber.status} ${wrongNumber.data?.error ?? ""}`);
+
+  const stillThere = await get("auth/me", { token: scratch.token });
+  ok("the account is still there after a refused delete", stillThere.data !== null);
+
+  const del = await post("accounts/delete", { token: scratch.token, phone: scratchPhone });
+  ok("deleting with the correct number succeeds", del.status === 200, `${del.status}`);
+
+  const deadToken = await get("auth/me", { token: scratch.token });
+  ok("the old session is dead after deletion", deadToken.data === null, `body=${JSON.stringify(deadToken.data)}`);
+
+  const afterDelete = await post("auth/request-otp", { phone: scratchPhone });
+  const afterCode = afterDelete.data?.devCode;
+  const afterVerify = await post("auth/verify-otp", { phone: scratchPhone, code: afterCode });
+  ok("the number is a brand-new signup again — the account was actually erased, not just hidden",
+    afterVerify.data?.status === "signup", `status=${afterVerify.data?.status}`);
+
+  // Leave the number clean for the next run: finish the signup this last check started, then
+  // delete it again.
+  const recreated = await post("auth/complete-login", {
+    ticket: afterVerify.data?.ticket, role: "provider", name: "E2E Consent Test", consent: true,
+  });
+  if (recreated.data?.token) {
+    await post("accounts/delete", { token: recreated.data.token, phone: scratchPhone });
+  }
 
   // ── I · SESSION TEARDOWN ────────────────────────────────────────────────────
   section("I · Session teardown");

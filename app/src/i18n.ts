@@ -140,6 +140,38 @@ const DICT: Record<string, { ml: string; en: string }> = {
     en: "You've selected more people than the headcount you asked for.",
   },
   groupWork: { ml: "ഗ്രൂപ്പ് ജോലി", en: "Group work" },
+  consentTitle: { ml: "തുടരും മുമ്പ്", en: "Before you continue" },
+  // Phone hashing moved from fnv1a to salted HMAC-SHA256 (migration 007), which is genuinely
+  // hard to reverse — but the copy still doesn't claim "unrecoverable". A leaked salt, or a
+  // future bug, could still connect the hash back to a number; overclaiming here would be the
+  // same class of mistake the deck's uncited statistics were.
+  consentWhat: {
+    ml: "നിങ്ങളുടെ പേര്, ഏകദേശ സ്ഥലം, വൈദഗ്ധ്യങ്ങൾ, റേറ്റിംഗുകൾ, ഫോട്ടോകൾ, സന്ദേശങ്ങൾ എന്നിവ ഞങ്ങൾ സൂക്ഷിക്കുന്നു. നിങ്ങളുടെ ഫോൺ നമ്പർ മറ്റാർക്കും കാണിക്കില്ല — അത് സൂക്ഷിക്കുന്നത് ഒരു കോഡ് രൂപത്തിലാണ്, എന്നാൽ പൂർണ്ണമായും തിരിച്ചെടുക്കാനാവാത്തതാണെന്ന് ഞങ്ങൾ അവകാശപ്പെടുന്നില്ല.",
+    en: "We keep your name, approximate location, skills, ratings, photos and messages. Your phone number is never shown to anyone else — it's stored as a code, though we don't claim that code can never be traced back.",
+  },
+  consentWho: {
+    ml: "പരാതികളോ പ്രശ്നങ്ങളോ പരിഹരിക്കാൻ വേണ്ടിവന്നാൽ അഡ്മിനുകൾക്ക് നിങ്ങളുടെ സന്ദേശങ്ങൾ വായിക്കാൻ കഴിയും.",
+    en: "Admins can read your messages if needed to resolve a problem or a complaint.",
+  },
+  consentDelete: {
+    ml: "പ്രൊഫൈലിൽ നിന്ന് എപ്പോൾ വേണമെങ്കിലും നിങ്ങളുടെ അക്കൗണ്ട് ഇല്ലാതാക്കാം. അത് നിങ്ങളുടെ എല്ലാ വിവരങ്ങളും എന്നെന്നേക്കുമായി മായ്ക്കും.",
+    en: "You can delete your account anytime from Profile. That erases everything permanently.",
+  },
+  consentAgree: { ml: "ഞാൻ ഇത് വായിച്ചു, സമ്മതിക്കുന്നു.", en: "I've read this and agree." },
+  deleteAccount: { ml: "അക്കൗണ്ട് ഇല്ലാതാക്കുക", en: "Delete account" },
+  deleteAccountWarning: {
+    ml: "ഇത് നിങ്ങളുടെ അക്കൗണ്ട്, വൈദഗ്ധ്യങ്ങൾ, ഫോട്ടോകൾ, സന്ദേശങ്ങൾ എന്നിവ എന്നെന്നേക്കുമായി ഇല്ലാതാക്കും. തിരികെ കൊണ്ടുവരാൻ കഴിയില്ല.",
+    en: "This permanently deletes your account, skills, photos and messages. It cannot be undone.",
+  },
+  retypeNumberToConfirm: {
+    ml: "സ്ഥിരീകരിക്കാൻ നിങ്ങളുടെ ഫോൺ നമ്പർ വീണ്ടും ടൈപ്പ് ചെയ്യുക",
+    en: "Type your phone number again to confirm",
+  },
+  deleteForever: { ml: "എന്നെന്നേക്കുമായി ഇല്ലാതാക്കുക", en: "Delete forever" },
+  numberDoesNotMatch: {
+    ml: "ഈ നമ്പർ നിങ്ങളുടെ അക്കൗണ്ടുമായി പൊരുത്തപ്പെടുന്നില്ല.",
+    en: "That number doesn't match your account.",
+  },
   demoOtp: { ml: "(ഡെമോ) OTP:", en: "(demo) OTP:" },
   // Sign-in failures, kept apart because they call for opposite actions: look again at the
   // SMS, or give up on it and ask for a new one.

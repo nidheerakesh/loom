@@ -7,6 +7,7 @@ import { LocationPicker } from "../shared/LocationPicker";
 import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
 import { RoleSwitch } from "../shared/RoleSwitch";
+import { DeleteAccount } from "../shared/DeleteAccount";
 
 type Readback = { raw: string; canonicalName: string | null; canonicalNameMl: string | null; matchedVia: string };
 type SkillRow = { _id: string; canonicalName: string; canonicalNameMl: string | null; proficiency: number };
@@ -184,6 +185,7 @@ export function ProviderProfile() {
         )}
       </Card>
       <RoleSwitch />
+      <DeleteAccount />
     </Screen>
   );
 }
