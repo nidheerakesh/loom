@@ -139,6 +139,102 @@ const DICT: Record<string, { ml: string; en: string }> = {
   resendCode: { ml: "പുതിയ കോഡ് അയയ്ക്കുക", en: "Send a new code" },
   themeDark: { ml: "ഇരുണ്ട നിറം", en: "Dark mode" },
   themeLight: { ml: "വെളുത്ത നിറം", en: "Light mode" },
+
+  // ---------------------------------------------------------------- landing page
+  // Mostly carried over from docs/presentation/landing-page.html, which was already written
+  // and already true. The status section is the exception: it had gone stale, and is rewritten
+  // against what the code actually does today.
+  landHeadA: { ml: "ഒറ്റയ്ക്ക് എത്തിപ്പിടിക്കാനാവാത്ത", en: "The income that was" },
+  landHeadB: { ml: "വരുമാനം.", en: "unreachable alone." },
+  landSub: {
+    ml: "കേരളത്തിൽ 45 ലക്ഷം സ്ത്രീകൾ സ്വയംസഹായ സംഘങ്ങളിലുണ്ട്. അവർക്ക് വായ്പയുണ്ട്, വൈദഗ്ധ്യമുണ്ട്. ഇല്ലാത്തത് വിപണിയാണ്.",
+    en: "Kerala has 4.5 million women in self-help groups. They have credit, and they have skills. What they don't have is the market.",
+  },
+  landOpen: { ml: "ആപ്പ് തുറക്കുക", en: "Open the app" },
+  landProblemEyebrow: { ml: "പ്രശ്നം", en: "The problem" },
+  landProblemHead: {
+    ml: "വായ്പ എത്തി. വിപണി എത്തിയില്ല.",
+    en: "Microfinance solved money. Nobody solved demand.",
+  },
+  landProblem1: {
+    ml: "തയ്ക്കാനറിയാവുന്ന ഒരു സ്ത്രീക്ക് മൂന്ന് കിലോമീറ്റർ അകലെയുള്ള ജോലി അറിയാൻ വഴിയില്ല — ജോലി വാമൊഴിയായാണ് സഞ്ചരിക്കുന്നത്. അതാണ് ചെറിയ പ്രശ്നം.",
+    en: "A woman who stitches cannot see a paid job three kilometres away, because work travels by word of mouth. That is the small problem.",
+  },
+  landProblem2: {
+    ml: "വലിയ പ്രശ്നം അവളുടെ വരുമാനം മാറ്റിമറിക്കാവുന്ന ഓർഡറാണ് — ഇരുനൂറ് സ്കൂൾ യൂണിഫോം, മുന്നൂറ് പേർക്കുള്ള സദ്യ. മുറിക്കണം, തയ്ക്കണം, പായ്ക്ക് ചെയ്യണം. ഒരാൾക്ക് മാത്രം കഴിയില്ല. അതുകൊണ്ട് അത് നഗരത്തിലെ ഫാക്ടറിയിൽ പോകുന്നു, പണം ജില്ല വിട്ടുപോകുന്നു. വൈദഗ്ധ്യം ഇല്ലാഞ്ഞിട്ടല്ല. കൂട്ടിച്ചേർക്കാൻ ആരുമില്ലാഞ്ഞിട്ടാണ്.",
+    en: "The large one is the order that would actually change her income — two hundred school uniforms, a wedding sadya for three hundred. It needs cutting, stitching and packaging, and more hands than any one woman has. So it goes to a factory in the city, and the money leaves the district. Not because the skill isn't there. Because nothing assembles it.",
+  },
+  landStat1: { ml: "ഇന്ത്യയിലെ വനിതാ സ്വയംസഹായ സംഘങ്ങൾ", en: "women's self-help groups in India" },
+  landStat2: { ml: "കുടുംബശ്രീയിലെ അംഗങ്ങൾ", en: "women in Kerala's Kudumbashree network" },
+  landDoesEyebrow: { ml: "ലൂം ചെയ്യുന്നത്", en: "What Loom does" },
+  landDoesHead: {
+    ml: "രണ്ട് തരം ചേരുവ. ഒന്ന് മറ്റെവിടെയുമില്ല.",
+    en: "Two kinds of matching. One of them doesn't exist anywhere else.",
+  },
+  landIndividual: { ml: "ഒറ്റയ്ക്കുള്ള ജോലി", en: "Individual" },
+  landIndividualBody: {
+    ml: "വൈദഗ്ധ്യം, ദൂരം, കൂലി — ഇവ നോക്കി അടുത്തുള്ള ജോലി ക്രമപ്പെടുത്തുന്നു. ഇത് ഒരു ജോബ് ബോർഡാണ്. ജോബ് ബോർഡുകൾ ഉണ്ട്.",
+    en: "Ranks nearby work for one woman by skill fit, distance and pay. This part is a job board, and job boards exist.",
+  },
+  landCollective: { ml: "കൂട്ടായ ജോലി", en: "Collective" },
+  landCollectiveBody: {
+    ml: "ആർക്കും ഒറ്റയ്ക്ക് ഏറ്റെടുക്കാനാവാത്ത ഓർഡർ എടുത്ത് വിവിധ സംഘങ്ങളിൽ നിന്ന് ഒരു ടീം ഉണ്ടാക്കുന്നു. ശേഷിയും ദൂരവും നോക്കും. ഓർഡർ പൂർത്തിയാക്കാൻ കഴിയില്ലെങ്കിൽ അത് തുറന്നു പറയും.",
+    en: "Takes an order too large for anyone and builds a team across different self-help groups. Capacity-aware, distance-aware, and it tells you honestly when it cannot cover the order.",
+  },
+  landAssemblyEyebrow: { ml: "ഒരു യഥാർത്ഥ ടീം", en: "A real assembly" },
+  landAssemblyHead: {
+    ml: "മുപ്പത് യൂണിഫോം. ഒറ്റയ്ക്ക് ആർക്കും ഏറ്റെടുക്കാനാവില്ല.",
+    en: "Thirty uniforms, and nobody who could take it alone.",
+  },
+  landAssemblyLead: {
+    ml: "ഒരു ടാപ്പിൽ ഇത് ഉണ്ടാകുന്നു — ഉത്തരം മാത്രമല്ല, കാരണവും പറയുന്നു.",
+    en: "One tap on a group order produces this — and states its own reasoning, rather than just its answer.",
+  },
+  landAssemblyFoot: {
+    ml: "സ്വയം പറഞ്ഞതിലധികം ജോലി ആർക്കും കൊടുക്കില്ല. ഉപഭോക്താവ് സ്ഥിരീകരിക്കുന്നത് വരെ ആരെയും അറിയിക്കില്ല — പിന്നെയും ഓരോരുത്തരും സ്വയം തീരുമാനിക്കും.",
+    en: "Nobody is allocated more than she declared she can deliver. And nothing reaches any of them until the customer confirms — then each woman still decides for herself.",
+  },
+  landUnits: { ml: "യൂണിറ്റ്", en: "units" },
+  landHowEyebrow: { ml: "എങ്ങനെ", en: "How it works" },
+  landHowHead: {
+    ml: "അവൾ വായിക്കുന്ന ഭാഷയിൽ, ഉറപ്പുള്ള ഉത്തരം.",
+    en: "Deterministic, in the language she reads.",
+  },
+  landStep1: { ml: "അവൾ പറയുന്നതുപോലെ വൈദഗ്ധ്യം എഴുതുന്നു", en: "She enters her skills, however she says them" },
+  landStep1Body: {
+    ml: "sewing, thayyal, തയ്യൽ, എന്തിന് stiching പോലും — എല്ലാം ഒരേ വൈദഗ്ധ്യമായി മാറുന്നു. അല്ലെങ്കിൽ വിപണി പര്യായങ്ങളായി ചിതറി നിശ്ശബ്ദമായി നിലയ്ക്കും.",
+    en: "sewing, thayyal, തയ്യൽ and even stiching all resolve to one canonical skill. Without that, the marketplace fragments into synonyms and quietly stops working.",
+  },
+  landStep2: { ml: "എൻജിൻ ക്രമപ്പെടുത്തുന്നു, അല്ലെങ്കിൽ ടീം ഉണ്ടാക്കുന്നു", en: "The engine ranks, or assembles" },
+  landStep2Body: {
+    ml: "ഒറ്റയ്ക്കുള്ള ജോലിക്ക് ഒരു സ്കോർ; ടീമിന് ശേഷി നോക്കിയുള്ള തിരച്ചിൽ. ഒരേ ഓർഡർ എപ്പോഴും ഒരേ ടീം തരും. മോഡലില്ല, പരിശീലന ഡാറ്റയില്ല.",
+    en: "A weighted score for individual work; a capacity-aware covering search for teams. The same order always produces the same team — no model, no training data, no inference cost.",
+  },
+  landStep3: { ml: "അത് സ്വയം വിശദീകരിക്കുന്നു, ഉറക്കെ പറയുകയും ചെയ്യും", en: "It explains itself, and can say it aloud" },
+  landStep3Body: {
+    ml: "ഓരോ തീരുമാനവും വിശദീകരണം എഴുതുന്നതിന് മുമ്പേ രേഖപ്പെടുത്തുന്നു — അതുകൊണ്ട് വിശദീകരണത്തിന് എൻജിനെ എതിർക്കാനാവില്ല. പിന്നെ അത് മലയാളത്തിൽ വായിച്ചു കേൾപ്പിക്കും.",
+    en: "Every decision is written to an audit table before a word of explanation is rendered, so the explanation cannot contradict the engine. Then it is read out in Malayalam.",
+  },
+  landStatusEyebrow: { ml: "സത്യസന്ധമായ നില", en: "Honest status" },
+  landStatusHead: {
+    ml: "പണിതു, വിന്യസിച്ചു, അളന്നു — ഇനി ഒരു യഥാർത്ഥ ഓർഡർ.",
+    en: "Built, deployed and measured. Next: one real order.",
+  },
+  landWorking: { ml: "ഇപ്പോൾ പ്രവർത്തിക്കുന്നത്", en: "Working today" },
+  landNotYet: { ml: "ഇനിയും ആയിട്ടില്ല", en: "Not yet" },
+  landYes1: { ml: "ലൈവ്, പൊതുവായത്, ഇൻസ്റ്റാൾ വേണ്ട", en: "Live, public, no install" },
+  landYes2: { ml: "മലയാളം ആദ്യം, പറഞ്ഞുകേൾപ്പിക്കുന്ന വിശദീകരണത്തോടെ", en: "Malayalam-first, with spoken explanations" },
+  landYes3: { ml: "ഒറ്റയ്ക്കും കൂട്ടായുമുള്ള ചേരുവ", en: "Individual and collective matching" },
+  landYes4: { ml: "വാട്സ്ആപ്പിലും പ്രവർത്തിക്കും — ശബ്ദസന്ദേശം ഉൾപ്പെടെ", en: "Works over WhatsApp, voice notes included" },
+  landYes5: { ml: "വീടിന്റെ വിലാസം സൂക്ഷിക്കാത്ത ജി‌പി‌എസ്", en: "GPS that never stores her home address" },
+  landNo1: { ml: "ആപ്പിനുള്ളിൽ ശബ്ദം കൊണ്ട് എഴുതാനാവില്ല — വാട്സ്ആപ്പിൽ മാത്രം", en: "Speaking to the app itself — that works on WhatsApp only" },
+  landNo2: { ml: "ജോലി എല്ലാവർക്കുമായി പങ്കിടുന്ന ക്രമം", en: "Fair rotation, so work spreads rather than concentrates" },
+  landNo3: { ml: "ഇതുവരെ ഒരു യഥാർത്ഥ ഉപയോക്താവില്ല", en: "No pilot user yet" },
+  landNext: {
+    ml: "അടുത്തത്: ഒരു യഥാർത്ഥ സംഘത്തിൽ നിന്ന് ഒരു യഥാർത്ഥ ഓർഡർ. അതാണ് ലക്ഷ്യം — മറ്റൊരു ഫീച്ചറല്ല.",
+    en: "Next: one real order, from one real group. That is the milestone — not another feature.",
+  },
+  landCode: { ml: "കോഡ് വായിക്കുക", en: "Read the code" },
   errorGeneric: { ml: "എന്തോ കുഴപ്പം സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.", en: "Something went wrong. Please try again." },
   tagline: { ml: "വൈദഗ്ധ്യം വരുമാനമാക്കുന്നു", en: "Weaving skills into income" },
   deleteImage: { ml: "ചിത്രം നീക്കുക", en: "Remove image" },

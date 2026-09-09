@@ -30,7 +30,9 @@ const REASON_KEYS: Record<string, string> = {
   "send-rate-limited": "errTooManyTries",
 };
 
-export function SignIn() {
+// `onBack` returns to the landing page. Optional because SignIn is also reached directly when a
+// stored token turns out to be dead, and there is no landing page to go back to in that case.
+export function SignIn({ onBack }: { onBack?: () => void } = {}) {
   const { setToken, t, lang, setLang } = useAuth();
 
   const [step, setStep] = useState<Step>("phone");
@@ -136,6 +138,11 @@ export function SignIn() {
             <Button className="w-full" onClick={() => void sendCode()} disabled={!phone || busy}>
               {t("sendCode")}
             </Button>
+            {onBack && (
+              <TextButton className="mt-3 w-full" onClick={onBack}>
+                ‹ {t("back")}
+              </TextButton>
+            )}
           </>
         )}
 

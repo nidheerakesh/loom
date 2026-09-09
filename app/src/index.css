@@ -187,3 +187,47 @@
     letter-spacing: -0.017em;
   }
 }
+
+/* The landing page mark draws itself: warp threads first, then the weft crossing them. Two
+   seconds at most, once, and it never moves again — a logo that loops is a logo you end up
+   hiding. */
+@keyframes loom-warp {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+@keyframes loom-weft {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+.warp {
+  transform-origin: top center;
+  animation: loom-warp 0.5s ease-out both;
+}
+.weft {
+  transform-origin: left center;
+  animation: loom-weft 0.55s ease-out both;
+}
+.over {
+  animation: loom-weft 0.01s linear 0.85s both;
+}
+
+/* Drawn already finished for anyone who has asked their system not to animate. */
+@media (prefers-reduced-motion: reduce) {
+  .warp,
+  .weft,
+  .over {
+    animation: none;
+  }
+}
