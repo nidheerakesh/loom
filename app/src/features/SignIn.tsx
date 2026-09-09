@@ -52,7 +52,7 @@ export function SignIn() {
 
   const verify = () =>
     run(async () => {
-      const res = await apiPost<VerifyResult>("/api/auth/verify-otp", { phone, code });
+      const res = await apiPost<VerifyResult>("/api/auth/verify-otp", { phone, code: code.trim() });
       if (res.status === "session") {
         setToken(res.token);
         return;

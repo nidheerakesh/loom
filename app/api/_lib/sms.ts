@@ -72,13 +72,24 @@ export async function checkVerification(e164: string, code: string): Promise<boo
   const res = await fetch(`https://verify.twilio.com/v2/Services/${serviceSid}/VerificationChecks`, {
     method: "POST",
     headers: { authorization: authHeader(), "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ To: e164, Code: code }),
+    body: new URLSearchParams({ To: e164, Code: code.trim() }),
   });
   if (!res.ok) {
-    if (res.status === 404) return false; // no pending verification for this number
+    if (res.status === 404) {
+      // No pending verification for this number — expired, already used, or superseded by a
+      // second "send code" tap. Logged because it looks identical to a typo'd digit from
+      // outside, and that distinction is the only way to tell them apart.
+      console.error(`[twilio] check 404 for ${e164}: no pending verification (expired or superseded)`);
+      return false;
+    }
     console.error(`[twilio] check ${res.status}: ${(await res.text()).slice(0, 300)}`);
     throw new Error("Could not verify code — try again");
   }
   const data = await res.json();
+  if (data?.status !== "approved") {
+    // Twilio's own reason the digits didn't match: "pending" (genuinely wrong), "canceled"
+    // (a later "send code" replaced this one), "max_attempts_reached" (too many wrong tries).
+    console.error(`[twilio] check status=${data?.status} for ${e164}`);
+  }
   return data?.status === "approved";
 }
