@@ -137,6 +137,8 @@ const DICT: Record<string, { ml: string; en: string }> = {
     en: "Could not send the code. Please try again.",
   },
   resendCode: { ml: "പുതിയ കോഡ് അയയ്ക്കുക", en: "Send a new code" },
+  themeDark: { ml: "ഇരുണ്ട നിറം", en: "Dark mode" },
+  themeLight: { ml: "വെളുത്ത നിറം", en: "Light mode" },
   errorGeneric: { ml: "എന്തോ കുഴപ്പം സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.", en: "Something went wrong. Please try again." },
   tagline: { ml: "വൈദഗ്ധ്യം വരുമാനമാക്കുന്നു", en: "Weaving skills into income" },
   deleteImage: { ml: "ചിത്രം നീക്കുക", en: "Remove image" },

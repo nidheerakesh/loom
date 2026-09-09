@@ -4,8 +4,42 @@
 
 /* To change the theme colors, change the values below
   or use the "Copy code" button at https://ui.shadcn.com/themes */
+/* The loom palette lives here rather than in tailwind.config.js because a hex in the config is
+   a constant — `.dark` cannot re-point it. As CSS variables the same 236 `loom-*` class usages
+   across the app resolve differently per theme, so dark mode needed no `dark:` variants at all.
+
+   These hold complete colour values rather than bare RGB channels, and the Tailwind config
+   references them as plain `var(--loom-x)`.
+
+   The channels-plus-`<alpha-value>` form is the more usual way to do this, and it was tried
+   first. It compiles to `rgb(var(--loom-indigo) / var(--tw-bg-opacity, 1))`, and that nested
+   var breaks style invalidation in Chromium: toggling the theme at runtime left every button
+   painted in the previous palette while `getComputedStyle` reported the new variable value.
+   Only a full restyle cleared it. `body`, which uses a plain `var()`, updated correctly
+   throughout — which is what isolated the nested alpha var as the cause.
+
+   The cost is that `bg-loom-indigo/40` no longer works. Nothing used it. If a loom colour ever
+   needs transparency, give it its own token rather than reintroducing the nesting.
+
+   Two tokens exist that had no hex before:
+     --loom-line   borders. `cottonDeep` was doing double duty as both card fill and border,
+                   which is invisible in light (they want the same value) and wrong in dark
+                   (a border must read against the surface it sits on, not match it).
+     --loom-paper  input fields, previously the hardcoded `bg-white` in ui.tsx. */
 @layer base {
   :root {
+    --loom-cotton: #f3efe6;
+    --loom-cottonDeep: #e7e0d2;
+    --loom-indigo: #26364f;
+    --loom-indigoSoft: #4c6284;
+    --loom-kasavu: #c9a227;
+    --loom-turmeric: #d98b21;
+    --loom-madder: #9c3b36;
+    --loom-leaf: #5b7a5b;
+    --loom-ink: #1c1a17;
+    --loom-line: #e7e0d2;
+    --loom-paper: #ffffff;
+
     --background: 0 0% 100%;
     --foreground: 20 14.3% 4.1%;
 
@@ -37,7 +71,28 @@
     --radius: 0.5rem;
   }
 
+  /* Taken from the dark palette already worked out in docs/presentation/landing-page.html — the
+     same hand, already balanced against each other, rather than nine independent guesses.
+
+     Surfaces and text invert; the four brand/semantic colours (kasavu, turmeric, madder, leaf)
+     are lifted for contrast instead, because a red that means "declined" has to keep meaning
+     that. One consequence worth knowing before you look at it: `bg-loom-indigo text-loom-cotton`
+     is the primary button, so inverting both makes it a cream button with dark text. That is
+     the ordinary convention in dark UIs and it costs no component changes — if it reads wrong,
+     split out a --loom-primary pair rather than fighting the inversion. */
   .dark {
+    --loom-cotton: #10161f;
+    --loom-cottonDeep: #17202c;
+    --loom-indigo: #ece5d6;
+    --loom-indigoSoft: #97a3b4;
+    --loom-kasavu: #d9b443;
+    --loom-turmeric: #e0a253;
+    --loom-madder: #c96a65;
+    --loom-leaf: #82a37c;
+    --loom-ink: #ece5d6;
+    --loom-line: #2a3442;
+    --loom-paper: #1e2734;
+
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
 
@@ -91,12 +146,44 @@
 }
 
 @layer base {
+  /* Default border colour for every element. Was the shadcn `--border`, which nothing else in
+     this app uses; loom-line keeps stray borders consistent with the ones set deliberately. */
   * {
-    @apply border-border;
+    @apply border-loom-line;
   }
+
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: #f3efe6; /* loom cotton */
-    color: #1c1a17; /* loom ink */
-    font-family: "Noto Sans Malayalam", "Inter", system-ui, sans-serif;
+    /* Variables, not hexes. These two lines were the only raw colours left in src/, and they
+       would have pinned the page to a cream background in dark mode while every component
+       around them flipped. */
+    background-color: var(--loom-cotton);
+    color: var(--loom-ink);
+    font-family:
+      "Noto Sans Malayalam", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    /* Malayalam conjuncts stack; the default line-height crowds them. */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Numbers are read as quantities all over this app — units, distances, rates, ratings — and
+     proportional digits make columns of them jitter as they update. */
+  .tnum,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.017em;
   }
 }

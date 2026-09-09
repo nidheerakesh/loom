@@ -82,7 +82,7 @@ export function LocationPicker({
             className={`min-h-[56px] px-4 rounded-[14px] border text-sm ${
               saved === a.label
                 ? "bg-loom-indigo text-loom-cotton border-loom-indigo"
-                : "bg-loom-cotton text-loom-indigo border-loom-cottonDeep"
+                : "bg-loom-cotton text-loom-indigo border-loom-line"
             }`}
           >
             {a.label}

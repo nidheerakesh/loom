@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiPost, ApiError } from "../lib/api";
 import { useAuth } from "../auth";
 import { Button, Card, Field, TextButton } from "../ui";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 type Role = "provider" | "customer";
 
@@ -113,9 +114,12 @@ export function SignIn() {
       <div className="text-center mb-6">
         <div className="text-4xl font-bold text-loom-indigo">{t("appName")}</div>
         <div className="text-loom-indigoSoft">{t("tagline")}</div>
-        <TextButton className="mt-2" onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
-          {lang === "ml" ? "English" : "മലയാളം"}
-        </TextButton>
+        <div className="flex items-center justify-center gap-1 mt-2">
+          <TextButton onClick={() => setLang(lang === "ml" ? "en" : "ml")}>
+            {lang === "ml" ? "English" : "മലയാളം"}
+          </TextButton>
+          <ThemeToggle />
+        </div>
       </div>
 
       <Card>

@@ -2,6 +2,7 @@ import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useRef
 import { useAuth } from "./auth";
 import { canSpeak, onVoicesReady, speak, stopSpeaking } from "./lib/speech";
 import { apiPost } from "./lib/api";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 export function Button({
   variant = "primary",
@@ -10,8 +11,19 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "gold" | "ghost" | "danger" | "leaf";
 }) {
+  // `transition-transform`, not the blanket `transition`.
+  //
+  // Tailwind's `transition` includes background-color, and a CSS transition on a background
+  // whose value comes from a custom property is never re-triggered by Chromium when that
+  // property changes. Switching themes left every button painted in the previous palette —
+  // a dark-indigo button on a dark page — while getComputedStyle reported the new variable.
+  // Only a full restyle cleared it, and next-themes' disableTransitionOnChange did not.
+  // `body` was unaffected because it carries no transition, which is what isolated it.
+  //
+  // The press animation is a transform and still runs. The hover colour change is now instant,
+  // which costs nothing on the touch devices this is built for.
   const base =
-    "min-h-[56px] px-4 rounded-[14px] font-medium text-base transition active:scale-95 disabled:opacity-40";
+    "min-h-[56px] px-4 rounded-[14px] font-medium text-base transition-transform active:scale-95 disabled:opacity-40";
   const styles: Record<string, string> = {
     primary: "bg-loom-indigo text-loom-cotton hover:bg-loom-indigoSoft",
     gold: "bg-loom-kasavu text-loom-ink hover:brightness-105",
@@ -55,7 +67,7 @@ export function Field({
     <label className="block mb-3">
       {label && <span className="block text-sm text-loom-indigoSoft mb-1">{label}</span>}
       <input
-        className={`w-full min-h-[56px] px-3 rounded-[14px] border border-loom-cottonDeep bg-white text-loom-ink text-base ${className}`}
+        className={`w-full min-h-[56px] px-3 rounded-[14px] border border-loom-line bg-loom-paper text-loom-ink text-base ${className}`}
         {...props}
       />
     </label>
@@ -67,7 +79,7 @@ export function Stars({ value, count }: { value: number; count?: number }) {
   return (
     <span className="text-loom-kasavu" title={`${value}`}>
       {"★".repeat(full)}
-      <span className="text-loom-cottonDeep">{"★".repeat(5 - full)}</span>
+      <span className="text-loom-line">{"★".repeat(5 - full)}</span>
       {count !== undefined && <span className="text-loom-indigoSoft text-sm ml-1">({count})</span>}
     </span>
   );
@@ -171,7 +183,7 @@ export function StarPicker({
           aria-label={`${n}`}
           onClick={() => onChange(n)}
           className={`min-h-[56px] w-14 text-2xl leading-none ${
-            n <= value ? "text-loom-kasavu" : "text-loom-cottonDeep"
+            n <= value ? "text-loom-kasavu" : "text-loom-line"
           }`}
         >
           ★
@@ -191,7 +203,7 @@ export function TabBar({
   onChange: (k: string) => void;
 }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-[520px] mx-auto bg-loom-cotton border-t border-loom-cottonDeep flex">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-[520px] mx-auto bg-loom-cotton border-t border-loom-line flex">
       {tabs.map((tab) => (
         <button
           key={tab.key}
@@ -215,9 +227,14 @@ export function TabBar({
 export function Screen({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
   return (
     <div className="max-w-[520px] mx-auto min-h-screen bg-loom-cotton pb-24">
-      <header className="sticky top-0 bg-loom-cotton px-4 py-3 flex items-center justify-between border-b border-loom-cottonDeep z-10">
-        <h1 className="text-xl font-bold text-loom-indigo">{title}</h1>
-        {right}
+      <header className="sticky top-0 bg-loom-cotton px-4 py-3 flex items-center justify-between border-b border-loom-line z-10">
+        <h1 className="text-xl font-bold text-loom-indigo tracking-tight">{title}</h1>
+        {/* The theme control belongs on every screen, not only where somebody remembered to
+            pass one in — a toggle that disappears once you are signed in reads as unfinished. */}
+        <div className="flex items-center gap-1">
+          {right}
+          <ThemeToggle />
+        </div>
       </header>
       <main className="p-4 space-y-3">{children}</main>
     </div>

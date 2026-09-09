@@ -19,16 +19,27 @@ export default {
     },
     extend: {
       colors: {
+        // Defined as CSS variables in src/index.css, not as hexes here — a hex is a constant
+        // and `.dark` cannot re-point it.
+        //
+        // Plain `var()` rather than the usual `rgb(var(--x) / <alpha-value>)` channel form:
+        // that form nests a second var in the alpha slot, which breaks style invalidation in
+        // Chromium and leaves every button painted in the old palette after a theme toggle.
+        // See the note in index.css. Trade-off: no `/opacity` modifier on loom colours.
         loom: {
-          cotton: "#F3EFE6",
-          cottonDeep: "#E7E0D2",
-          indigo: "#26364F",
-          indigoSoft: "#4C6284",
-          kasavu: "#C9A227",
-          turmeric: "#D98B21",
-          madder: "#9C3B36",
-          leaf: "#5B7A5B",
-          ink: "#1C1A17",
+          cotton: "var(--loom-cotton)",
+          cottonDeep: "var(--loom-cottonDeep)",
+          indigo: "var(--loom-indigo)",
+          indigoSoft: "var(--loom-indigoSoft)",
+          kasavu: "var(--loom-kasavu)",
+          turmeric: "var(--loom-turmeric)",
+          madder: "var(--loom-madder)",
+          leaf: "var(--loom-leaf)",
+          ink: "var(--loom-ink)",
+          // Borders, split out of cottonDeep — see the note in index.css.
+          line: "var(--loom-line)",
+          // Input fields, replacing the hardcoded bg-white in ui.tsx.
+          paper: "var(--loom-paper)",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

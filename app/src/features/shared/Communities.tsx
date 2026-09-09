@@ -110,7 +110,7 @@ export function ChatThread({
       {/* Sat at `bottom-0`, the same as the tab bar, so it rendered underneath it and the
           message box could not be reached. The tab bar is 56px plus safe-area inset; this
           clears it and matches the pb-24 the Screen already reserves. */}
-      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep flex gap-2 z-20">
+      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-line flex gap-2 z-20">
         <div className="flex-1">
           <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>
@@ -181,7 +181,7 @@ function NewConversation({
         </Card>
       ))}
 
-      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-cottonDeep z-20">
+      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-line z-20">
         <Button
           className="w-full"
           disabled={selected.length === 0 || !title.trim() || create.isPending}

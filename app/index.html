@@ -1,15 +1,59 @@
 <!doctype html>
-<html lang="en">
+<!-- The UI defaults to Malayalam (auth.tsx), so `lang="en"` was telling screen readers and the
+     browser's own translation prompt the wrong thing about most of the text on screen. -->
+<html lang="ml">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/loom.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#26364F" />
+
+    <!-- One value cannot be right for both themes; the browser chrome would stay indigo above a
+         near-black page. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F3EFE6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10161F" />
+
+    <!-- The Malayalam face is only discovered once the CSS has been fetched and parsed, which on
+         a slow connection means most of the first screen renders in a fallback and then reflows.
+         Preloading starts it in parallel with the stylesheet. -->
+    <link
+      rel="preload"
+      href="/fonts/noto-sans-malayalam.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
     <meta
       name="description"
       content="Loom connects women's self-help group members who offer skills with customers who need work done — individual jobs or group orders assembled across SHGs."
     />
     <title>Loom — weaving skills into income</title>
+
+    <!--
+      Set the theme before first paint.
+
+      next-themes applies the class from React, which is at least one frame after the browser has
+      already painted the body background. On a dark-mode phone that frame is a full-screen flash
+      of cream. This runs synchronously in <head>, before anything is drawn, and reads the exact
+      same localStorage key next-themes uses so the two never disagree.
+
+      Wrapped in try/catch because localStorage throws outright in some privacy modes, and a
+      theme preference is not worth a blank page.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme");
+          var dark =
+            stored === "dark" ||
+            ((!stored || stored === "system") &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {
+          /* no stored preference reachable; the OS default applies once React mounts */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

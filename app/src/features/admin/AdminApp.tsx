@@ -60,7 +60,7 @@ export function AdminApp() {
             className={`min-h-[56px] px-4 rounded-[14px] border text-sm ${
               filter === f
                 ? "bg-loom-indigo text-loom-cotton border-loom-indigo"
-                : "bg-loom-cotton text-loom-indigo border-loom-cottonDeep"
+                : "bg-loom-cotton text-loom-indigo border-loom-line"
             }`}
           >
             {f}
