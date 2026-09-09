@@ -43,6 +43,14 @@ type TeamMember = {
   coveredUnits: number;
   state: string;
 };
+type TeamSkill = {
+  skillId: string;
+  skill: string;
+  skillMl: string | null;
+  quantity: number;
+  covered: number;
+  shortfall: number;
+};
 type TeamDetailData = {
   _id: string;
   status: string;
@@ -50,6 +58,7 @@ type TeamDetailData = {
   complete: boolean;
   requestTitle: string;
   requestUnits: number;
+  skills: TeamSkill[];
   members: TeamMember[];
 };
 
@@ -133,31 +142,57 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
     mutationFn: () => apiPost("/api/team-assembly/confirm", { token, teamId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] }),
   });
-  // Which slot the customer is choosing a replacement for.
-  const [swapping, setSwapping] = useState<TeamMember | null>(null);
+  // The candidate list answers one question — "who else can do this skill" — and two different
+  // actions need it: replacing a woman already on the team, and adding one to a team that has
+  // nobody spare. Sharing the state keeps a single picker on screen at a time, which is also
+  // what stops "replace" and "add" both being half-open at once.
+  type Picking = { kind: "swap"; member: TeamMember } | { kind: "add"; skill: TeamSkill };
+  const [picking, setPicking] = useState<Picking | null>(null);
+  const pickingSkillId = picking?.kind === "swap" ? picking.member.skillId : picking?.skill.skillId;
+
   const { data: candidates } = useQuery({
-    queryKey: ["team-assembly/candidates", teamId, swapping?.skillId],
+    queryKey: ["team-assembly/candidates", teamId, pickingSkillId],
     queryFn: () =>
       apiGet<Candidate[]>("/api/team-assembly/candidates", {
         token: token!,
         teamId,
-        skillId: swapping!.skillId,
+        skillId: pickingSkillId!,
       }),
-    enabled: !!token && !!swapping,
+    enabled: !!token && !!pickingSkillId,
   });
   const swap = useMutation({
-    mutationFn: (replacementId: string) =>
-      apiPost("/api/team-assembly/swap-member", {
+    mutationFn: (replacementId: string) => {
+      // Only reachable from the swap branch of the picker; asserting that here keeps the
+      // outgoing body from ever carrying an empty providerId.
+      if (picking?.kind !== "swap") throw new Error("No member selected to replace");
+      return apiPost("/api/team-assembly/swap-member", {
         token,
         teamId,
-        providerId: swapping!.providerId,
+        providerId: picking.member.providerId,
         replacementId,
-      }),
+      });
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
-      setSwapping(null);
+      setPicking(null);
     },
   });
+  const addMember = useMutation({
+    mutationFn: (providerId: string) =>
+      apiPost<{ assignedUnits: number; overAssigned: boolean }>("/api/team-assembly/add-member", {
+        token,
+        teamId,
+        providerId,
+        skillId: pickingSkillId,
+      }),
+    onSuccess: (r) => {
+      void queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
+      // Adding past what the order needs is allowed, and worth saying out loud once.
+      setNotice(r.overAssigned ? t("addedBeyondNeed") : null);
+      setPicking(null);
+    },
+  });
+  const [notice, setNotice] = useState<string | null>(null);
   const removeMember = useMutation({
     mutationFn: (providerId: string) =>
       apiPost("/api/team-assembly/remove-member", { token, teamId, providerId }),
@@ -186,16 +221,51 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">{team.rationale}</div>
           </Card>
-          {/* Choosing a replacement for one slot. Ranked the way assembly ranks, so the list
-              reads as "who it would have picked next". */}
-          {swapping && (
+          {notice && <Card className="mb-2"><div className="text-sm text-loom-indigo">{notice}</div></Card>}
+
+          {/* What the order asks for against what the team currently covers, and the way in to
+              adding somebody. Shown whenever the team can still be edited — including when
+              coverage is complete, because "complete" is the engine's minimum and not a cap on
+              who the customer may bring in. */}
+          {token && team.status === "proposed" && team.skills?.length > 0 && (
+            <Card className="mb-2">
+              <div className="font-semibold text-loom-indigo mb-1">{t("whatThisNeeds")}</div>
+              {team.skills.map((sk) => (
+                <div key={sk.skillId} className="flex items-center justify-between py-1">
+                  <div className="text-sm">
+                    <span className="text-loom-indigo">{pickLang(lang, sk.skill, sk.skillMl)}</span>
+                    <span className={sk.shortfall > 0 ? "text-loom-madder" : "text-loom-indigoSoft"}>
+                      {" "}
+                      {sk.covered}/{sk.quantity} {t("units")}
+                    </span>
+                  </div>
+                  <Button
+                    variant={sk.shortfall > 0 ? "gold" : "ghost"}
+                    onClick={() => setPicking({ kind: "add", skill: sk })}
+                  >
+                    {t("addMember")}
+                  </Button>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {/* Choosing somebody for a slot — a replacement, or an extra pair of hands. Ranked the
+              way assembly ranks, so the list reads as "who it would have picked next". */}
+          {picking && (
             <Card className="mb-2">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold text-loom-indigo">
-                  {t("swapMember")}: {swapping.shopName ?? swapping.name}
+                  {picking.kind === "swap"
+                    ? `${t("swapMember")}: ${picking.member.shopName ?? picking.member.name}`
+                    : `${t("addMember")}: ${pickLang(lang, picking.skill.skill, picking.skill.skillMl)}`}
                 </div>
-                <TextButton onClick={() => setSwapping(null)}>{t("cancel")}</TextButton>
+                <TextButton onClick={() => setPicking(null)}>{t("cancel")}</TextButton>
               </div>
+              {/* Said before she picks, not after: adding here is deliberate, not a mistake. */}
+              {picking.kind === "add" && picking.skill.shortfall === 0 && (
+                <div className="mb-2 text-sm text-loom-indigoSoft">{t("alreadyCoveredHint")}</div>
+              )}
               {candidates === undefined && <div className="text-loom-indigoSoft">…</div>}
               {candidates?.length === 0 && (
                 <div className="text-loom-indigoSoft text-sm">{t("noAlternatives")}</div>
@@ -211,8 +281,12 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                   </div>
                   <Button
                     variant="gold"
-                    disabled={swap.isPending}
-                    onClick={() => swap.mutate(c.providerId)}
+                    disabled={swap.isPending || addMember.isPending}
+                    onClick={() =>
+                      picking.kind === "swap"
+                        ? swap.mutate(c.providerId)
+                        : addMember.mutate(c.providerId)
+                    }
                   >
                     {t("choose")}
                   </Button>
@@ -220,6 +294,9 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
               ))}
               {swap.isError && (
                 <div className="mt-2 text-loom-madder text-sm">{(swap.error).message}</div>
+              )}
+              {addMember.isError && (
+                <div className="mt-2 text-loom-madder text-sm">{(addMember.error).message}</div>
               )}
             </Card>
           )}
@@ -258,7 +335,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                   {token && (team.status === "proposed" || m.state === "declined") && (
                     <Button
                       variant={m.state === "declined" ? "gold" : "ghost"}
-                      onClick={() => setSwapping(m)}
+                      onClick={() => setPicking({ kind: "swap", member: m })}
                     >
                       {t("swapMember")}
                     </Button>

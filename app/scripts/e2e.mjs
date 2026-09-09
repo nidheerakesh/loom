@@ -312,12 +312,43 @@ async function main() {
   const afterAdd = (await get("team-assembly/get", { teamId })).data;
   ok("she can be added back", readded.status === 200, `${readded.data?.assignedUnits} units`);
   ok("coverage returns to complete", afterAdd.complete === true && /complete\./i.test(afterAdd.rationale));
-  ok("never assigned more units than the order still needed",
+  ok("filled exactly the gap her removal left",
     (readded.data?.assignedUnits ?? 0) <= dropped.coveredUnits);
   ok("adding the same person twice is refused",
     (await post("team-assembly/add-member", {
       token: A.c2.token, teamId, providerId: dropped.providerId, skillId: dropped.skillId,
     })).status === 409);
+
+  // Coverage being complete used to mean the team was closed: "That skill is already covered".
+  // Team size is the customer's call, so a covered team must still accept somebody — and must
+  // say plainly that it now holds more than the order needs.
+  ok("the team reports what the order needs, skill by skill",
+    Array.isArray(afterAdd.skills) && afterAdd.skills.length > 0 &&
+      afterAdd.skills.every((s) => typeof s.shortfall === "number" && typeof s.quantity === "number"),
+    JSON.stringify(afterAdd.skills?.map((s) => `${s.skill} ${s.covered}/${s.quantity}`)));
+
+  const spare = (await get("team-assembly/candidates", {
+    token: A.c2.token, teamId, skillId: dropped.skillId,
+  })).data;
+  if (spare?.length) {
+    const extraId = spare[0]._id ?? spare[0].providerId;
+    const extra = await post("team-assembly/add-member", {
+      token: A.c2.token, teamId, providerId: extraId, skillId: dropped.skillId,
+    });
+    const afterExtra = (await get("team-assembly/get", { teamId })).data;
+    ok("somebody can be added to a team that is already covered",
+      extra.status === 200, `status=${extra.status} ${extra.data?.error ?? ""}`);
+    ok("…and the over-assignment is reported, not hidden",
+      extra.data?.overAssigned === true, `overAssigned=${extra.data?.overAssigned}`);
+    ok("…and the team still reads as covered afterwards",
+      afterExtra.complete === true, afterExtra.rationale);
+    ok("…and she can be removed again, back to the original size",
+      (await post("team-assembly/remove-member", {
+        token: A.c2.token, teamId, providerId: extraId,
+      })).status === 200);
+  } else {
+    ok("somebody can be added to a team that is already covered", false, "no spare candidate to add");
+  }
   ok("another customer cannot edit this team",
     (await post("team-assembly/remove-member", {
       token: A.c1.token, teamId, providerId: dropped.providerId,

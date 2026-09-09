@@ -153,6 +153,16 @@ const DICT: Record<string, { ml: string; en: string }> = {
   markFinished: { ml: "ജോലി പൂർത്തിയായി", en: "Mark finished" },
   swapMember: { ml: "മാറ്റി നിയമിക്കുക", en: "Replace" },
   removeMember: { ml: "ഒഴിവാക്കുക", en: "Remove" },
+  addMember: { ml: "ചേർക്കുക", en: "Add" },
+  whatThisNeeds: { ml: "ഈ ജോലിക്ക് വേണ്ടത്", en: "What this work needs" },
+  alreadyCoveredHint: {
+    ml: "ഇത് ഇപ്പോൾ തന്നെ പൂർത്തിയായി. വേണമെങ്കിൽ കൂടുതൽ പേരെ ചേർക്കാം.",
+    en: "This is already covered. You can still add more people if you want to.",
+  },
+  addedBeyondNeed: {
+    ml: "ചേർത്തു. ഈ ജോലിക്ക് ആവശ്യമുള്ളതിലും കൂടുതൽ പേരുണ്ട് ഇപ്പോൾ.",
+    en: "Added. The team is now larger than this order needs.",
+  },
   noAlternatives: { ml: "മറ്റാരും ലഭ്യമല്ല", en: "No one else is available for this skill" },
   newConversation: { ml: "പുതിയ സംഭാഷണം", en: "New conversation" },
   conversationName: { ml: "സംഭാഷണത്തിന്റെ പേര്", en: "Conversation name" },

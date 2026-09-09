@@ -45,6 +45,16 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     skills: { canonical_name: string; canonical_name_ml: string | null } | null;
   };
 
+  // What the order asks for, skill by skill, with how much of each the team currently covers.
+  // Members alone cannot answer this: a skill whose only member was removed disappears from the
+  // team entirely, and that is exactly the skill somebody needs to be added for.
+  const { data: reqSkillRows, error: rsErr } = await supabaseAdmin
+    .from("request_skills")
+    .select("skill_id, quantity, skills(canonical_name, canonical_name_ml)")
+    .eq("request_id", team.request_id)
+    .order("created_at", { ascending: true });
+  if (rsErr) throw new HttpError(500, rsErr.message);
+
   const members = ((memberRows ?? []) as unknown as MemberRow[]).map((m) => ({
     providerId: m.provider_id,
     // Needed by the swap UI to look up alternatives for this specific slot.
@@ -58,6 +68,27 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     state: m.state,
   }));
 
+  type ReqSkillRow = {
+    skill_id: string;
+    quantity: number;
+    skills: { canonical_name: string; canonical_name_ml: string | null } | null;
+  };
+  // A declined member is not working on this, so her units do not count as covered — the same
+  // rule recomputeCoverage applies, and it must match or the two disagree on the same screen.
+  const skills = ((reqSkillRows ?? []) as unknown as ReqSkillRow[]).map((r) => {
+    const covered = members
+      .filter((m) => m.skillId === r.skill_id && m.state !== "declined")
+      .reduce((n, m) => n + m.coveredUnits, 0);
+    return {
+      skillId: r.skill_id,
+      skill: r.skills?.canonical_name ?? "",
+      skillMl: r.skills?.canonical_name_ml ?? null,
+      quantity: r.quantity,
+      covered,
+      shortfall: Math.max(0, r.quantity - covered),
+    };
+  });
+
   res.status(200).json({
     _id: team.id,
     status: team.status,
@@ -65,6 +96,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     complete: team.complete,
     requestTitle: request?.title ?? "",
     requestUnits: request?.units ?? 0,
+    skills,
     members,
   });
 });

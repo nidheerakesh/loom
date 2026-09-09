@@ -20,12 +20,20 @@ const Body = z.object({
 // So the engine advises and the customer decides — the same principle behind swap-member, and
 // behind the customer choosing between applicants on individual work.
 //
-// Three constraints hold regardless of what the customer wants, because they are promises made
+// Two constraints hold regardless of what the customer wants, because they are promises made
 // to the provider rather than preferences of the customer:
 //
-//   she must actually have the skill      — the order needs doing, not just staffing
-//   never more units than she declared    — capacity is what she said she can deliver
-//   never more than the order still needs — the alternative is quietly paying for surplus
+//   she must actually have the skill    — the order needs doing, not just staffing
+//   never more units than she declared  — capacity is what she said she can deliver
+//
+// A third once existed — never more than the order still needs — and it was wrong. It meant a
+// covered team was a closed team: once the engine's arithmetic said "complete", the customer
+// could not add the woman she has worked with for ten years, and got "That skill is already
+// covered" instead. Coverage is the engine's opinion about a minimum, not a cap on who may
+// work. Team size is the customer's decision.
+//
+// Over-assigning is therefore allowed but never silent: the response says so, so the screen can
+// show it rather than the customer discovering the surplus on the invoice.
 //
 // Adding to a confirmed team is allowed and sends her an invitation immediately, which is how
 // a customer fills a slot left by somebody who declined. She still has to accept.
@@ -77,10 +85,13 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (!provRes.data.available) throw new HttpError(409, "She is not available for work");
   if (!skillRes.data) throw new HttpError(400, "She does not list that skill");
 
+  // Still consulted, but as a default rather than a ceiling: fill what is missing unless the
+  // customer asked for a specific number, and when nothing is missing give her a single unit.
+  // shortfallFor still rejects a skill this order does not need at all, which is a different
+  // thing from a skill that is merely already covered.
   const remaining = await shortfallFor(teamId, skillId);
-  if (remaining <= 0) throw new HttpError(409, "That skill is already covered");
 
-  const give = Math.min(units ?? remaining, remaining, provRes.data.capacity);
+  const give = Math.min(units ?? Math.max(1, remaining), provRes.data.capacity);
   if (give <= 0) throw new HttpError(400, "That would assign her no work");
 
   const { error: insErr } = await supabaseAdmin.from("team_members").insert({
@@ -95,5 +106,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (insErr) throw new HttpError(500, insErr.message);
 
   const { complete, rationale } = await recomputeCoverage(teamId);
-  res.status(200).json({ assignedUnits: give, complete, rationale });
+  // `overAssigned` is how the screen knows to say "more than this order needs" — the customer
+  // may well have meant it, but they should be told rather than left to notice.
+  res.status(200).json({ assignedUnits: give, overAssigned: give > remaining, complete, rationale });
 });
