@@ -120,6 +120,23 @@ const DICT: Record<string, { ml: string; en: string }> = {
   ok: { ml: "ശരി", en: "OK" },
   teamOrderNotice: { ml: "ഇത് ഒരു ടീം ഓർഡറാണ്.", en: "This is a team order." },
   demoOtp: { ml: "(ഡെമോ) OTP:", en: "(demo) OTP:" },
+  // Sign-in failures, kept apart because they call for opposite actions: look again at the
+  // SMS, or give up on it and ask for a new one.
+  errWrongCode: { ml: "കോഡ് ശരിയല്ല. ഒന്നുകൂടി നോക്കൂ.", en: "That code is not right. Check it again." },
+  errCodeExpired: {
+    ml: "ഈ കോഡിന്റെ സമയം കഴിഞ്ഞു. പുതിയ കോഡ് ചോദിക്കൂ.",
+    en: "That code has expired. Ask for a new one.",
+  },
+  errTooManyTries: {
+    ml: "വളരെയധികം തവണ ശ്രമിച്ചു. പുതിയ കോഡ് ചോദിക്കൂ.",
+    en: "Too many attempts. Ask for a new code.",
+  },
+  errBadPhone: { ml: "10 അക്ക ഫോൺ നമ്പർ നൽകൂ.", en: "Enter a valid 10-digit phone number." },
+  errSendFailed: {
+    ml: "കോഡ് അയയ്ക്കാൻ കഴിഞ്ഞില്ല. ഒന്നുകൂടി ശ്രമിക്കൂ.",
+    en: "Could not send the code. Please try again.",
+  },
+  resendCode: { ml: "പുതിയ കോഡ് അയയ്ക്കുക", en: "Send a new code" },
   errorGeneric: { ml: "എന്തോ കുഴപ്പം സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.", en: "Something went wrong. Please try again." },
   tagline: { ml: "വൈദഗ്ധ്യം വരുമാനമാക്കുന്നു", en: "Weaving skills into income" },
   deleteImage: { ml: "ചിത്രം നീക്കുക", en: "Remove image" },

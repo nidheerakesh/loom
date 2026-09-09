@@ -1,12 +1,23 @@
 // Thin fetch wrapper for the /api/* Vercel functions, replacing convex/react's
 // useQuery/useMutation/useAction. Same-origin — Vercel serves /api alongside the SPA.
 
-export class ApiError extends Error {}
+// `reason` is the server's stable code for the failure, when it has one. The message is
+// English; the reason is what lets a Malayalam screen say the right thing instead.
+export class ApiError extends Error {
+  reason?: string;
+  constructor(message: string, reason?: string) {
+    super(message);
+    this.reason = reason;
+  }
+}
 
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(typeof body.error === "string" ? body.error : `Request failed (${res.status})`);
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : `Request failed (${res.status})`,
+      typeof body.reason === "string" ? body.reason : undefined,
+    );
   }
   return res.json() as Promise<T>;
 }

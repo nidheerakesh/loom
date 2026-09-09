@@ -10,6 +10,8 @@
 //   npx vercel env add OTP_TEST_NUMBERS   # e.g. "+919999900001:123456,+919999900002:123456"
 // If Twilio env vars are unset, callers fall back to an on-screen mock code (demo-only).
 
+import { HttpError } from "./http.js";
+
 export function twilioConfigured(): boolean {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID,
@@ -22,7 +24,9 @@ export function toE164(phone: string): string {
   if (digits.startsWith("+")) return digits;
   if (digits.length === 10) return `+91${digits}`;
   if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  throw new Error("Enter a valid 10-digit phone number");
+  // HttpError, not Error: a plain Error becomes a bare 500 "Internal error", which is what a
+  // mistyped phone number used to produce — a user mistake reported as a server crash.
+  throw new HttpError(400, "Enter a valid 10-digit phone number", "bad-phone");
 }
 
 // Reserved test numbers, e.g. "+919999900001:123456,+919999900002:123456" — these
@@ -61,35 +65,79 @@ export async function startVerification(e164: string): Promise<void> {
     headers: { authorization: authHeader(), "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ To: e164, Channel: "sms" }),
   });
-  if (!res.ok) {
-    console.error(`[twilio] start ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    throw new Error("Could not send code — try again");
+  if (res.ok) return;
+
+  // Twilio puts a numeric `code` and a human `message` in the error body. Both go to the log:
+  // every send failure used to surface as "Internal error", which says nothing about whether
+  // the fault is the number, the account, or the service.
+  const body = await res.text();
+  let twilioCode: number | undefined;
+  try {
+    twilioCode = JSON.parse(body)?.code;
+  } catch {
+    /* non-JSON error body; the raw text below is the whole diagnostic */
   }
+  console.error(`[twilio] start ${res.status} code=${twilioCode ?? "?"}: ${body.slice(0, 300)}`);
+
+  // 21608 is the trial-account restriction: an unverified destination number. It is the single
+  // most likely failure on a trial account and it is not a bug — but "Internal error" sends you
+  // looking for one.
+  if (twilioCode === 21608) {
+    throw new HttpError(
+      400,
+      "This number is not verified in Twilio. A trial account can only send to numbers you have verified in the console.",
+      "unverified-recipient",
+    );
+  }
+  if (res.status === 429) {
+    throw new HttpError(429, "Too many codes requested. Wait a few minutes.", "send-rate-limited");
+  }
+  throw new HttpError(502, "Could not send the code — try again", "send-failed");
 }
 
-export async function checkVerification(e164: string, code: string): Promise<boolean> {
+// Twilio Verify owns the code, so "wrong code" is its verdict, not ours — but that verdict has
+// several distinct causes that all arrived here as a single `false`:
+//
+//   wrong-code       the digits genuinely do not match
+//   code-expired     no pending verification: it aged out (~10 min), was already approved,
+//                    or a second "send code" tap cancelled the SMS she is reading
+//   too-many-tries   Twilio locked this verification after repeated wrong guesses
+//
+// Collapsing these told her to re-read a code that could no longer work no matter how
+// carefully she typed it. Each one now has its own instruction.
+export type CheckResult =
+  | { approved: true }
+  | { approved: false; reason: "wrong-code" | "code-expired" | "too-many-tries" };
+
+export async function checkVerification(e164: string, code: string): Promise<CheckResult> {
   const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID!;
   const res = await fetch(`https://verify.twilio.com/v2/Services/${serviceSid}/VerificationChecks`, {
     method: "POST",
     headers: { authorization: authHeader(), "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ To: e164, Code: code.trim() }),
   });
+
   if (!res.ok) {
-    if (res.status === 404) {
-      // No pending verification for this number — expired, already used, or superseded by a
-      // second "send code" tap. Logged because it looks identical to a typo'd digit from
-      // outside, and that distinction is the only way to tell them apart.
-      console.error(`[twilio] check 404 for ${e164}: no pending verification (expired or superseded)`);
-      return false;
+    const body = await res.text();
+    let twilioCode: number | undefined;
+    try {
+      twilioCode = JSON.parse(body)?.code;
+    } catch {
+      /* non-JSON error body */
     }
-    console.error(`[twilio] check ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    throw new Error("Could not verify code — try again");
+    console.error(`[twilio] check ${res.status} code=${twilioCode ?? "?"}: ${body.slice(0, 300)}`);
+
+    // 404: the verification is simply gone. 60202: the max-check-attempts limit.
+    if (res.status === 404) return { approved: false, reason: "code-expired" };
+    if (twilioCode === 60202 || res.status === 429) return { approved: false, reason: "too-many-tries" };
+    throw new HttpError(502, "Could not check the code — try again", "check-failed");
   }
+
   const data = await res.json();
-  if (data?.status !== "approved") {
-    // Twilio's own reason the digits didn't match: "pending" (genuinely wrong), "canceled"
-    // (a later "send code" replaced this one), "max_attempts_reached" (too many wrong tries).
-    console.error(`[twilio] check status=${data?.status} for ${e164}`);
-  }
-  return data?.status === "approved";
+  if (data?.status === "approved") return { approved: true };
+
+  console.error(`[twilio] check status=${data?.status} for ${e164}`);
+  // "canceled" means a newer verification replaced this one — same practical advice as expiry:
+  // the SMS in her hand is dead, ask for a fresh one.
+  return { approved: false, reason: data?.status === "canceled" ? "code-expired" : "wrong-code" };
 }

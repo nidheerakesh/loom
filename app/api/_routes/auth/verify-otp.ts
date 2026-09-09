@@ -25,9 +25,10 @@ async function verifyMockOtp(phoneHash: string, code: string): Promise<void> {
     .eq("phone_hash", phoneHash)
     .maybeSingle();
   if (error) throw new HttpError(500, error.message);
-  if (!otp) throw new HttpError(401, "Request a code first");
-  if (new Date(otp.expires_at).getTime() < Date.now()) throw new HttpError(401, "Code expired");
-  if (otp.code_hash !== fnv1a("code:" + code)) throw new HttpError(401, "Wrong code");
+  if (!otp) throw new HttpError(401, "Request a code first", "code-expired");
+  if (new Date(otp.expires_at).getTime() < Date.now())
+    throw new HttpError(401, "That code has expired. Ask for a new one.", "code-expired");
+  if (otp.code_hash !== fnv1a("code:" + code.trim())) throw new HttpError(401, "Wrong code", "wrong-code");
   const { error: consumeErr } = await supabaseAdmin.from("otps").delete().eq("id", otp.id);
   // A code that cannot be consumed is a code that can be replayed.
   if (consumeErr) throw new HttpError(500, consumeErr.message);
@@ -48,10 +49,20 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const testCode = testCodeFor(e164);
   if (testCode !== null) {
-    if (code !== testCode) throw new HttpError(401, "Wrong code");
+    if (code.trim() !== testCode) throw new HttpError(401, "Wrong code", "wrong-code");
   } else if (twilioConfigured()) {
-    const approved = await checkVerification(e164, code);
-    if (!approved) throw new HttpError(401, "Wrong code");
+    const result = await checkVerification(e164, code);
+    if (!result.approved) {
+      // Twilio's reason travels to the client so it can be said in Malayalam. An expired code
+      // and a mistyped one need opposite actions — ask for a new one, or look again.
+      const message =
+        result.reason === "code-expired"
+          ? "That code has expired. Ask for a new one."
+          : result.reason === "too-many-tries"
+            ? "Too many attempts. Ask for a new code."
+            : "Wrong code";
+      throw new HttpError(401, message, result.reason);
+    }
   } else {
     await verifyMockOtp(phoneHash, code);
   }

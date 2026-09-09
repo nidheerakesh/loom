@@ -17,6 +17,18 @@ type VerifyResult =
 
 type Step = "phone" | "code" | "choose" | "signup";
 
+// The server's English message is the fallback; its `reason` is what gets translated. A woman
+// signing in reads Malayalam, and "wrong code" and "expired code" ask her to do different
+// things — one to look again, one to stop looking and request another.
+const REASON_KEYS: Record<string, string> = {
+  "wrong-code": "errWrongCode",
+  "code-expired": "errCodeExpired",
+  "too-many-tries": "errTooManyTries",
+  "bad-phone": "errBadPhone",
+  "send-failed": "errSendFailed",
+  "send-rate-limited": "errTooManyTries",
+};
+
 export function SignIn() {
   const { setToken, t, lang, setLang } = useAuth();
 
@@ -30,6 +42,8 @@ export function SignIn() {
   const [role, setRole] = useState<Role>("provider");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // The code on her phone can no longer work — expired, or locked by too many tries.
+  const [stale, setStale] = useState(false);
 
   const run = async (fn: () => Promise<void>) => {
     setErr(null);
@@ -37,7 +51,14 @@ export function SignIn() {
     try {
       await fn();
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : String(e));
+      if (e instanceof ApiError) {
+        const key = e.reason ? REASON_KEYS[e.reason] : undefined;
+        setErr(key ? t(key) : e.message);
+        // A dead code cannot be fixed by retyping it, so stop offering that as the next step.
+        setStale(e.reason === "code-expired" || e.reason === "too-many-tries");
+      } else {
+        setErr(String(e));
+      }
     } finally {
       setBusy(false);
     }
@@ -47,6 +68,8 @@ export function SignIn() {
     run(async () => {
       const res = await apiPost<{ devCode: string | null }>("/api/auth/request-otp", { phone });
       setDevCode(res.devCode);
+      setCode("");
+      setStale(false);
       setStep("code");
     });
 
@@ -82,6 +105,7 @@ export function SignIn() {
     setDevCode(null);
     setTicket("");
     setErr(null);
+    setStale(false);
   };
 
   return (
@@ -125,9 +149,20 @@ export function SignIn() {
               autoFocus
               onChange={(e) => setCode(e.target.value)}
             />
-            <Button className="w-full" onClick={() => void verify()} disabled={code.length < 4 || busy}>
-              {t("verify")}
+            {/* Once the code is dead, resending is the only thing that helps — so it becomes
+                the primary button and verifying is switched off. */}
+            <Button
+              className="w-full"
+              onClick={() => (stale ? void sendCode() : void verify())}
+              disabled={busy || (!stale && code.length < 4)}
+            >
+              {stale ? t("resendCode") : t("verify")}
             </Button>
+            {!stale && (
+              <TextButton className="mt-3 w-full" onClick={() => void sendCode()} disabled={busy}>
+                {t("resendCode")}
+              </TextButton>
+            )}
             <TextButton className="mt-3 w-full" onClick={restart}>
               {t("changeNumber")}
             </TextButton>
