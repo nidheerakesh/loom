@@ -12,7 +12,14 @@
 
 import { HttpError } from "./http.js";
 
+// TWILIO_DISABLED is a kill switch separate from the credentials themselves, so turning Twilio
+// off for the sprint before a demo doesn't mean re-pasting three secrets to turn it back on.
+// With it set, every number — including a real one — gets the on-screen code instead of an SMS.
+// That is strictly weaker than the 21608-only fallback: it applies to numbers Twilio could have
+// reached too, so anyone who can call this endpoint for a given number can read that number's
+// code. Turn it off again before a real user signs in for keeps.
 export function twilioConfigured(): boolean {
+  if (process.env.TWILIO_DISABLED === "true") return false;
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID,
   );
