@@ -148,6 +148,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
   // what stops "replace" and "add" both being half-open at once.
   type Picking = { kind: "swap"; member: TeamMember } | { kind: "add"; skill: TeamSkill };
   const [picking, setPicking] = useState<Picking | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const pickingSkillId = picking?.kind === "swap" ? picking.member.skillId : picking?.skill.skillId;
 
   const { data: candidates } = useQuery({
@@ -192,7 +193,6 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
       setPicking(null);
     },
   });
-  const [notice, setNotice] = useState<string | null>(null);
   const removeMember = useMutation({
     mutationFn: (providerId: string) =>
       apiPost("/api/team-assembly/remove-member", { token, teamId, providerId }),
