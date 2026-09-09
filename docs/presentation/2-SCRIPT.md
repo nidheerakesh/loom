@@ -208,7 +208,7 @@ sounds like engineering.]**
 > And a hundred and fifteen automated checks run against the live deployment. All passing. That
 > harness is in the repo; you can run it yourself.
 
-**[CUT the middle paragraph if short on time. Keep 115/115.]**
+**[CUT the middle paragraph if short on time. Keep 125/125.]**
 
 ---
 

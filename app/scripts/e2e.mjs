@@ -237,10 +237,13 @@ async function main() {
   ok("customer posts a group order", grp.status === 200 && grp.data?.teamSuggested === true, `id=${grp.data?.requestId}`);
   const grpId = grp.data.requestId;
 
+  // Group orders are an open call now (superseding the 8 Aug regression this used to guard,
+  // which required the opposite): any provider who can do the work sees it in the same feed as
+  // individual work, and applies the same way — requests/respond.ts, not a route of its own.
   const feedP2 = await get("matching/feed", { token: A.p2.token });
-  ok("group orders stay OUT of the individual work feed",
-    Array.isArray(feedP2.data) && feedP2.data.length >= 0 && !feedP2.data.some((c) => c.requestId === grpId),
-    "regression found by the 8 Aug runbook");
+  ok("group orders now appear in the same feed as individual work — it's an open call",
+    Array.isArray(feedP2.data) && feedP2.data.some((c) => c.requestId === grpId),
+    `${feedP2.data?.length} cards`);
 
   const asm = await post("team-assembly/assemble", { token: A.c2.token, requestId: grpId });
   ok("team assembled", asm.status === 200 && Boolean(asm.data?.teamId), `teamId=${asm.data?.teamId} complete=${asm.data?.complete}`);
@@ -403,6 +406,61 @@ async function main() {
         `${swapAccepted.status} ${swapAccepted.data?.error ?? ""} — swapping her would revoke work she agreed to`);
     }
   }
+
+  // ── F2 · GROUP OPEN CALL ─────────────────────────────────────────────────────
+  // The customer's other way to staff a group order: state how many people she wants and by
+  // when, let everyone who can do the work apply through the same feed and respond route
+  // individual work already uses, and choose herself once she's seen who applied.
+  section("F2 · Group open call");
+  const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const openCall = await post("requests/create", {
+    token: A.c2.token, title: "E2E open call", description: "automated test",
+    mode: "group", units: 2, headcount: 2, interestDeadline: future,
+    skills: [{ skillId: newSkillId, quantity: 2 }],
+  });
+  const openCallId = openCall.data.requestId;
+  ok("customer posts an open call with a headcount and a deadline", openCall.status === 200, `id=${openCallId}`);
+
+  const feedP3 = await get("matching/feed", { token: A.p3.token });
+  ok("the open call appears in the same feed individual work uses",
+    Array.isArray(feedP3.data) && feedP3.data.some((c) => c.requestId === openCallId),
+    `headcount ${feedP3.data?.find((c) => c.requestId === openCallId)?.headcount}`);
+
+  for (const k of ["p1", "p2", "p3"]) {
+    const r = await post("requests/respond", { token: A[k].token, requestId: openCallId, accept: true });
+    ok(`${A[k].name} applies to the open call`, r.status === 200, `state=${r.data?.state}`);
+  }
+
+  const over = await post("requests/select-team", {
+    token: A.c2.token, requestId: openCallId, providerIds: [A.p1.userId, A.p2.userId, A.p3.userId],
+  });
+  ok("selecting more than the headcount is refused",
+    over.status === 400 && over.data?.reason === "over-headcount", `${over.status} ${over.data?.error ?? ""}`);
+
+  const sel = await post("requests/select-team", {
+    token: A.c2.token, requestId: openCallId, providerIds: [A.p1.userId, A.p2.userId],
+  });
+  ok("customer selects two of the three who applied", sel.status === 200 && sel.data?.selected === 2,
+    `selected=${sel.data?.selected}`);
+
+  const applicantsAfter = await get("requests/interested-providers", { token: A.c2.token, requestId: openCallId });
+  const stateOf = (id) => applicantsAfter.data?.find((a) => a.providerId === id)?.state;
+  ok("the two she picked are 'accepted', the one she didn't is 'declined'",
+    stateOf(A.p1.userId) === "accepted" && stateOf(A.p2.userId) === "accepted" && stateOf(A.p3.userId) === "declined",
+    JSON.stringify(applicantsAfter.data?.map((a) => `${a.name}:${a.state}`)));
+
+  const p3After = await get("requests/my-accepted", { token: A.p3.token });
+  ok("the one not picked no longer sees this job as active",
+    !(p3After.data ?? []).some((r) => r._id === openCallId));
+
+  const past = new Date(Date.now() - 1000).toISOString();
+  const closedCall = await post("requests/create", {
+    token: A.c2.token, title: "E2E closed open call", description: "automated test",
+    mode: "group", units: 1, interestDeadline: past, skills: [{ skillId: newSkillId, quantity: 1 }],
+  });
+  const late = await post("requests/respond", { token: A.p1.token, requestId: closedCall.data.requestId, accept: true });
+  ok("applying after the interest deadline is refused",
+    late.status === 409 && late.data?.reason === "interest-deadline-passed", `${late.status} ${late.data?.error ?? ""}`);
 
   // ── G · CHAT PRIVACY ────────────────────────────────────────────────────────
   section("G · Chat and privacy");
