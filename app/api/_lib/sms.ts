@@ -58,14 +58,20 @@ function authHeader(): string {
   return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
 }
 
-export async function startVerification(e164: string): Promise<void> {
+// "sent", or "unverified-recipient" meaning Twilio will never deliver to this number at all.
+// The second is a fact about the destination rather than a fault, so the caller decides what to
+// do about it. Every other failure still throws — see the comment on the 21608 branch below for
+// why that distinction is load-bearing rather than tidy.
+export type StartResult = "sent" | "unverified-recipient";
+
+export async function startVerification(e164: string): Promise<StartResult> {
   const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID!;
   const res = await fetch(`https://verify.twilio.com/v2/Services/${serviceSid}/Verifications`, {
     method: "POST",
     headers: { authorization: authHeader(), "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ To: e164, Channel: "sms" }),
   });
-  if (res.ok) return;
+  if (res.ok) return "sent";
 
   // Twilio puts a numeric `code` and a human `message` in the error body. Both go to the log:
   // every send failure used to surface as "Internal error", which says nothing about whether
@@ -79,16 +85,15 @@ export async function startVerification(e164: string): Promise<void> {
   }
   console.error(`[twilio] start ${res.status} code=${twilioCode ?? "?"}: ${body.slice(0, 300)}`);
 
-  // 21608 is the trial-account restriction: an unverified destination number. It is the single
-  // most likely failure on a trial account and it is not a bug — but "Internal error" sends you
-  // looking for one.
-  if (twilioCode === 21608) {
-    throw new HttpError(
-      400,
-      "This number is not verified in Twilio. A trial account can only send to numbers you have verified in the console.",
-      "unverified-recipient",
-    );
-  }
+  // 21608 is the trial-account restriction: a destination not on the console's verified list.
+  // No SMS will ever arrive for it, so retrying is pointless and the caller needs to know.
+  //
+  // This is matched on the numeric body code and NOT on `res.status === 400`, deliberately. A
+  // malformed request is also a 400, and treating the two alike would let a bad parameter open
+  // the caller's fallback path. Everything below still throws for the same reason: if a rate
+  // limit or a revoked credential could reach the fallback, then breaking Twilio would be how
+  // you sign in as somebody else.
+  if (twilioCode === 21608) return "unverified-recipient";
   if (res.status === 429) {
     throw new HttpError(429, "Too many codes requested. Wait a few minutes.", "send-rate-limited");
   }

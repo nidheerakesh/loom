@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "../api/_lib/supabase.js";
-import { fnv1a as hash } from "../api/_lib/text.js";
+import { hashPhone } from "../api/_lib/text.js";
 import { clearTables, seedReference, USER_TABLES } from "./seedHelpers.js";
 import { PROVIDERS, PORTFOLIO_CAPTIONS, RATING_COMMENTS, CUSTOMERS, REQUESTS, CHAT } from "./demoData.js";
 
@@ -15,7 +15,7 @@ import { PROVIDERS, PORTFOLIO_CAPTIONS, RATING_COMMENTS, CUSTOMERS, REQUESTS, CH
 // made of seeded providers, so neither the order nor the invitations it produces could be
 // reached from the app.
 //
-// auth/request-otp derives the account from `fnv1a("phone:" + e164)`, so seeding that exact
+// auth/request-otp derives the account from `hashPhone(e164)`, so seeding that exact
 // value against a known number makes these accounts reachable through the ordinary OTP flow —
 // no bypass, no special case in the app.
 //
@@ -23,7 +23,7 @@ import { PROVIDERS, PORTFOLIO_CAPTIONS, RATING_COMMENTS, CUSTOMERS, REQUESTS, CH
 // first-time sign-ups, so "returning user" and "new user" journeys stay separable.
 const providerPhone = (i: number) => `98765${30001 + i}`;
 const customerPhone = (i: number) => `98765${40001 + i}`;
-const phoneHash = (phone: string) => hash("phone:+91" + phone);
+const phoneHash = (phone: string) => hashPhone("+91" + phone);
 
 async function main() {
   await clearTables(USER_TABLES);

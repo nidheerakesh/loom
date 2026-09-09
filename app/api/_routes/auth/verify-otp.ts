@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
-import { fnv1a } from "../../_lib/text.js";
+import { fnv1a, hashPhone } from "../../_lib/text.js";
 import { toE164, testCodeFor, twilioConfigured, checkVerification, isAdminPhone } from "../../_lib/sms.js";
 import { accountId, createSession, rolesForPhone } from "../../_lib/accounts.js";
 import { issueTicket } from "../../_lib/ticket.js";
@@ -45,7 +45,7 @@ async function verifyMockOtp(phoneHash: string, code: string): Promise<void> {
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { phone, code } = Body.parse(req.body);
   const e164 = toE164(phone);
-  const phoneHash = fnv1a("phone:" + e164);
+  const phoneHash = hashPhone(e164);
 
   const testCode = testCodeFor(e164);
   if (testCode !== null) {
@@ -53,15 +53,24 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   } else if (twilioConfigured()) {
     const result = await checkVerification(e164, code);
     if (!result.approved) {
-      // Twilio's reason travels to the client so it can be said in Malayalam. An expired code
-      // and a mistyped one need opposite actions — ask for a new one, or look again.
-      const message =
-        result.reason === "code-expired"
-          ? "That code has expired. Ask for a new one."
-          : result.reason === "too-many-tries"
-            ? "Too many attempts. Ask for a new code."
-            : "Wrong code";
-      throw new HttpError(401, message, result.reason);
+      // Twilio's answer is final whenever it has one. "code-expired" is the single exception,
+      // because it is Twilio's 404 — it holds no verification for this number at all, which is
+      // exactly the state request-otp leaves behind when 21608 sent it down the mock path. So
+      // this is the one branch where a stored code can still be the truth.
+      if (result.reason === "code-expired" && process.env.DEMO_OTP_FALLBACK !== "off") {
+        console.warn(`[demo-otp-fallback] no twilio verification for ${e164} — checking stored code`);
+        await verifyMockOtp(phoneHash, code);
+      } else {
+        // Twilio's reason travels to the client so it can be said in Malayalam. An expired code
+        // and a mistyped one need opposite actions — ask for a new one, or look again.
+        const message =
+          result.reason === "code-expired"
+            ? "That code has expired. Ask for a new one."
+            : result.reason === "too-many-tries"
+              ? "Too many attempts. Ask for a new code."
+              : "Wrong code";
+        throw new HttpError(401, message, result.reason);
+      }
     }
   } else {
     await verifyMockOtp(phoneHash, code);
@@ -74,11 +83,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
-  const roles = await rolesForPhone(phoneHash);
+  const roles = await rolesForPhone(phoneHash, e164);
 
   if (roles.length === 1) {
     const role = roles[0];
-    const userId = await accountId(phoneHash, role);
+    const userId = await accountId(phoneHash, role, e164);
     if (!userId) throw new HttpError(500, "Account lookup failed");
     const token = await createSession(phoneHash, role, userId);
     res.status(200).json({ status: "session", token, role, userId });

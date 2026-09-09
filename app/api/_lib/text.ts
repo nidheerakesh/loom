@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 // Deterministic text helpers — used by skill canonicalization and mock/deterministic
 // hashing. Ported verbatim from convex/lib/text.ts (no external calls, same input
 // always yields same output — preserves determinism).
@@ -6,9 +8,35 @@ export function normalize(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-// FNV-1a hash → hex. NOT cryptographically secure; demo-only stand-in for a salted
-// hash of phone numbers / OTP codes so raw values are never stored, and for
+// HMAC-SHA256 salted phone hash (64 hex characters). Replaces fnv1a, which is a 32-bit
+// non-cryptographic hash: an Indian mobile number has about 10^9 possibilities, so every
+// stored fnv1a digest could be reversed by brute force in seconds. The secret salt is what
+// makes this different — without it, HMAC over the same tiny keyspace is just as reversible.
+//
+// So there is deliberately no default. A missing salt fails the request loudly instead of
+// silently falling back to a constant, because a constant committed to a public repository is
+// not a secret and would leave the hashing purely decorative while looking solved.
+//
+// PHONE_HASH_SALT must be set in Vercel *and* in the local .env used by seed.ts, and the two
+// must match: the seed writes the hashes that sign-in later looks up. Treat it as permanent.
+// Changing it orphans every migrated row — legacyPhoneHash below recovers fnv1a rows, but
+// nothing recovers a row hashed under a previous salt.
+export function hashPhone(e164: string): string {
+  const salt = process.env.PHONE_HASH_SALT;
+  if (!salt) {
+    throw new Error(
+      "PHONE_HASH_SALT is not set. Phone hashing needs a secret salt; refusing to fall back to a constant.",
+    );
+  }
+  return crypto.createHmac("sha256", salt).update("phone:" + e164).digest("hex");
+}
+
+// Legacy FNV-1a hash → hex. Retained for automatic migration of existing rows and
 // deterministically seeding a new signup's location/group index.
+export function legacyPhoneHash(e164: string): string {
+  return fnv1a("phone:" + e164);
+}
+
 export function fnv1a(input: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {

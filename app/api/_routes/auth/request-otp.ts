@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
-import { fnv1a } from "../../_lib/text.js";
+import { fnv1a, hashPhone } from "../../_lib/text.js";
 import { toE164, testCodeFor, twilioConfigured, startVerification } from "../../_lib/sms.js";
 
 // Sign-in is phone + OTP only. No role: at this point nobody knows whether the number belongs
@@ -16,7 +16,8 @@ function genCode(): string {
 }
 
 // Mock fallback: only reached when the number isn't a reserved test number AND
-// Twilio isn't configured (local/demo dev with no keys at all).
+// Twilio isn't configured (local/demo dev with no keys at all), or for trial-account numbers
+// that Twilio refuses (21608) when DEMO_OTP_FALLBACK is not turned off.
 // Upsert on the phone_hash unique constraint, not delete-then-insert — two concurrent
 // requests for the same number (double-click, dev double-fire) used to race and leave
 // two rows behind, which broke verify-otp's .maybeSingle() lookup with a Postgres
@@ -43,7 +44,7 @@ async function storeMockOtp(phoneHash: string): Promise<string> {
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { phone } = Body.parse(req.body);
   const e164 = toE164(phone);
-  const phoneHash = fnv1a("phone:" + e164);
+  const phoneHash = hashPhone(e164);
 
   // 1. Reserved test numbers bypass everything — no SMS, no cost, works on any env.
   if (testCodeFor(e164) !== null) {
@@ -52,13 +53,32 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   // 2. Real SMS via Twilio Verify when configured.
+  //
+  // A Twilio trial account only delivers to numbers verified in its console and refuses every
+  // other destination with 21608. The seeded demo is around forty fictional numbers and the test
+  // suite adds five more; none of them can ever be verified, because nobody owns the handset.
+  // An undeliverable number falls through to the on-screen code instead.
+  //
+  // SECURITY: on that path the code goes to whoever ASKED for it, not to whoever holds the
+  // phone, so sign-in stops being authentication for any number it applies to. Confined to
+  // numbers Twilio refused outright. Set DEMO_OTP_FALLBACK=off to restore hard failure.
   if (twilioConfigured()) {
-    await startVerification(e164);
-    res.status(200).json({ devCode: null });
-    return;
+    const started = await startVerification(e164);
+    if (started === "sent") {
+      res.status(200).json({ devCode: null });
+      return;
+    }
+    if (process.env.DEMO_OTP_FALLBACK === "off") {
+      throw new HttpError(
+        400,
+        "This number is not verified in Twilio. A trial account can only send to numbers you have verified in the console.",
+        "unverified-recipient",
+      );
+    }
+    console.warn(`[demo-otp-fallback] twilio refused ${e164} (21608) — showing code instead`);
   }
 
-  // 3. Keyless mock fallback (local/demo dev only) — code shown on screen.
+  // 3. Mock fallback — code shown on screen.
   const code = await storeMockOtp(phoneHash);
   console.log(`[mock-otp] phone=${e164} code=${code}`);
   res.status(200).json({ devCode: code });

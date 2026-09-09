@@ -2,17 +2,36 @@ import { HttpError } from "./http.js";
 import { supabaseAdmin } from "./supabase.js";
 import { fnv1a } from "./text.js";
 
+import { legacyPhoneHash } from "./text.js";
+
 export type AccountRole = "provider" | "customer";
 
 // Which accounts a phone number already owns. A number may hold both — someone who stitches
 // for a living can also hire a caterer — so this returns a list rather than a single role.
-export async function rolesForPhone(phoneHash: string): Promise<AccountRole[]> {
-  const [prov, cust] = await Promise.all([
+// Transparently migrates any legacy fnv1a phone_hash to the HMAC-SHA256 hash when e164 is provided.
+export async function rolesForPhone(phoneHash: string, e164?: string): Promise<AccountRole[]> {
+  let [prov, cust] = await Promise.all([
     supabaseAdmin.from("providers").select("id").eq("phone_hash", phoneHash).maybeSingle(),
     supabaseAdmin.from("customers").select("id").eq("phone_hash", phoneHash).maybeSingle(),
   ]);
   if (prov.error) throw new HttpError(500, prov.error.message);
   if (cust.error) throw new HttpError(500, cust.error.message);
+
+  if (!prov.data && !cust.data && e164) {
+    const oldHash = legacyPhoneHash(e164);
+    const [oldProv, oldCust] = await Promise.all([
+      supabaseAdmin.from("providers").select("id").eq("phone_hash", oldHash).maybeSingle(),
+      supabaseAdmin.from("customers").select("id").eq("phone_hash", oldHash).maybeSingle(),
+    ]);
+    if (oldProv.data) {
+      await supabaseAdmin.from("providers").update({ phone_hash: phoneHash }).eq("id", oldProv.data.id);
+      prov = oldProv;
+    }
+    if (oldCust.data) {
+      await supabaseAdmin.from("customers").update({ phone_hash: phoneHash }).eq("id", oldCust.data.id);
+      cust = oldCust;
+    }
+  }
 
   const roles: AccountRole[] = [];
   if (prov.data) roles.push("provider");
@@ -20,7 +39,7 @@ export async function rolesForPhone(phoneHash: string): Promise<AccountRole[]> {
   return roles;
 }
 
-export async function accountId(phoneHash: string, role: AccountRole): Promise<string | null> {
+export async function accountId(phoneHash: string, role: AccountRole, e164?: string): Promise<string | null> {
   const table = role === "provider" ? "providers" : "customers";
   const { data, error } = await supabaseAdmin
     .from(table)
@@ -28,7 +47,21 @@ export async function accountId(phoneHash: string, role: AccountRole): Promise<s
     .eq("phone_hash", phoneHash)
     .maybeSingle();
   if (error) throw new HttpError(500, error.message);
-  return data?.id ?? null;
+  if (data) return data.id;
+
+  if (e164) {
+    const oldHash = legacyPhoneHash(e164);
+    const { data: oldData } = await supabaseAdmin
+      .from(table)
+      .select("id")
+      .eq("phone_hash", oldHash)
+      .maybeSingle();
+    if (oldData) {
+      await supabaseAdmin.from(table).update({ phone_hash: phoneHash }).eq("id", oldData.id);
+      return oldData.id;
+    }
+  }
+  return null;
 }
 
 // Deterministic seeded location/group so a fresh signup is matchable within the cluster.

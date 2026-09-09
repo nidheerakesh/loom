@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "test:e2e": "node scripts/e2e.mjs",
-    "reset-users": "tsx --env-file=.env.local scripts/reset-users.ts"
+    "reset-users": "tsx --env-file=.env.local scripts/reset-users.ts",
+    "rehash-phones": "tsx --env-file=.env.local scripts/rehash-phones.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",

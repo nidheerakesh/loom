@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { supabaseAdmin } from "../../_lib/supabase.js";
-import { fnv1a, normalize } from "../../_lib/text.js";
+import { hashPhone, legacyPhoneHash, normalize } from "../../_lib/text.js";
 import { toE164 } from "../../_lib/sms.js";
 import { distanceMap } from "../../_lib/geo.js";
 import { score, skillFit } from "../../_lib/scoring.js";
@@ -13,7 +13,7 @@ import { transcribe, sttConfigured } from "../../_lib/speech.js";
 // the two things that matter, finding work and taking it, where she already is.
 //
 // Identity comes free. WhatsApp has already verified the sender's number, and accounts are
-// keyed on `fnv1a("phone:" + e164)` — the same hash auth/request-otp computes — so a message
+// keyed on `hashPhone(e164)` — the same hash auth/request-otp computes — so a message
 // resolves to a provider with no OTP, no password and no session.
 //
 // Two networks, one engine. Meta's Cloud API and Twilio deliver completely different payloads
@@ -48,10 +48,22 @@ async function providerFor(e164: string) {
   const { data, error } = await supabaseAdmin
     .from("providers")
     .select("id, name, home_location_id")
-    .eq("phone_hash", fnv1a("phone:" + e164))
+    .eq("phone_hash", hashPhone(e164))
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  if (data) return data;
+
+  // A row written before the move to HMAC hashing is still keyed on the old fnv1a value. The
+  // sign-in path migrates those rows as it finds them; this one only reads, because a webhook
+  // must stay side-effect-free with respect to identity — she has not proved anything here
+  // beyond WhatsApp's own verification of the sender.
+  const { data: legacy, error: legacyError } = await supabaseAdmin
+    .from("providers")
+    .select("id, name, home_location_id")
+    .eq("phone_hash", legacyPhoneHash(e164))
+    .maybeSingle();
+  if (legacyError) throw new Error(legacyError.message);
+  return legacy;
 }
 
 // The individual work feed, ranked exactly as matching/feed.ts ranks it. Deliberately its own
