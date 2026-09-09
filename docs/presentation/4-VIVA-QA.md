@@ -265,7 +265,7 @@ something. Know the reasoning, not just the choice.*
 > absolute.
 
 **How do you know it works?**
-> Two layers. A 52-check manual runbook covering every user journey, and 78 automated checks that
+> Two layers. A 52-check manual runbook covering every user journey, and 115 automated checks that
 > drive the deployed API exactly as the UI does — real accounts through the real OTP flow, no
 > mocks, no direct database access. Both pass. The harness is in the repo; you can run it.
 
@@ -428,7 +428,7 @@ something. Know the reasoning, not just the choice.*
 |---|---|
 | Scale | 42 API routes · 24 tables · ~7,200 lines |
 | Speed | **21.0s → 1.35s** on the landing screen |
-| Testing | **78 automated checks against production, all passing** |
+| Testing | **115 automated checks against production, all passing** |
 | Security | 4 chat vulnerabilities found and closed; RLS on all 24 tables |
 | Vocabulary | 110 aliases; typos separate at 0.11 vs 0.25 |
 | Users | **Zero. Pilot is the next milestone.** |

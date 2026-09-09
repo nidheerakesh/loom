@@ -3,7 +3,7 @@
 **Presentation: 16 August 2026.**
 
 The good news, stated plainly so nobody spends tonight on the wrong thing: **the prototype is
-built and deployed.** 78 automated checks pass against the live site, both matching modes work,
+built and deployed.** 115 automated checks pass against the live site, both matching modes work,
 chat is private, the Malayalam interface loads. Nothing on this list is a feature.
 
 What is left is **making the demo not embarrass the build**. Test rows are visible in the app,
@@ -112,7 +112,7 @@ is running" and continue. Judges forgive a network; they remember a team that pa
 ```bash
 cd app
 node scripts/demo-preflight.mjs   # every device account + the headline order, read-only
-node scripts/e2e.mjs              # expect 78/78
+node scripts/e2e.mjs              # expect 115/115
 ```
 
 `demo-preflight.mjs` never assembles a team, so it is safe to run immediately before you walk

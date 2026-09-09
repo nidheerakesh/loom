@@ -69,7 +69,7 @@ Two decisions shaped the entire build:
 | 15 | Customer control — choose, edit, swap, confirm, complete | Complete | `requests/`, `team-assembly/` |
 | 16 | Team chat + provider completion notice | Complete | commit `a0da02f` |
 | 17 | Full demo runbook executed against production | 6/6 sections pass | `docs/DEMO_RUNBOOK.md` |
-| 18 | Automated end-to-end suite against production | 78/78 checks pass | `app/scripts/e2e.mjs` |
+| 18 | Automated end-to-end suite against production | 115/115 checks pass | `app/scripts/e2e.mjs` |
 | 19 | Conversation named after the other participant, per viewer | Complete | `chat/threads.ts`, §7.8 |
 | 20 | Lint clean — 30 pre-existing errors cleared | Complete | `npm run lint`: 0 issues |
 | 21 | Speech-to-text, graph visualisation, admin surface | Not started | see §11 |
@@ -97,7 +97,7 @@ Two decisions shaped the entire build:
 | 2 | 2 Aug | **Full backend migration off Convex** onto Supabase + Vercel Serverless. Every backend function rewritten. Then three deployment faults, each of which reported success (§7.2). |
 | 3 | 2 – 7 Aug | Real demo data; phone + OTP sign-in; chat privacy audit and fixes; **N+1 elimination — the main screen went from 21 s to 1.35 s**; Malayalam defaults and self-hosted font; text-to-speech made real; "My work" view. |
 | 4 | 8 – 9 Aug | Customer control (choose provider, edit request, swap team member); skill matching rewritten to match by **meaning** rather than letter-shape; RLS on every table; six silent database writes fixed; team chat; **full 15-minute runbook run against production, 6/6 sections pass**. |
-| 5 | 15 Aug | **Automated end-to-end suite written and run against production — 78 checks, 0 failures**, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1). |
+| 5 | 15 Aug | **Automated end-to-end suite written and run against production — 78 checks, 0 failures**, driving five real accounts through both lifecycles, chat privacy and authorisation (§9.1). Extended 9 Sep to 115 checks: location capture, WhatsApp, and the demo-OTP fallback. |
 
 This month: roughly one week designing, one week rebuilding the foundation,
 and two weeks hardening — security, performance, language, and the failure modes that look fine
@@ -631,7 +631,7 @@ each get a different answer to the same URL, and the outsider gets `404` rather 
 Two layers: an automated end-to-end suite that drives the deployed API, and a manual runbook
 that drives the screens.
 
-### 9.1 Automated end-to-end suite — 78 checks, 0 failures
+### 9.1 Automated end-to-end suite — 115 checks, 0 failures
 
 `app/scripts/e2e.mjs` (`npm run test:e2e`) signs **three provider accounts and two customer
 accounts** in through the real phone + OTP flow and drives the complete product against
@@ -640,19 +640,23 @@ customers are the minimum that can express the interesting cases: two providers 
 one job, a customer choosing between them, a team whose members accept and decline
 independently, and a non-participant who must be locked out of a conversation.
 
-**Run of 15 August 2026 against production: 78 passed, 0 failed.**
+**Run of 15 August 2026 against production: 78 passed, 0 failed. Re-run 9 September 2026 after
+extending the suite with location capture, WhatsApp, and the demo-OTP fallback: 115 passed, 0
+failed.**
 
 | Section | Checks | What it proves |
 |---|---|---|
-| A · Authentication | 6 | Signup, returning sign-in, `auth/me`, wrong OTP rejected, bogus token yields no session |
-| B · Skill canonicalisation | 7 | `sewing`→`തയ്യൽ` and `catering`→`പാചകം` by alias; `stiching`→stitching by **typo**; `garment finishing`→stitching despite sharing almost no characters; a new phrase becomes its own skill and is reused, not duplicated; **`covering` no longer collapses into cooking** |
+| A · Authentication | 8 | Signup, returning sign-in, `auth/me`, wrong OTP rejected, bogus token yields no session |
+| B · Skill canonicalisation | 8 | `sewing`→`തയ്യൽ` and `catering`→`പാചകം` by alias; `stiching`→stitching by **typo**; `garment finishing`→stitching despite sharing almost no characters; a new phrase becomes its own skill and is reused, not duplicated; **`covering` no longer collapses into cooking** |
 | C · Profiles | 5 | Provider and customer profile writes persist and read back |
-| D · Browse and filters | 5 | 43 cards; skill filter 23/43; price filter 39 ≤ ₹400; distance filter 27 ≤ 5 km; combined 16 |
+| D · Browse and filters | 5 | 40 cards; skill filter 21/40; price filter 38 ≤ ₹400; distance filter 25 ≤ 5 km; combined 15 |
 | E · Individual lifecycle | 17 | Post → ranked feed → **Malayalam narration with score breakdown** → two providers apply → customer chooses → **loser auto-declined** → second choice rejected 409 → edit-after-assign rejected 409 → complete → double-complete rejected 409 → rate → re-rate revises rather than duplicates → appears in history |
-| F · Collective lifecycle | 19 | Group order stays **out** of the individual feed → team assembled, coverage complete → **units split 4 + 2 = 6 respecting capacity** → **determinism: re-assembly yields the identical team** → re-assembly replaces the draft, no orphans → **provider sees nothing before confirm**, and cannot accept even by calling the API directly (409) → swap before confirm → confirm → invitations appear → one accepts, one declines → **declined member replaced on a confirmed team** → **accepted member cannot be swapped out (409)** |
+| F · Collective lifecycle | 32 | Group order stays **out** of the individual feed → team assembled, coverage complete → **units split 4 + 2 = 6 respecting capacity** → **determinism: re-assembly yields the identical team** → re-assembly replaces the draft, no orphans → **provider sees nothing before confirm**, and cannot accept even by calling the API directly (409) → member removed and re-added, coverage recomputed both ways → adding beyond coverage is reported, not hidden → swap before confirm → confirm → invitations appear → one accepts, one declines → **declined member replaced on a confirmed team** → **accepted member cannot be swapped out (409)** |
 | G · Chat and privacy | 7 | Participant reads; **non-participant gets 404, not 403**; her thread list excludes it; re-opening reuses the thread; confirming a team creates the team chat |
-| H · Authorisation | 7 | Request detail 401 without a session; no cross-customer edit (403); no assembling someone else's order (403); customer cannot read the provider feed; grievances scoped to their author |
+| H · Authorisation | 10 | Request detail 401 without a session; no cross-customer edit (403); no assembling someone else's order (403); customer cannot read the provider feed; grievances scoped to their author; moderation list refuses an unauthenticated caller |
 | I · Teardown | 2 | Sign-out kills the token |
+| J · Location | 11 | Named areas offered; raw coordinates never exposed as a choice; a reading near a known area snaps to it, storing nothing new; a reading with nothing nearby is rounded to a ~1km grid; a second reading 30m away reuses the same row; invalid input refused |
+| K · WhatsApp | 10 | Unrecognised message gets the menu, never a guess; Malayalam commands answered in Malayalam; voice notes acknowledged; speak/transcribe round-trip through Sarvam; unregistered numbers refused and told where to sign up |
 
 Selected output, verbatim:
 
@@ -667,7 +671,7 @@ Selected output, verbatim:
 ✅ an ACCEPTED member cannot be swapped out — 409 only a provider who declined can be replaced
 ✅ NON-participant gets 404, not 403 — status=404
 
-  78 passed, 0 failed, 78 checks total
+  115 passed, 0 failed, 115 checks total
 ```
 
 Two behaviours the suite pinned down that are worth stating, because both look like bugs and
@@ -729,7 +733,7 @@ scaffolding. 6 customers, 5 requests spanning `open` / `assembling` / `assigned`
 | Payload halved for low-bandwidth users | 438 KB → 221 KB |
 | Chat privacy | 4 vulnerabilities closed; RLS on 24/24 tables |
 | Silent-failure class eliminated | 6 unchecked writes fixed |
-| Verification discipline | 78-check automated suite (0 failures) **and** a 52-check manual runbook, both against production |
+| Verification discipline | 115-check automated suite (0 failures) **and** a 52-check manual runbook, both against production |
 
 ---
 
@@ -811,7 +815,7 @@ India has built the world's largest network of women's self-help groups and give
 What is missing is the intelligence to route income through that network.
 
 Loom is that layer. This month it went from a planning document to a deployed, secured, measured
-system: 42 routes, 24 tables, a deterministic matching engine, 78 automated checks passing
+system: 42 routes, 24 tables, a deterministic matching engine, 115 automated checks passing
 against the live deployment, and a landing screen taken from 21 seconds to 1.35. Given a large
 order, it composes a capable team across several groups, respects what each member can actually
 deliver, and explains the result in Malayalam.

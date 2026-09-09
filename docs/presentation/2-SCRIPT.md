@@ -205,10 +205,10 @@ sounds like engineering.]**
 > now — that was N-plus-one queries, and our server running in Washington while our users are in
 > Kerala.
 >
-> And seventy-eight automated checks run against the live deployment. All passing. That harness
-> is in the repo; you can run it yourself.
+> And a hundred and fifteen automated checks run against the live deployment. All passing. That
+> harness is in the repo; you can run it yourself.
 
-**[CUT the middle paragraph if short on time. Keep 78/78.]**
+**[CUT the middle paragraph if short on time. Keep 115/115.]**
 
 ---
 

@@ -169,10 +169,10 @@ Table, six rows, nothing else:
 | Database | 24 tables, row-level security on all |
 | Landing screen | **21.0s → 1.35s** |
 | Payload | 438 KB → 221 KB |
-| Automated checks against production | **78 / 78 passing** |
+| Automated checks against production | **115 / 115 passing** |
 | Security | 4 chat vulnerabilities found and closed |
 
-Put `21.0s → 1.35s` and `78/78` in `kasavu`. They are the two numbers a judge remembers.
+Put `21.0s → 1.35s` and `115/115` in `kasavu`. They are the two numbers a judge remembers.
 
 ---
 
