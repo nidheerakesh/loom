@@ -70,7 +70,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
         description,
         mode,
         units,
-        pay: pay === "" ? undefined : Number(pay),
+        pay: mode === "group" ? (agreedRate === "" ? undefined : Number(agreedRate)) : (pay === "" ? undefined : Number(pay)),
         headcount: mode === "group" && headcount !== "" ? headcount : undefined,
         interestDeadline:
           mode === "group" && interestDeadline ? new Date(interestDeadline).toISOString() : undefined,
@@ -123,6 +123,19 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
           <Button variant={mode === "group" ? "primary" : "ghost"} className="flex-1" onClick={() => setMode("group")}>
             {t("group")}
           </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {/* The server enforces the same bounds — a number input is a suggestion, not a
+              constraint — but clamping here means the form cannot show an illegal value. */}
+          <Field label={t("units")} type="number" min={1} max={10000} value={units}
+            onChange={(e) => setUnits(Math.min(10000, Math.max(1, Math.floor(Number(e.target.value)) || 1)))} />
+          {/* A group order's price is the agreed rate below — one figure the whole team is
+              paid at, not a second, differently-labelled place to enter what is really the
+              same number. Asking for both here and again as "agreed rate" is what looked like
+              the form repeating itself. */}
+          {mode === "individual" && (
+            <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
+          )}
         </div>
         {mode === "group" && (
           <div className="grid grid-cols-2 gap-2">
@@ -208,13 +221,6 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
             )}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          {/* The server enforces the same bounds — a number input is a suggestion, not a
-              constraint — but clamping here means the form cannot show an illegal value. */}
-          <Field label={t("units")} type="number" min={1} max={10000} value={units}
-            onChange={(e) => setUnits(Math.min(10000, Math.max(1, Math.floor(Number(e.target.value)) || 1)))} />
-          <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
-        </div>
         <Button className="w-full" onClick={() => void submit()} disabled={!title || selected.size === 0}>
           {t("submit")}
         </Button>
