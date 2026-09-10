@@ -140,6 +140,18 @@ const DICT: Record<string, { ml: string; en: string }> = {
     en: "You've selected more people than the headcount you asked for.",
   },
   groupWork: { ml: "ഗ്രൂപ്പ് ജോലി", en: "Group work" },
+  micSpeak: { ml: "സംസാരിച്ച് ചേർക്കുക", en: "Speak" },
+  micListening: { ml: "കേൾക്കുന്നു…", en: "Listening…" },
+  micReview: { ml: "ഇത് ശരിയാണോ എന്ന് നോക്കൂ", en: "Check this before adding" },
+  micAdd: { ml: "ചേർക്കുക", en: "Add" },
+  micDenied: {
+    ml: "മൈക്ക് അനുവാദം ലഭിച്ചില്ല. ടൈപ്പ് ചെയ്യാം.",
+    en: "Microphone permission was not given. You can still type.",
+  },
+  micError: {
+    ml: "കേൾക്കാൻ കഴിഞ്ഞില്ല. ഒന്നുകൂടി ശ്രമിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ.",
+    en: "Couldn't hear that. Try again, or type instead.",
+  },
   consentTitle: { ml: "തുടരും മുമ്പ്", en: "Before you continue" },
   // Phone hashing moved from fnv1a to salted HMAC-SHA256 (migration 007), which is genuinely
   // hard to reverse — but the copy still doesn't claim "unrecoverable". A leaked salt, or a

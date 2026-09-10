@@ -8,6 +8,7 @@ import { Button, Card, Field, Screen, Stars } from "../../ui";
 import { SignOut } from "./Current";
 import { RoleSwitch } from "../shared/RoleSwitch";
 import { DeleteAccount } from "../shared/DeleteAccount";
+import { SkillMic } from "../shared/SkillMic";
 
 type Readback = { raw: string; canonicalName: string | null; canonicalNameMl: string | null; matchedVia: string };
 type SkillRow = { _id: string; canonicalName: string; canonicalNameMl: string | null; proficiency: number };
@@ -120,6 +121,7 @@ export function ProviderProfile() {
           ))}
         </div>
         <Field placeholder={t("skillsPlaceholder")} value={skillText} onChange={(e) => setSkillText(e.target.value)} />
+        <SkillMic onConfirm={(text) => setSkillText((prev) => (prev ? `${prev}, ${text}` : text))} />
         <Button className="w-full" onClick={() => void addSkills()}>{t("save")}</Button>
         {readback && (
           <div className="mt-3 text-sm space-y-1">

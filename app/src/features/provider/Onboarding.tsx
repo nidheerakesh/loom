@@ -5,6 +5,7 @@ import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { LocationPicker } from "../shared/LocationPicker";
 import { Button, Card, Field, ListenButton, TextButton } from "../../ui";
+import { SkillMic } from "../shared/SkillMic";
 
 type Readback = {
   raw: string;
@@ -99,6 +100,14 @@ export function ProviderOnboarding({ onDone }: { onDone: () => void }) {
             setReadback(null);
           }}
         />
+        {!readback && (
+          <SkillMic
+            onConfirm={(text) => {
+              setSkillText((prev) => (prev ? `${prev}, ${text}` : text));
+              setReadback(null);
+            }}
+          />
+        )}
 
         {!readback && (
           <Button className="w-full" onClick={() => void preview()} disabled={!skillText.trim() || busy}>
