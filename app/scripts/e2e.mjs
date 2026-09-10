@@ -462,6 +462,14 @@ async function main() {
   ok("the one not picked no longer sees this job as active",
     !(p3After.data ?? []).some((r) => r._id === openCallId));
 
+  const openTeamThreads = await get("chat/threads", { token: A.p1.token });
+  ok("an open-call selection creates a team chat too, same as auto-assembly",
+    Array.isArray(openTeamThreads.data) && openTeamThreads.data.length > 0,
+    `${openTeamThreads.data?.length} thread(s) for a selected open-call provider`);
+  const notPickedThreads = await get("chat/threads", { token: A.p3.token });
+  ok("the applicant she didn't pick is not in that chat",
+    !(notPickedThreads.data ?? []).some((t) => (openTeamThreads.data ?? []).some((ot) => ot._id === t._id)));
+
   const past = new Date(Date.now() - 1000).toISOString();
   const closedCall = await post("requests/create", {
     token: A.c2.token, title: "E2E closed open call", description: "automated test",

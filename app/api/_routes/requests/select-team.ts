@@ -14,19 +14,22 @@ const Body = z.object({
 // up for a group order, in one decision. The mirror of choose-provider.ts, but many rather
 // than one — a group order has no single winner.
 //
-// Deliberately does not touch `teams` / `team_members`. Those tables carry a per-skill unit
-// split that team-assembly's coverage engine computes; an open call has no such split — the
-// customer is choosing people, not covering units — and forcing this through that schema
-// would mean inventing numbers nobody entered. `interests` already carries everything this
-// needs: who is on the job (state 'accepted') and who is not (state 'declined'), exactly the
-// distinction requests/my-accepted.ts and matching/feed.ts already read.
+// `interests` alone carries who is on the job (state 'accepted') and who is not ('declined'),
+// which is everything requests/my-accepted.ts and matching/feed.ts need. But a `teams` row is
+// what gives the selected people somewhere to talk — team-assembly/confirm.ts creates a
+// team-context chat thread the moment a team is confirmed, and that machinery (membership
+// resolution, the customer's own Teams screen) already exists and is already tested; reusing
+// it here rather than inventing a second "who can message whom" system for the open call. The
+// per-skill unit split that row usually carries is genuinely not meaningful for an open call
+// (the customer chose people, not units), so covered_units is an even split across whoever she
+// picked — approximate on purpose, cosmetic, not read by anything that enforces coverage.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, requestId, providerIds } = Body.parse(req.body);
   const s = await requireRole(token, "customer");
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, customer_id, mode, status, headcount")
+    .select("id, customer_id, mode, status, headcount, units")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -90,6 +93,68 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     })),
   );
   if (auditErr) throw new HttpError(500, auditErr.message);
+
+  // One skill to attach every member to — open-call orders are not staffed per-skill the way
+  // auto-assembly is, so there is no real per-provider skill to record; the request's own
+  // first skill is a label, not a coverage claim.
+  const { data: reqSkills, error: rsErr } = await supabaseAdmin
+    .from("request_skills")
+    .select("skill_id")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (rsErr) throw new HttpError(500, rsErr.message);
+  const skillId = reqSkills?.[0]?.skill_id;
+
+  if (skillId) {
+    const evenShare = Math.max(1, Math.round(request.units / providerIds.length));
+    const { data: team, error: teamInsErr } = await supabaseAdmin
+      .from("teams")
+      .insert({
+        request_id: requestId,
+        status: "confirmed",
+        rationale: `${providerIds.length} provider${providerIds.length > 1 ? "s" : ""} selected from an open call.`,
+        complete: true,
+      })
+      .select("id")
+      .single();
+    if (teamInsErr) throw new HttpError(500, teamInsErr.message);
+
+    const { error: memErr } = await supabaseAdmin.from("team_members").insert(
+      providerIds.map((providerId) => ({
+        team_id: team.id,
+        provider_id: providerId,
+        assigned_skill_id: skillId,
+        covered_units: evenShare,
+        state: "accepted" as const,
+      })),
+    );
+    if (memErr) throw new HttpError(500, memErr.message);
+
+    // Same idempotent-thread pattern team-assembly/confirm.ts uses — not strictly reachable
+    // twice here (the status gate above already refuses a re-selection), kept anyway so the
+    // two code paths that create a team chat stay identical rather than one being "trusted"
+    // to only run once and the other checking.
+    const { data: existingThread, error: findThreadErr } = await supabaseAdmin
+      .from("chat_threads")
+      .select("id")
+      .eq("context_type", "team")
+      .eq("context_id", team.id)
+      .maybeSingle();
+    if (findThreadErr) throw new HttpError(500, findThreadErr.message);
+    if (!existingThread) {
+      const { data: titled, error: titleErr } = await supabaseAdmin
+        .from("requests")
+        .select("title")
+        .eq("id", requestId)
+        .maybeSingle();
+      if (titleErr) throw new HttpError(500, titleErr.message);
+      const { error: threadErr } = await supabaseAdmin
+        .from("chat_threads")
+        .insert({ context_type: "team", context_id: team.id, title: titled?.title ?? "Team" });
+      if (threadErr) throw new HttpError(500, threadErr.message);
+    }
+  }
 
   res.status(200).json({ selected: providerIds.length });
 });
