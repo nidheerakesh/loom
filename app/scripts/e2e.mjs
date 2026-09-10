@@ -446,6 +446,8 @@ async function main() {
   ok("selecting more than the headcount is refused",
     over.status === 400 && over.data?.reason === "over-headcount", `${over.status} ${over.data?.error ?? ""}`);
 
+  const p1ThreadsBefore = new Set((await get("chat/threads", { token: A.p1.token })).data?.map((t) => t._id) ?? []);
+
   const sel = await post("requests/select-team", {
     token: A.c2.token, requestId: openCallId, providerIds: [A.p1.userId, A.p2.userId],
   });
@@ -463,12 +465,12 @@ async function main() {
     !(p3After.data ?? []).some((r) => r._id === openCallId));
 
   const openTeamThreads = await get("chat/threads", { token: A.p1.token });
+  const newOpenCallThreadId = (openTeamThreads.data ?? []).map((t) => t._id).find((id) => !p1ThreadsBefore.has(id));
   ok("an open-call selection creates a team chat too, same as auto-assembly",
-    Array.isArray(openTeamThreads.data) && openTeamThreads.data.length > 0,
-    `${openTeamThreads.data?.length} thread(s) for a selected open-call provider`);
+    Boolean(newOpenCallThreadId), `${openTeamThreads.data?.length} thread(s) for a selected open-call provider`);
   const notPickedThreads = await get("chat/threads", { token: A.p3.token });
   ok("the applicant she didn't pick is not in that chat",
-    !(notPickedThreads.data ?? []).some((t) => (openTeamThreads.data ?? []).some((ot) => ot._id === t._id)));
+    !(notPickedThreads.data ?? []).some((t) => t._id === newOpenCallThreadId));
 
   const past = new Date(Date.now() - 1000).toISOString();
   const closedCall = await post("requests/create", {
