@@ -547,6 +547,43 @@ async function main() {
   const patDelete = await post("requests/pattern-delete", { token: A.p3.token, itemId: patItemId });
   ok("the coordinator deletes the pattern photo", patDelete.status === 200);
 
+  // ── F4 · GROUP COORDINATOR, DECIDED AFTER STAFFING ─────────────────────────
+  // Coordinator and final price moved from "asked at posting" to "settled after the team
+  // exists" — she doesn't know who's on it until people have applied. This exercises that:
+  // no coordinator named at creation, staffed through the open call, and only THEN appointed
+  // and priced — which needs requests/set-coordinator.ts to work past 'open', the one thing
+  // that changed about it.
+  section("F4 · Coordinator decided after staffing");
+  const lateCall = await post("requests/create", {
+    token: A.c2.token, title: "E2E late-coordinator order", description: "automated test",
+    mode: "group", units: 1, skills: [{ skillId: newSkillId, quantity: 1 }],
+  });
+  const lateId = lateCall.data.requestId;
+  const lateBefore = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === lateId);
+  ok("no coordinator named at creation defaults to the customer", lateBefore?.coordinatorRole === "customer");
+
+  await post("requests/respond", { token: A.p1.token, requestId: lateId, accept: true });
+  const lateSel = await post("requests/select-team", { token: A.c2.token, requestId: lateId, providerIds: [A.p1.userId] });
+  ok("staffed through the open call, no coordinator involved yet", lateSel.status === 200);
+
+  // interested-providers now carries each applicant's own rate — what the finalize screen
+  // shows her to compare candidates by before deciding who coordinates and what it pays.
+  const lateApplicants = await get("requests/interested-providers", { token: A.c2.token, requestId: lateId });
+  ok("an applicant's own rate is visible to the customer reviewing them",
+    typeof lateApplicants.data?.[0]?.rate !== "undefined");
+
+  const lateFinalize = await post("requests/set-coordinator", {
+    token: A.c2.token, requestId: lateId, coordinatorRole: "provider",
+    coordinatorProviderId: A.p1.userId, agreedRate: 275, agreedRateUnit: "piece",
+  });
+  ok("the coordinator can be named AFTER the job is staffed (status is 'assigned', not 'open')",
+    lateFinalize.status === 200, `${lateFinalize.status} ${lateFinalize.data?.error ?? ""}`);
+
+  const lateAfter = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === lateId);
+  ok("the appointed coordinator and the real, finalised price are both readable back",
+    lateAfter?.coordinatorRole === "provider" && lateAfter?.agreedRate === 275,
+    `role=${lateAfter?.coordinatorRole} rate=${lateAfter?.agreedRate}`);
+
   // ── G · CHAT PRIVACY ────────────────────────────────────────────────────────
   section("G · Chat and privacy");
   const th = await post("chat/create", { token: A.c1.token, providerIds: [A.p1.userId], title: "E2E conversation" });

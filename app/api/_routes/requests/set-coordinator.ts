@@ -9,19 +9,28 @@ const Body = z.object({
   requestId: z.string().min(1),
   coordinatorRole: z.enum(["customer", "provider"]),
   coordinatorProviderId: z.string().min(1).optional(),
+  // The real, finalised rate — set here rather than at posting, because the point of a
+  // coordinator is that the price is settled after the team is chosen and has actually talked
+  // to each other, not guessed at before anyone was even picked.
+  agreedRate: z.number().nonnegative().max(10_000_000).optional(),
+  agreedRateUnit: z.string().max(40).optional(),
 });
 
-// Changing who is accountable for a group order after it was posted — she may not have
-// decided at creation time, or may change her mind once she sees who applied.
+// Naming who is accountable for a group order, and settling the real rate — deliberately a
+// step that happens AFTER staffing, not at creation. She doesn't know who's actually on the
+// team until people have applied or been assembled, and the price the team agrees to pay is
+// something to settle once they've actually talked, not guess at up front (requests/create.ts
+// still accepts an optional starting figure — shown to applicants as what she expects to pay,
+// not a locked number).
 //
-// Same edit window requests/update.ts already enforces: only while `status === 'open'`. Once
-// the job is staffed, providers have arranged their work around who they agreed is
-// coordinating it, and swapping that out from under them is a different job, not an edit.
+// Reachable any time before the job is marked finished, not only while `status === 'open'` —
+// this is exactly the step that normally happens once the team exists. Only `completed` is off
+// limits: once the job is done, there's nothing left to settle.
 //
 // The named provider is not required to already be on the team — a customer may want her own
 // trusted SHG contact coordinating even before anyone has applied or been selected.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
-  const { token, requestId, coordinatorRole, coordinatorProviderId } = Body.parse(req.body);
+  const { token, requestId, coordinatorRole, coordinatorProviderId, agreedRate, agreedRateUnit } = Body.parse(req.body);
   const s = await requireRole(token, "customer");
 
   if (coordinatorRole === "provider" && !coordinatorProviderId) {
@@ -37,7 +46,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (!request) throw new HttpError(404, "Request not found");
   if (request.customer_id !== s.userId) throw new HttpError(403, "Not your request");
   if (request.mode !== "group") throw new HttpError(400, "Only group orders have a coordinator");
-  if (request.status !== "open") throw new HttpError(409, "This work can no longer be edited");
+  if (request.status === "completed") throw new HttpError(409, "This work is already finished");
 
   if (coordinatorRole === "provider" && coordinatorProviderId) {
     const { data: coord, error: coordErr } = await supabaseAdmin
@@ -49,16 +58,17 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     if (!coord) throw new HttpError(400, "That provider does not exist");
   }
 
-  const { error: updErr } = await supabaseAdmin
-    .from("requests")
-    .update({
-      coordinator_role: coordinatorRole,
-      coordinator_provider_id: coordinatorRole === "provider" ? coordinatorProviderId : null,
-      // A change of coordinator invalidates any earlier sign-off — the person who signed off
-      // may no longer be the one accountable.
-      coordinator_signed_off_at: null,
-    })
-    .eq("id", requestId);
+  const patch: Record<string, unknown> = {
+    coordinator_role: coordinatorRole,
+    coordinator_provider_id: coordinatorRole === "provider" ? coordinatorProviderId : null,
+    // A change of coordinator invalidates any earlier sign-off — the person who signed off
+    // may no longer be the one accountable.
+    coordinator_signed_off_at: null,
+  };
+  if (agreedRate !== undefined) patch.agreed_rate = agreedRate;
+  if (agreedRateUnit !== undefined) patch.agreed_rate_unit = agreedRateUnit;
+
+  const { error: updErr } = await supabaseAdmin.from("requests").update(patch).eq("id", requestId);
   if (updErr) throw new HttpError(500, updErr.message);
 
   res.status(200).json(null);

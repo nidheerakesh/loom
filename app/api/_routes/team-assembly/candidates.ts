@@ -51,7 +51,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: providers, error: provErr } = await supabaseAdmin
     .from("providers")
-    .select("id, seq, name, shop_name, capacity, rating, group_id, home_location_id")
+    .select("id, seq, name, shop_name, capacity, rating, rate, rate_unit, group_id, home_location_id")
     .in("id", candidateIds)
     .eq("available", true);
   if (provErr) throw new HttpError(500, provErr.message);
@@ -72,6 +72,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       shopName: p.shop_name ?? null,
       capacity: p.capacity,
       rating: p.rating,
+      rate: p.rate ?? null,
+      rateUnit: p.rate_unit ?? null,
       proficiency: profById.get(p.id) ?? 0,
       distanceKm: distances.get(p.home_location_id) ?? null,
       seq: p.seq,

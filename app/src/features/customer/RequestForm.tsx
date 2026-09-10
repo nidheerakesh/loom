@@ -7,8 +7,10 @@ import { Button, Card, Field, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null };
-type ProviderOption = { _id: string; name: string; shopName: string | null };
 
+// Coordinator is deliberately not asked here. At creation time she doesn't yet know who is
+// actually on the team — that's the whole point of the open call — so appointing someone is a
+// step that belongs after staffing (Accepted.tsx's finalize step), not before it.
 export function RequestForm({ onDone }: { onDone: () => void }) {
   const { token, t, lang } = useAuth();
   const { data: skills } = useQuery({ queryKey: ["skills"], queryFn: () => apiGet<SkillOption[]>("/api/skills/list") });
@@ -21,20 +23,10 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
       pay: number | undefined;
       headcount: number | undefined;
       interestDeadline: string | undefined;
-      coordinatorProviderId: string | undefined;
       agreedRate: number | undefined;
       agreedRateUnit: string | undefined;
       skills: { skillId: string; quantity: number }[];
     }) => apiPost<{ requestId: string; teamSuggested: boolean }>("/api/requests/create", { token, ...body }),
-  });
-  // Fetched only once she opens the "someone else" picker — no point loading the whole
-  // provider directory for a customer posting an individual job, or one happy to coordinate
-  // her own group order herself (the common case).
-  const [pickingCoordinator, setPickingCoordinator] = useState(false);
-  const { data: providerOptions } = useQuery({
-    queryKey: ["providers/search", token],
-    queryFn: () => apiGet<ProviderOption[]>("/api/providers/search", { token: token! }),
-    enabled: !!token && pickingCoordinator,
   });
 
   const [title, setTitle] = useState("");
@@ -48,9 +40,11 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
   // Date.now(). Good enough for a single-cluster deployment; not something to get clever about
   // before Friday.
   const [interestDeadline, setInterestDeadline] = useState("");
-  const [agreedRate, setAgreedRate] = useState<number | "">("");
-  const [agreedRateUnit, setAgreedRateUnit] = useState("");
-  const [coordinator, setCoordinator] = useState<ProviderOption | null>(null);
+  // Same `agreed_rate` column the finalize step later locks in — here it's only what she
+  // expects to pay, shown to applicants as a number to weigh their own rate against, not a
+  // promise. She (or the coordinator) sets the real figure once the team exists.
+  const [expectedPrice, setExpectedPrice] = useState<number | "">("");
+  const [expectedPriceUnit, setExpectedPriceUnit] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [created, setCreated] = useState<{ requestId: string; group: boolean } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -70,13 +64,15 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
         description,
         mode,
         units,
-        pay: mode === "group" ? (agreedRate === "" ? undefined : Number(agreedRate)) : (pay === "" ? undefined : Number(pay)),
+        pay:
+          mode === "group"
+            ? expectedPrice === "" ? undefined : Number(expectedPrice)
+            : pay === "" ? undefined : Number(pay),
         headcount: mode === "group" && headcount !== "" ? headcount : undefined,
         interestDeadline:
           mode === "group" && interestDeadline ? new Date(interestDeadline).toISOString() : undefined,
-        coordinatorProviderId: mode === "group" ? coordinator?._id : undefined,
-        agreedRate: mode === "group" && agreedRate !== "" ? agreedRate : undefined,
-        agreedRateUnit: mode === "group" && agreedRateUnit.trim() ? agreedRateUnit.trim() : undefined,
+        agreedRate: mode === "group" && expectedPrice !== "" ? expectedPrice : undefined,
+        agreedRateUnit: mode === "group" && expectedPriceUnit.trim() ? expectedPriceUnit.trim() : undefined,
         skills: [...selected].map((skillId) => ({ skillId, quantity: units })),
       });
       setCreated({ requestId: res.requestId, group: res.teamSuggested });
@@ -129,10 +125,6 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               constraint — but clamping here means the form cannot show an illegal value. */}
           <Field label={t("units")} type="number" min={1} max={10000} value={units}
             onChange={(e) => setUnits(Math.min(10000, Math.max(1, Math.floor(Number(e.target.value)) || 1)))} />
-          {/* A group order's price is the agreed rate below — one figure the whole team is
-              paid at, not a second, differently-labelled place to enter what is really the
-              same number. Asking for both here and again as "agreed rate" is what looked like
-              the form repeating itself. */}
           {mode === "individual" && (
             <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
           )}
@@ -160,65 +152,17 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
         {mode === "group" && (
           <div className="grid grid-cols-2 gap-2">
             <Field
-              label={t("agreedRate")}
+              label={t("expectedPrice")}
               type="number"
-              value={agreedRate}
-              onChange={(e) => setAgreedRate(e.target.value === "" ? "" : Number(e.target.value))}
+              value={expectedPrice}
+              onChange={(e) => setExpectedPrice(e.target.value === "" ? "" : Number(e.target.value))}
             />
             <Field
               label={t("agreedRateUnit")}
               placeholder="piece"
-              value={agreedRateUnit}
-              onChange={(e) => setAgreedRateUnit(e.target.value)}
+              value={expectedPriceUnit}
+              onChange={(e) => setExpectedPriceUnit(e.target.value)}
             />
-          </div>
-        )}
-        {mode === "group" && (
-          <div className="mb-3">
-            <div className="text-sm text-loom-indigoSoft mb-1">{t("coordinator")}</div>
-            <div className="flex gap-2 mb-2">
-              <Button
-                variant={!pickingCoordinator && !coordinator ? "primary" : "ghost"}
-                className="flex-1"
-                onClick={() => {
-                  setPickingCoordinator(false);
-                  setCoordinator(null);
-                }}
-              >
-                {t("coordinatorMyself")}
-              </Button>
-              <Button
-                variant={pickingCoordinator || coordinator ? "primary" : "ghost"}
-                className="flex-1"
-                onClick={() => setPickingCoordinator(true)}
-              >
-                {t("coordinatorSomeoneElse")}
-              </Button>
-            </div>
-            {coordinator && (
-              <div className="text-sm text-loom-indigo mb-2">
-                {t("coordinatorAppointed")}: {coordinator.shopName ?? coordinator.name}
-              </div>
-            )}
-            {pickingCoordinator && !coordinator && (
-              <div className="max-h-40 overflow-y-auto border border-loom-line rounded-[14px]">
-                {providerOptions === undefined && (
-                  <div className="p-3 text-loom-indigoSoft text-sm">…</div>
-                )}
-                {providerOptions?.map((p) => (
-                  <button
-                    key={p._id}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-loom-cottonDeep"
-                    onClick={() => {
-                      setCoordinator(p);
-                      setPickingCoordinator(false);
-                    }}
-                  >
-                    {p.shopName ?? p.name}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         )}
         <Button className="w-full" onClick={() => void submit()} disabled={!title || selected.size === 0}>

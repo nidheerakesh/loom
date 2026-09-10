@@ -6,6 +6,7 @@ import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, StarPicker, Stars, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 import { RequestPattern } from "../shared/RequestPattern";
+import { FinalizeGroup } from "../shared/FinalizeGroup";
 
 type MyRequest = {
   _id: string;
@@ -30,6 +31,8 @@ type InterestedProvider = {
   name: string;
   shopName: string | null;
   rating: number;
+  rate: number | null;
+  rateUnit: string | null;
   state: string;
 };
 type Candidate = {
@@ -38,6 +41,8 @@ type Candidate = {
   shopName: string | null;
   capacity: number;
   rating: number;
+  rate: number | null;
+  rateUnit: string | null;
   proficiency: number;
   distanceKm: number | null;
 };
@@ -247,6 +252,10 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
   });
   // Which member is being rated, and the draft rating for them.
   const [rating, setRating] = useState<{ providerId: string; stars: number; comment: string } | null>(null);
+  // Finalize (coordinator + real price) is offered once the team is confirmed, and dismissible
+  // — "skip for now" leaves the customer-default coordinator and whatever price was posted, so
+  // nothing is blocked on it.
+  const [dismissedFinalize, setDismissedFinalize] = useState(false);
 
   return (
     <Screen title={t("teams")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
@@ -273,6 +282,20 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
             )}
           </Card>
           {notice && <Card className="mb-2"><div className="text-sm text-loom-indigo">{notice}</div></Card>}
+          {team.status === "confirmed" && !dismissedFinalize && (
+            <FinalizeGroup
+              requestId={team.requestId}
+              candidates={team.members
+                .filter((m) => m.state !== "declined")
+                .map((m) => ({ id: m.providerId, name: m.shopName ?? m.name }))}
+              initialRate={team.agreedRate}
+              initialRateUnit={team.agreedRateUnit}
+              onDone={() => {
+                setDismissedFinalize(true);
+                void queryClient.invalidateQueries({ queryKey: ["team-assembly/get", teamId] });
+              }}
+            />
+          )}
           <RequestPattern requestId={team.requestId} canManage={team.coordinatorRole === "customer"} />
 
           {/* What the order asks for against what the team currently covers, and the way in to
@@ -329,6 +352,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
                     <div className="text-xs text-loom-indigoSoft">
                       {c.distanceKm !== null && `${c.distanceKm} ${t("km")} · `}
                       {c.capacity} {t("people")}
+                      {c.rate !== null && ` · ₹${c.rate}${c.rateUnit ? "/" + c.rateUnit : ""}`}
                     </div>
                   </div>
                   <Button
@@ -556,15 +580,34 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
     next.has(id) ? next.delete(id) : next.add(id);
     setPicked(next);
   };
+  // Set once selection succeeds, with the names of who was actually picked — the finalize
+  // step (coordinator + real price) replaces the rest of this screen rather than sending her
+  // back to the list, since there's nothing left on it worth returning to.
+  const [finalizing, setFinalizing] = useState<{ id: string; name: string }[] | null>(null);
 
   const selectTeam = useMutation({
     mutationFn: () =>
-      apiPost("/api/requests/select-team", { token, requestId, providerIds: [...picked] }),
+      apiPost<{ selected: number }>("/api/requests/select-team", { token, requestId, providerIds: [...picked] }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
-      onBack();
+      const byId = new Map((applicants ?? []).map((a) => [a.providerId, a.shopName ?? a.name] as const));
+      setFinalizing([...picked].map((id) => ({ id, name: byId.get(id) ?? id })));
     },
   });
+
+  if (finalizing) {
+    return (
+      <Screen title={t("viewApplicants")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
+        <FinalizeGroup
+          requestId={requestId}
+          candidates={finalizing}
+          initialRate={request.agreedRate}
+          initialRateUnit={request.agreedRateUnit}
+          onDone={onBack}
+        />
+      </Screen>
+    );
+  }
 
   const decided = request.status !== "open";
   const waiting = (applicants ?? []).filter((a) => a.state === "interested");
@@ -629,6 +672,14 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
                 <div>
                   <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
                   <Stars value={a.rating} />
+                  {/* Her own asking rate — not what the job will finally pay, but what she'd
+                      compare candidates by before deciding. */}
+                  {a.rate !== null && (
+                    <div className="text-xs text-loom-indigoSoft">
+                      {t("providerOwnRate")}: ₹{a.rate}
+                      {a.rateUnit ? `/${a.rateUnit}` : ""}
+                    </div>
+                  )}
                 </div>
                 <input
                   type="checkbox"
