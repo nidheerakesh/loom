@@ -41,6 +41,7 @@ import r_requests_pattern from "./requests/pattern.js";
 import r_requests_pattern_delete from "./requests/pattern-delete.js";
 import r_requests_pattern_upload_url from "./requests/pattern-upload-url.js";
 import r_requests_respond from "./requests/respond.js";
+import r_requests_respond_coordinator from "./requests/respond-coordinator.js";
 import r_requests_select_team from "./requests/select-team.js";
 import r_requests_set_coordinator from "./requests/set-coordinator.js";
 import r_requests_update from "./requests/update.js";
@@ -109,6 +110,7 @@ export const routes: Record<string, Handler> = {
   "requests/pattern-delete": r_requests_pattern_delete,
   "requests/pattern-upload-url": r_requests_pattern_upload_url,
   "requests/respond": r_requests_respond,
+  "requests/respond-coordinator": r_requests_respond_coordinator,
   "requests/select-team": r_requests_select_team,
   "requests/set-coordinator": r_requests_set_coordinator,
   "requests/update": r_requests_update,

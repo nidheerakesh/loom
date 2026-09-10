@@ -64,6 +64,12 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     // A change of coordinator invalidates any earlier sign-off — the person who signed off
     // may no longer be the one accountable.
     coordinator_signed_off_at: null,
+    // An appointed provider starts back at 'pending' — even if she's being re-appointed after
+    // previously declining, this is a fresh ask and deserves a fresh answer, not the old one
+    // carried over. The customer herself needs no response of her own; she can't decline
+    // being accountable for her own order.
+    coordinator_response: coordinatorRole === "provider" ? "pending" : "accepted",
+    coordinator_appointed_at: coordinatorRole === "provider" ? new Date().toISOString() : null,
   };
   if (agreedRate !== undefined) patch.agreed_rate = agreedRate;
   if (agreedRateUnit !== undefined) patch.agreed_rate_unit = agreedRateUnit;

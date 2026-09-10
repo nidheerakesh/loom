@@ -9,12 +9,13 @@ export type CoordinatedRequest = {
   status: string;
   coordinator_role: "customer" | "provider";
   coordinator_provider_id: string | null;
+  coordinator_response: "pending" | "accepted" | "declined";
 };
 
 async function loadRequest(requestId: string): Promise<CoordinatedRequest> {
   const { data: request, error } = await supabaseAdmin
     .from("requests")
-    .select("id, customer_id, mode, status, coordinator_role, coordinator_provider_id")
+    .select("id, customer_id, mode, status, coordinator_role, coordinator_provider_id, coordinator_response")
     .eq("id", requestId)
     .maybeSingle();
   if (error) throw new HttpError(500, error.message);
@@ -37,6 +38,12 @@ export async function requireCoordinator(session: Session, requestId: string): P
       session.role === "provider" &&
       session.userId === request.coordinator_provider_id);
   if (!isCoordinator) throw new HttpError(403, "Only the coordinator can do this");
+  // An appointed provider who hasn't accepted isn't coordinating anything yet — she can still
+  // see the job (requirePatternViewer covers that), but pattern uploads and sign-off are
+  // actions that commit her to the role, so they wait on her actually saying yes.
+  if (request.coordinator_role === "provider" && request.coordinator_response !== "accepted") {
+    throw new HttpError(409, "Accept the coordinator role before doing this", "coordinator-not-accepted");
+  }
   return request;
 }
 

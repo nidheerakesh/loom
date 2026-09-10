@@ -21,7 +21,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
     .select(
-      "title, units, status, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, providers(name, shop_name)",
+      "title, units, status, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, coordinator_response, coordinator_appointed_at, providers(name, shop_name)",
     )
     .eq("id", team.request_id)
     .maybeSingle();
@@ -109,6 +109,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     agreedRate: request?.agreed_rate ?? null,
     agreedRateUnit: request?.agreed_rate_unit ?? null,
     coordinatorSignedOffAt: request?.coordinator_signed_off_at ?? null,
+    coordinatorResponse: request?.coordinator_response ?? "accepted",
+    coordinatorAppointedAt: request?.coordinator_appointed_at ?? null,
     skills,
     members,
   });

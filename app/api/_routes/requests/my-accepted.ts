@@ -58,7 +58,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
     .select(
-      "id, title, units, pay, status, mode, location_id, created_at, customers(name), coordinator_signed_off_at",
+      "id, title, units, pay, status, mode, location_id, created_at, customers(name), coordinator_signed_off_at, coordinator_response, coordinator_appointed_at",
     )
     .in("id", requestIds)
     .order("created_at", { ascending: false });
@@ -78,6 +78,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     location_id: string;
     customers: { name: string } | null;
     coordinator_signed_off_at: string | null;
+    coordinator_response: string;
+    coordinator_appointed_at: string | null;
   };
   const rows = requests as unknown as Row[];
 
@@ -99,6 +101,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       interestState: stateByRequest.get(r.id) ?? null,
       isCoordinator: coordinatingIds.has(r.id),
       coordinatorSignedOffAt: r.coordinator_signed_off_at ?? null,
+      coordinatorResponse: r.coordinator_response,
+      coordinatorAppointedAt: r.coordinator_appointed_at ?? null,
       customerName: r.customers?.name ?? null,
       distanceKm: distances.get(r.location_id) ?? null,
     })),

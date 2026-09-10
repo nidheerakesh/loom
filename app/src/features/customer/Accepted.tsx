@@ -25,6 +25,8 @@ type MyRequest = {
   agreedRate: number | null;
   agreedRateUnit: string | null;
   coordinatorSignedOffAt: string | null;
+  coordinatorResponse: "pending" | "accepted" | "declined";
+  coordinatorAppointedAt: string | null;
 };
 type InterestedProvider = {
   providerId: string;
@@ -131,6 +133,12 @@ export function Accepted() {
           {r.mode === "group" && r.coordinatorRole === "provider" && (
             <div className="text-sm text-loom-indigo">
               {t("coordinator")}: {r.coordinatorName ?? "—"}
+              {r.coordinatorResponse === "pending" && r.coordinatorAppointedAt && (
+                <span className="text-loom-turmeric">
+                  {" "}
+                  ({t("coordinatorPending")} — {t("waitingSince")} {new Date(r.coordinatorAppointedAt).toLocaleString()})
+                </span>
+              )}
             </div>
           )}
           <div className="flex flex-wrap gap-2 mt-2">
@@ -167,7 +175,9 @@ export function Accepted() {
               r.mode === "group" &&
               r.coordinatorRole === "provider" &&
               !r.coordinatorSignedOffAt && (
-                <span className="text-sm text-loom-turmeric self-center">{t("awaitingSignoff")}</span>
+                <span className="text-sm text-loom-turmeric self-center">
+                  {r.coordinatorResponse === "pending" ? t("coordinatorPending") : t("awaitingSignoff")}
+                </span>
               )}
           </div>
         </Card>

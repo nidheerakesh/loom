@@ -18,6 +18,8 @@ type AcceptedRequest = {
   interestState: "interested" | "accepted" | null;
   isCoordinator: boolean;
   coordinatorSignedOffAt: string | null;
+  coordinatorResponse: "pending" | "accepted" | "declined";
+  coordinatorAppointedAt: string | null;
 };
 
 type MyTeam = {
@@ -57,6 +59,11 @@ export function ProviderMyWork() {
   });
   const signOff = useMutation({
     mutationFn: (requestId: string) => apiPost("/api/requests/coordinator-signoff", { token, requestId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] }),
+  });
+  const respondCoordinator = useMutation({
+    mutationFn: (body: { requestId: string; accept: boolean }) =>
+      apiPost("/api/requests/respond-coordinator", { token, ...body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] }),
   });
 
@@ -212,7 +219,30 @@ export function ProviderMyWork() {
                 {r.customerName && (
                   <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
                 )}
-                {r.status === "assigned" && (
+                {/* Appointment is not automatic acceptance — she says yes or no before any
+                    sign-off/pattern control appears, same as a team invitation. */}
+                {r.coordinatorResponse === "pending" && (
+                  <>
+                    <p className="text-sm text-loom-indigoSoft mt-2">{t("coordinatorInviteBody")}</p>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="leaf"
+                        disabled={respondCoordinator.isPending}
+                        onClick={() => respondCoordinator.mutate({ requestId: r._id, accept: true })}
+                      >
+                        {t("accept")}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        disabled={respondCoordinator.isPending}
+                        onClick={() => respondCoordinator.mutate({ requestId: r._id, accept: false })}
+                      >
+                        {t("decline")}
+                      </Button>
+                    </div>
+                  </>
+                )}
+                {r.coordinatorResponse === "accepted" && r.status === "assigned" && (
                   <div className="mt-2">
                     {r.coordinatorSignedOffAt ? (
                       <span className="text-sm text-loom-leaf font-medium">{t("signedOff")}</span>
@@ -230,7 +260,9 @@ export function ProviderMyWork() {
                   </div>
                 )}
               </Card>
-              {r.status === "assigned" && <RequestPattern requestId={r._id} canManage />}
+              {r.coordinatorResponse === "accepted" && r.status === "assigned" && (
+                <RequestPattern requestId={r._id} canManage />
+              )}
             </div>
           ))}
         </section>

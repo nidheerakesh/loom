@@ -213,7 +213,11 @@ create table requests (
   coordinator_provider_id uuid references providers (id),
   agreed_rate double precision,
   agreed_rate_unit text,
-  coordinator_signed_off_at timestamptz
+  coordinator_signed_off_at timestamptz,
+  -- Migration 012. Mirrors team_members' invited/accepted/declined for the coordinator role
+  -- specifically — she is appointed, not automatically responsible.
+  coordinator_response text not null default 'pending' check (coordinator_response in ('pending', 'accepted', 'declined')),
+  coordinator_appointed_at timestamptz
 );
 create index requests_customer_id_idx on requests (customer_id);
 create index requests_status_idx on requests (status);

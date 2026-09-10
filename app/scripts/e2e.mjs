@@ -480,6 +480,42 @@ async function main() {
   ok("the appointed coordinator and agreed rate are readable back",
     coordRow?.coordinatorRole === "provider" && coordRow?.agreedRate === 350,
     `role=${coordRow?.coordinatorRole} rate=${coordRow?.agreedRate}${coordRow?.agreedRateUnit}`);
+  ok("appointment starts 'pending', not automatically accepted", coordRow?.coordinatorResponse === "pending");
+
+  // Appointment is unilateral, but coordinating is not — she has to say yes, the same as a
+  // team invitation, before anything that commits her (sign-off, pattern uploads) is reachable.
+  const wrongAccept = await post("requests/respond-coordinator", { token: A.p1.token, requestId: coordId, accept: true });
+  ok("only the appointed provider can answer the appointment", wrongAccept.status === 403,
+    `${wrongAccept.status} ${wrongAccept.data?.error ?? ""}`);
+
+  const earlySignoff = await post("requests/coordinator-signoff", { token: A.p3.token, requestId: coordId });
+  ok("signing off before accepting the appointment is refused",
+    earlySignoff.status === 409 && earlySignoff.data?.reason === "coordinator-not-accepted",
+    `${earlySignoff.status} ${earlySignoff.data?.error ?? ""}`);
+
+  const coordAccept = await post("requests/respond-coordinator", { token: A.p3.token, requestId: coordId, accept: true });
+  ok("the appointed provider accepts", coordAccept.status === 200);
+  const afterAccept = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === coordId);
+  ok("her response is now 'accepted'", afterAccept?.coordinatorResponse === "accepted");
+
+  const doubleAnswer = await post("requests/respond-coordinator", { token: A.p3.token, requestId: coordId, accept: true });
+  ok("answering twice is refused — already answered", doubleAnswer.status === 409);
+
+  // Declining reverts the job to the customer, same as a declined team slot being simply
+  // vacant rather than an error state — checked on a second, throwaway appointment so it
+  // doesn't disturb the accepted one the rest of this section depends on.
+  const declineReq = await post("requests/create", {
+    token: A.c2.token, title: "E2E declined-coordinator order", description: "automated test",
+    mode: "group", units: 1, coordinatorProviderId: A.p2.userId, skills: [{ skillId: newSkillId, quantity: 1 }],
+  });
+  const declineResp = await post("requests/respond-coordinator", {
+    token: A.p2.token, requestId: declineReq.data.requestId, accept: false,
+  });
+  ok("the appointed provider can decline", declineResp.status === 200);
+  const afterDecline = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === declineReq.data.requestId);
+  ok("declining reverts the coordinator back to the customer, not a stuck state",
+    afterDecline?.coordinatorRole === "customer" && afterDecline?.coordinatorResponse === "accepted",
+    `role=${afterDecline?.coordinatorRole} response=${afterDecline?.coordinatorResponse}`);
 
   // Provider One applies and gets selected — she does the work; Provider Three coordinates it
   // without ever applying.
