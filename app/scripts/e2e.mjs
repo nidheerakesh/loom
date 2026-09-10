@@ -695,8 +695,8 @@ async function main() {
     `→ ${nearKnown.data?.label}`);
 
   const faraway = await post("accounts/set-location", { token: A.p1.token, lat: 8.5241, lng: 76.9366 });
-  ok("a reading with nothing nearby is rounded to a ~1km grid, not stored exactly",
-    faraway.status === 200 && /^\d+\.\d{2}, \d+\.\d{2}$/.test(faraway.data?.label ?? ""),
+  ok("a reading with nothing nearby is rounded to a ~1km grid, named — not shown as coordinates",
+    faraway.status === 200 && !/^-?\d+\.\d+/.test(faraway.data?.label ?? "") && /^Near /.test(faraway.data?.label ?? ""),
     `→ ${faraway.data?.label}`);
 
   const jittered = await post("accounts/set-location", { token: A.p1.token, lat: 8.52436, lng: 76.93688 });

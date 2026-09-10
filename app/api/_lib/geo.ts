@@ -91,8 +91,10 @@ const GRID_DP = 2;
 //   1. If it falls within SNAP_KM of an area we already know, she *is* at that area. Nothing new
 //      is written and she shares a row with her neighbours, which is also what the seeded data
 //      does. Her position within the area is unrecoverable because it was never recorded.
-//   2. Otherwise the reading is rounded to a ~1km grid and stored as a new area. Still not her
-//      house, and the label says so.
+//   2. Otherwise the reading is rounded to a ~1km grid and stored as a new area, named
+//      relative to the nearest place we already know rather than by its coordinates — a
+//      number on this screen would be the one place in the app that looked like a leak, even
+//      though the row underneath is exactly as rounded as case 1's label implies.
 //
 // Matching is unaffected: SNAP_KM is well inside the distances the score cares about, and
 // `proximity` is 1/(1+km), which is deliberately smooth rather than banded.
@@ -103,14 +105,14 @@ export async function resolveLocationId(lat: number, lng: number): Promise<strin
 
   const { data: known, error } = await supabaseAdmin
     .from("locations")
-    .select("id, lat, lng")
+    .select("id, lat, lng, label")
     .limit(500);
   if (error) throw new HttpError(500, error.message);
 
-  let nearest: { id: string; km: number } | null = null;
+  let nearest: { id: string; km: number; label: string } | null = null;
   for (const l of known ?? []) {
     const km = haversine(lat, lng, l.lat, l.lng);
-    if (!nearest || km < nearest.km) nearest = { id: l.id, km };
+    if (!nearest || km < nearest.km) nearest = { id: l.id, km, label: l.label };
   }
   if (nearest && nearest.km <= SNAP_KM) return nearest.id;
 
@@ -127,9 +129,16 @@ export async function resolveLocationId(lat: number, lng: number): Promise<strin
   if (exErr) throw new HttpError(500, exErr.message);
   if (existing) return existing.id;
 
+  // A name, not coordinates — "8.52, 76.94" means nothing to her and would be the one place in
+  // this flow that showed a number where every other screen shows a place. Named relative to
+  // the nearest area we already know (Kochi's own named areas are within reach of anyone the
+  // seeded cluster covers), which is exactly as safe as the label it stands in for: still not
+  // her exact position, since the row underneath is still the rounded grid cell, unchanged.
+  const label = nearest ? `Near ${nearest.label}` : "New area";
+
   const { data: created, error: insErr } = await supabaseAdmin
     .from("locations")
-    .insert({ lat: gLat, lng: gLng, label: `${gLat.toFixed(2)}, ${gLng.toFixed(2)}` })
+    .insert({ lat: gLat, lng: gLng, label })
     .select("id")
     .single();
   if (insErr) throw new HttpError(500, insErr.message);
