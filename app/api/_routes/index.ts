@@ -57,6 +57,7 @@ import r_team_assembly_my_teams from "./team-assembly/my-teams.js";
 import r_team_assembly_remove_member from "./team-assembly/remove-member.js";
 import r_team_assembly_respond_invite from "./team-assembly/respond-invite.js";
 import r_team_assembly_swap_member from "./team-assembly/swap-member.js";
+import r_telegram_webhook from "./telegram/webhook.js";
 import r_whatsapp_webhook from "./whatsapp/webhook.js";
 
 export type Handler = (req: VercelRequest, res: VercelResponse) => Promise<void>;
@@ -124,6 +125,8 @@ export const routes: Record<string, Handler> = {
   "team-assembly/remove-member": r_team_assembly_remove_member,
   "team-assembly/respond-invite": r_team_assembly_respond_invite,
   "team-assembly/swap-member": r_team_assembly_swap_member,
+  // Telegram posts here; a demo stand-in for WhatsApp (see telegram/webhook.ts).
+  "telegram/webhook": r_telegram_webhook,
   // Twilio posts here; it replies TwiML rather than JSON, so it is not a `withHandler` route.
   "whatsapp/webhook": r_whatsapp_webhook,
 };

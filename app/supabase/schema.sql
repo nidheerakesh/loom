@@ -298,6 +298,17 @@ create table consents (
 );
 create index consents_phone_hash_idx on consents (phone_hash);
 
+-- Migration 010. Telegram-only demo channel: unlike WhatsApp, Telegram never verifies a
+-- phone number, so a chat proves it once (typed, matched like sign-in) and this remembers the
+-- mapping for replyFor (_lib/messagingEngine.ts) on every later message.
+create table telegram_links (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  chat_id text not null unique,
+  phone_hash text not null
+);
+create index telegram_links_phone_hash_idx on telegram_links (phone_hash);
+
 create table narrations (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -418,6 +429,7 @@ alter table chat_threads      enable row level security;
 alter table messages          enable row level security;
 alter table consents          enable row level security;
 alter table request_patterns  enable row level security;
+alter table telegram_links    enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Performance indexes. Each corresponds to a filter/sort the API actually issues;
