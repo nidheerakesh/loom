@@ -109,8 +109,15 @@ export async function resolveLocationId(lat: number, lng: number): Promise<strin
     .limit(500);
   if (error) throw new HttpError(500, error.message);
 
+  // A row this function created itself (grid cell, labelled "Near X") is not a real landmark —
+  // naming a new cell after another synthetic cell would chain into nonsense, and snapping to
+  // one under SNAP_KM would defeat the point of SNAP_KM (it exists to detect a *named* area).
+  // Only rows with a genuine name are candidates for either.
+  const isSynthetic = (label: string) => /^-?\d+\.\d+, -?\d+\.\d+$/.test(label) || label.startsWith("Near ");
+
   let nearest: { id: string; km: number; label: string } | null = null;
   for (const l of known ?? []) {
+    if (isSynthetic(l.label)) continue;
     const km = haversine(lat, lng, l.lat, l.lng);
     if (!nearest || km < nearest.km) nearest = { id: l.id, km, label: l.label };
   }
@@ -118,23 +125,31 @@ export async function resolveLocationId(lat: number, lng: number): Promise<strin
 
   const gLat = Number(lat.toFixed(GRID_DP));
   const gLng = Number(lng.toFixed(GRID_DP));
+  // A name, not coordinates — "8.52, 76.94" means nothing to her and would be the one place in
+  // this flow that showed a number where every other screen shows a place. Named relative to
+  // the nearest real area we already know, which is exactly as safe as the label it stands in
+  // for: still not her exact position, since the row underneath is still the rounded grid cell,
+  // unchanged.
+  const label = nearest ? `Near ${nearest.label}` : "New area";
 
   // Two people in the same new cell must land on the same row rather than racing to create two.
   const { data: existing, error: exErr } = await supabaseAdmin
     .from("locations")
-    .select("id")
+    .select("id, label")
     .eq("lat", gLat)
     .eq("lng", gLng)
     .maybeSingle();
   if (exErr) throw new HttpError(500, exErr.message);
-  if (existing) return existing.id;
-
-  // A name, not coordinates — "8.52, 76.94" means nothing to her and would be the one place in
-  // this flow that showed a number where every other screen shows a place. Named relative to
-  // the nearest area we already know (Kochi's own named areas are within reach of anyone the
-  // seeded cluster covers), which is exactly as safe as the label it stands in for: still not
-  // her exact position, since the row underneath is still the rounded grid cell, unchanged.
-  const label = nearest ? `Near ${nearest.label}` : "New area";
+  if (existing) {
+    // Self-heals a row created before this naming existed — otherwise the first person to land
+    // in a cell fixes its label forever, and everyone reusing that same cell inherits whatever
+    // the old numeric label said.
+    if (/^-?\d+\.\d+, -?\d+\.\d+$/.test(existing.label)) {
+      const { error: fixErr } = await supabaseAdmin.from("locations").update({ label }).eq("id", existing.id);
+      if (fixErr) throw new HttpError(500, fixErr.message);
+    }
+    return existing.id;
+  }
 
   const { data: created, error: insErr } = await supabaseAdmin
     .from("locations")
