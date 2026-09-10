@@ -420,7 +420,11 @@ async function main() {
   const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   const openCall = await post("requests/create", {
     token: A.c2.token, title: "E2E open call", description: "automated test",
-    mode: "group", units: 2, headcount: 2, interestDeadline: future,
+    // Max pay (normalizedPay caps at ₹2000) keeps this request's score at the top of the
+    // ranked feed — repeated e2e runs against production leave their own open test requests
+    // behind on the same shared skill, and the feed only returns the top 20 by score. Without
+    // this, this run's own request can get pushed out of that window by earlier runs' leftovers.
+    mode: "group", units: 2, headcount: 2, pay: 2000, interestDeadline: future,
     skills: [{ skillId: newSkillId, quantity: 2 }],
   });
   const openCallId = openCall.data.requestId;
