@@ -61,6 +61,7 @@ export type CustomerRow = {
   name: string;
   company: string | null;
   location_id: string;
+  location_confirmed: boolean;
 };
 
 export type Customer = {
@@ -68,8 +69,15 @@ export type Customer = {
   name: string;
   company: string | null;
   locationId: string;
+  locationConfirmed: boolean;
 };
 
 export function mapCustomer(row: CustomerRow): Customer {
-  return { id: row.id, name: row.name, company: row.company, locationId: row.location_id };
+  return {
+    id: row.id,
+    name: row.name,
+    company: row.company,
+    locationId: row.location_id,
+    locationConfirmed: row.location_confirmed,
+  };
 }

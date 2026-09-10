@@ -53,7 +53,13 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
           .from("providers")
           .update({ home_location_id: resolved })
           .eq("id", s.userId)
-      : await supabaseAdmin.from("customers").update({ location_id: resolved }).eq("id", s.userId);
+      : // location_confirmed flips true here — a customer who explicitly sets a place (either
+        // path) has told us where she is, which is what CustomerApp.tsx's first-run prompt is
+        // waiting on.
+        await supabaseAdmin
+          .from("customers")
+          .update({ location_id: resolved, location_confirmed: true })
+          .eq("id", s.userId);
   if (error) throw new HttpError(500, error.message);
 
   const { data: place, error: placeErr } = await supabaseAdmin

@@ -6,7 +6,7 @@ import { mapProvider, mapCustomer } from "../../_lib/mappers.js";
 
 const PROVIDER_COLS =
   "id, name, shop_name, available, capacity, rate, rate_unit, delivery_days, experience_years, rating, rating_count, languages, home_location_id, group_id";
-const CUSTOMER_COLS = "id, name, company, location_id";
+const CUSTOMER_COLS = "id, name, company, location_id, location_confirmed";
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const token = typeof req.query.token === "string" ? req.query.token : undefined;

@@ -91,6 +91,10 @@ async function main() {
         company: c.company,
         phone_hash: phoneHash(customerPhone(i)),
         location_id: locIds[i % locIds.length],
+        // Deliberately assigned for the demo story, not a hash-guessed placeholder — the
+        // first-run location prompt (CustomerApp.tsx) would otherwise fire for every seeded
+        // customer on first sign-in.
+        location_confirmed: true,
       })
       .select("id")
       .single();

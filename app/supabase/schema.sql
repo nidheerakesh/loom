@@ -179,7 +179,10 @@ create table customers (
   name text not null,
   company text,
   phone_hash text not null,
-  location_id uuid not null references locations (id)
+  location_id uuid not null references locations (id),
+  -- Migration 011. Distinguishes "she told us where she is" from "a phone-number hash picked
+  -- somewhere for her" — CustomerApp.tsx gates the first-run location prompt on this.
+  location_confirmed boolean not null default false
 );
 create index customers_phone_hash_idx on customers (phone_hash);
 
