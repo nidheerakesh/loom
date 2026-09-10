@@ -641,23 +641,34 @@ async function main() {
 
   // Group orders are an open call now (this session's headline change), applied to through the
   // exact same `interests` insert as individual work — so the bot's job feed is not allowed to
-  // silently stay individual-only. A fresh scratch provider with only this one skill, so
-  // nothing from earlier sections competes for the feed's top-3 slots.
-  const waP = await signUp("9000000104", "provider", "E2E Bot Provider Four");
-  const waSkill = await post("skills/resolve", { token: waP.token, phrases: ["waSkill reed craft"] });
+  // silently stay individual-only. A fresh scratch provider signs up under a phone unique to
+  // this run (previous runs left their own open test group orders behind on a shared number,
+  // which then competed for the feed's ranked slots and made "1" apply to the wrong one) with
+  // one dedicated skill, so nothing else competes for the feed's top-3 either.
+  const waRunId = Date.now().toString(36);
+  const waPhone = `9000${String(Date.now() % 1000000).padStart(6, "0")}`;
+  const waP = await signUp(waPhone, "provider", "E2E Bot Provider Four");
+  const waSkill = await post("skills/resolve", { token: waP.token, phrases: [`waSkill ${waRunId}`] });
   const waSkillId = waSkill.data.readback[0].skillId;
+  const waTitle = `E2E bot-visible group order ${waRunId}`;
   const waGroup = await post("requests/create", {
-    token: A.c2.token, title: "E2E bot-visible group order", description: "automated test",
+    token: A.c2.token, title: waTitle, description: "automated test",
     mode: "group", units: 1, headcount: 2, pay: 2000, skills: [{ skillId: waSkillId, quantity: 1 }],
   });
-  const waJobs = await waSay("9000000104", "work");
+  const waJobs = await waSay(waPhone, "work");
   ok("a group order shows up in the bot's job feed, tagged GROUP",
-    waJobs.includes("E2E bot-visible group order") && waJobs.includes("GROUP"),
+    waJobs.includes(waTitle) && waJobs.includes("GROUP"),
     waJobs.split("\n").find((l) => l.includes("GROUP")) ?? "(not found)");
 
-  const waApply = await waSay("9000000104", "1");
+  // Applies by the listed number that matches THIS run's job, not by assuming it landed at #1 —
+  // the feed is ranked, not insertion-ordered, so position is not something a fresh test run
+  // controls.
+  const waLine = waJobs.split("\n").find((l) => l.includes(waTitle));
+  const waSlot = waLine ? Number(waLine.match(/^(\d+)\./)?.[1]) : NaN;
+  const waApply = Number.isFinite(waSlot) ? await waSay(waPhone, String(waSlot)) : "";
   ok("applying to a group order over the bot registers real interest",
-    /അപേക്ഷിച്ചു|already applied/.test(waApply), waApply.split("\n")[0]);
+    Number.isFinite(waSlot) && /അപേക്ഷിച്ചു|already applied/.test(waApply),
+    Number.isFinite(waSlot) ? waApply.split("\n")[0] : "job not found in its own feed");
   const waInterests = await get("requests/interested-providers", { token: A.c2.token, requestId: waGroup.data.requestId });
   ok("…and it is the same `interests` row the app itself would show the customer",
     (waInterests.data ?? []).some((i) => i.providerId === waP.userId && i.state === "interested"));
