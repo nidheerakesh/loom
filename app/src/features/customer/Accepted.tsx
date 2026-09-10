@@ -5,6 +5,7 @@ import { pickLang } from "../../i18n";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, StarPicker, Stars, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
+import { RequestPattern } from "../shared/RequestPattern";
 
 type MyRequest = {
   _id: string;
@@ -17,6 +18,12 @@ type MyRequest = {
   interestedCount: number;
   acceptedCount: number;
   teamId: string | null;
+  coordinatorRole: "customer" | "provider";
+  coordinatorProviderId: string | null;
+  coordinatorName: string | null;
+  agreedRate: number | null;
+  agreedRateUnit: string | null;
+  coordinatorSignedOffAt: string | null;
 };
 type InterestedProvider = {
   providerId: string;
@@ -58,11 +65,20 @@ type TeamDetailData = {
   status: string;
   rationale: string;
   complete: boolean;
+  requestId: string;
   requestTitle: string;
   requestUnits: number;
+  requestStatus: string | null;
+  coordinatorRole: "customer" | "provider";
+  coordinatorProviderId: string | null;
+  coordinatorName: string | null;
+  agreedRate: number | null;
+  agreedRateUnit: string | null;
+  coordinatorSignedOffAt: string | null;
   skills: TeamSkill[];
   members: TeamMember[];
 };
+
 
 export function Accepted() {
   const { token, t } = useAuth();
@@ -102,7 +118,16 @@ export function Accepted() {
           <div className="text-sm text-loom-indigoSoft">
             {r.mode} · {r.units} {t("units")} · {r.interestedCount} {t("interestedCount")} · {r.acceptedCount} {t("acceptedCount")}
             {r.mode === "group" && r.headcount !== null && ` · ${r.headcount} ${t("peopleWanted")}`}
+            {r.mode === "group" && r.agreedRate !== null && ` · ₹${r.agreedRate}${r.agreedRateUnit ? "/" + r.agreedRateUnit : ""}`}
           </div>
+          {/* Every group order has someone accountable for it — herself by default, shown
+              only when she appointed someone else, so the common case (coordinating her own
+              order) doesn't clutter the card with a badge that just says what's already true. */}
+          {r.mode === "group" && r.coordinatorRole === "provider" && (
+            <div className="text-sm text-loom-indigo">
+              {t("coordinator")}: {r.coordinatorName ?? "—"}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 mt-2">
             {r.teamId && <Button onClick={() => setTeamId(r.teamId)}>{t("teams")}</Button>}
             {/* Both individual and group work are awarded by the customer, not claimed by
@@ -124,11 +149,21 @@ export function Accepted() {
                 {t("edit")}
               </Button>
             )}
-            {r.status === "assigned" && (
-              <Button variant="leaf" onClick={() => complete.mutate(r._id)}>
-                {t("markFinished")}
-              </Button>
-            )}
+            {/* A group order with an appointed provider coordinator needs her sign-off first
+                — requests/complete.ts refuses it server-side, so this mirrors that rather than
+                offering a button that would just come back as an error. */}
+            {r.status === "assigned" &&
+              (r.mode !== "group" || r.coordinatorRole !== "provider" || r.coordinatorSignedOffAt) && (
+                <Button variant="leaf" onClick={() => complete.mutate(r._id)}>
+                  {t("markFinished")}
+                </Button>
+              )}
+            {r.status === "assigned" &&
+              r.mode === "group" &&
+              r.coordinatorRole === "provider" &&
+              !r.coordinatorSignedOffAt && (
+                <span className="text-sm text-loom-turmeric self-center">{t("awaitingSignoff")}</span>
+              )}
           </div>
         </Card>
       ))}
@@ -225,8 +260,20 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
               {team.complete ? t("coverageComplete") : t("coverageIncomplete")} · {team.status}
             </div>
             <div className="text-sm text-loom-indigoSoft mt-1">{team.rationale}</div>
+            {team.agreedRate !== null && (
+              <div className="text-sm text-loom-indigo mt-1">
+                {t("agreedRate")}: ₹{team.agreedRate}
+                {team.agreedRateUnit ? `/${team.agreedRateUnit}` : ""}
+              </div>
+            )}
+            {team.coordinatorRole === "provider" && (
+              <div className="text-sm text-loom-indigo">
+                {t("coordinator")}: {team.coordinatorName ?? "—"}
+              </div>
+            )}
           </Card>
           {notice && <Card className="mb-2"><div className="text-sm text-loom-indigo">{notice}</div></Card>}
+          <RequestPattern requestId={team.requestId} canManage={team.coordinatorRole === "customer"} />
 
           {/* What the order asks for against what the team currently covers, and the way in to
               adding somebody. Shown whenever the team can still be edited — including when
@@ -535,10 +582,22 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
           {request.interestDeadline &&
             `${t("applyBy")} ${new Date(request.interestDeadline).toLocaleString()}`}
         </div>
+        {request.agreedRate !== null && (
+          <div className="text-sm text-loom-indigo mt-1">
+            {t("agreedRate")}: ₹{request.agreedRate}
+            {request.agreedRateUnit ? `/${request.agreedRateUnit}` : ""}
+          </div>
+        )}
+        {request.coordinatorRole === "provider" && (
+          <div className="text-sm text-loom-indigo">
+            {t("coordinator")}: {request.coordinatorName ?? "—"}
+          </div>
+        )}
         {!decided && deadlinePassed && (
           <div className="text-sm text-loom-madder mt-1">{t("interestDeadlinePassed")}</div>
         )}
       </Card>
+      <RequestPattern requestId={requestId} canManage={request.coordinatorRole === "customer"} />
 
       {applicants === undefined && <div className="text-loom-indigoSoft">…</div>}
 

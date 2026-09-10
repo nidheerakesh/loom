@@ -15,7 +15,9 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   let query = supabaseAdmin
     .from("requests")
-    .select("id, title, mode, units, status, headcount, interest_deadline")
+    .select(
+      "id, title, mode, units, status, headcount, interest_deadline, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, providers(name, shop_name)",
+    )
     .eq("customer_id", s.userId)
     .order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
@@ -49,17 +51,26 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   res.status(200).json(
-    requests.map((r) => ({
-      _id: r.id,
-      title: r.title,
-      mode: r.mode,
-      units: r.units,
-      status: r.status,
-      headcount: r.headcount ?? null,
-      interestDeadline: r.interest_deadline ?? null,
-      interestedCount: counts.get(r.id)?.interested ?? 0,
-      acceptedCount: counts.get(r.id)?.accepted ?? 0,
-      teamId: teamByRequest.get(r.id) ?? null,
-    })),
+    requests.map((r) => {
+      const coordinatorProvider = r.providers as unknown as { name: string; shop_name: string | null } | null;
+      return {
+        _id: r.id,
+        title: r.title,
+        mode: r.mode,
+        units: r.units,
+        status: r.status,
+        headcount: r.headcount ?? null,
+        interestDeadline: r.interest_deadline ?? null,
+        interestedCount: counts.get(r.id)?.interested ?? 0,
+        acceptedCount: counts.get(r.id)?.accepted ?? 0,
+        teamId: teamByRequest.get(r.id) ?? null,
+        coordinatorRole: r.coordinator_role ?? "customer",
+        coordinatorProviderId: r.coordinator_provider_id ?? null,
+        coordinatorName: coordinatorProvider?.shop_name ?? coordinatorProvider?.name ?? null,
+        agreedRate: r.agreed_rate ?? null,
+        agreedRateUnit: r.agreed_rate_unit ?? null,
+        coordinatorSignedOffAt: r.coordinator_signed_off_at ?? null,
+      };
+    }),
   );
 });

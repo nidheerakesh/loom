@@ -30,15 +30,24 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
-  const { data: mine, error: intErr } = await supabaseAdmin
-    .from("interests")
-    .select("request_id, state")
-    .eq("provider_id", provider.id)
-    .in("state", ["interested", "accepted"]);
-  if (intErr) throw new HttpError(500, intErr.message);
+  // Two independent reasons a job belongs to her: she applied and either waits or won
+  // (`interests`), or the customer appointed her to coordinate it — which needs no
+  // application at all, per the group-coordinator feature: "someone [the customer] appoints,
+  // can be a provider," not restricted to providers already on the job.
+  const [mineRes, coordinatingRes] = await Promise.all([
+    supabaseAdmin
+      .from("interests")
+      .select("request_id, state")
+      .eq("provider_id", provider.id)
+      .in("state", ["interested", "accepted"]),
+    supabaseAdmin.from("requests").select("id").eq("coordinator_provider_id", provider.id),
+  ]);
+  if (mineRes.error) throw new HttpError(500, mineRes.error.message);
+  if (coordinatingRes.error) throw new HttpError(500, coordinatingRes.error.message);
 
-  const stateByRequest = new Map((mine ?? []).map((i) => [i.request_id, i.state] as const));
-  const requestIds = [...stateByRequest.keys()];
+  const stateByRequest = new Map((mineRes.data ?? []).map((i) => [i.request_id, i.state] as const));
+  const coordinatingIds = new Set((coordinatingRes.data ?? []).map((r) => r.id));
+  const requestIds = [...new Set([...stateByRequest.keys(), ...coordinatingIds])];
   if (requestIds.length === 0) {
     res.status(200).json([]);
     return;
@@ -48,7 +57,9 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   // alike, which is the whole point of the screen.
   const { data: requests, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, title, units, pay, status, mode, location_id, created_at, customers(name)")
+    .select(
+      "id, title, units, pay, status, mode, location_id, created_at, customers(name), coordinator_signed_off_at",
+    )
     .in("id", requestIds)
     .order("created_at", { ascending: false });
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -66,6 +77,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     mode: string;
     location_id: string;
     customers: { name: string } | null;
+    coordinator_signed_off_at: string | null;
   };
   const rows = requests as unknown as Row[];
 
@@ -82,8 +94,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       pay: r.pay ?? null,
       status: r.status,
       mode: r.mode,
-      // 'interested' means still competing for the job; 'accepted' means it is theirs.
+      // 'interested' means still competing for the job; 'accepted' means it is theirs; null
+      // means she never applied at all — only reachable when she is coordinating it instead.
       interestState: stateByRequest.get(r.id) ?? null,
+      isCoordinator: coordinatingIds.has(r.id),
+      coordinatorSignedOffAt: r.coordinator_signed_off_at ?? null,
       customerName: r.customers?.name ?? null,
       distanceKm: distances.get(r.location_id) ?? null,
     })),

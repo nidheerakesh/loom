@@ -21,15 +21,36 @@ const Body = z.object({
   // or a cutoff, still works exactly as before.
   headcount: z.number().int().positive().max(1000).optional(),
   interestDeadline: z.string().datetime().optional(),
+  // Group orders only. Who is accountable for this job (default: the customer herself), and
+  // the single rate every team member is paid for it. All optional — an older client, or a
+  // customer who doesn't want to set either up front, still works exactly as before.
+  coordinatorProviderId: z.string().min(1).optional(),
+  agreedRate: z.number().nonnegative().max(10_000_000).optional(),
+  agreedRateUnit: z.string().max(40).optional(),
   skills: z.array(
     z.object({ skillId: z.string().min(1), quantity: z.number().int().positive().max(10000) }),
   ),
 });
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
-  const { token, title, description, mode, units, pay, deadline, headcount, interestDeadline, skills } =
-    Body.parse(req.body);
+  const {
+    token, title, description, mode, units, pay, deadline, headcount, interestDeadline,
+    coordinatorProviderId, agreedRate, agreedRateUnit, skills,
+  } = Body.parse(req.body);
   const s = await requireRole(token, "customer");
+
+  // A coordinator provider must be real — checked here rather than left to the foreign key,
+  // for the same reason set-coordinator.ts does: a route can say "that provider doesn't
+  // exist", a constraint violation on the insert below can only say "insert failed".
+  if (coordinatorProviderId) {
+    const { data: coord, error: coordErr } = await supabaseAdmin
+      .from("providers")
+      .select("id")
+      .eq("id", coordinatorProviderId)
+      .maybeSingle();
+    if (coordErr) throw new HttpError(500, coordErr.message);
+    if (!coord) throw new HttpError(400, "That provider does not exist");
+  }
 
   const { data: customer, error: custErr } = await supabaseAdmin
     .from("customers")
@@ -50,6 +71,10 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       deadline,
       headcount: mode === "group" ? headcount : undefined,
       interest_deadline: mode === "group" ? interestDeadline : undefined,
+      coordinator_role: mode === "group" && coordinatorProviderId ? "provider" : "customer",
+      coordinator_provider_id: mode === "group" ? coordinatorProviderId : undefined,
+      agreed_rate: mode === "group" ? agreedRate : undefined,
+      agreed_rate_unit: mode === "group" ? agreedRateUnit : undefined,
       location_id: customer.location_id,
       status: "open",
       customer_id: customer.id,

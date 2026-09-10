@@ -4,6 +4,7 @@ import { pickLang } from "../../i18n";
 import { Button, Card, Screen } from "../../ui";
 import { apiGet, apiPost } from "../../lib/api";
 import { SignOut } from "./Current";
+import { RequestPattern } from "../shared/RequestPattern";
 
 type AcceptedRequest = {
   _id: string;
@@ -15,6 +16,8 @@ type AcceptedRequest = {
   customerName: string | null;
   distanceKm: number | null;
   interestState: "interested" | "accepted" | null;
+  isCoordinator: boolean;
+  coordinatorSignedOffAt: string | null;
 };
 
 type MyTeam = {
@@ -52,6 +55,10 @@ export function ProviderMyWork() {
       apiPost("/api/team-assembly/respond-invite", { token, ...body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-assembly/my-teams", token] }),
   });
+  const signOff = useMutation({
+    mutationFn: (requestId: string) => apiPost("/api/requests/coordinator-signoff", { token, requestId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requests/my-accepted", token] }),
+  });
 
   const statusLabel = (status: string) => t(`status_${status}`);
 
@@ -66,8 +73,15 @@ export function ProviderMyWork() {
   );
   const activeIndividual = (accepted ?? []).filter((r) => r.status !== "completed" && r.mode === "individual");
   const doneIndividual = (accepted ?? []).filter((r) => r.status === "completed" && r.mode === "individual");
-  const activeGroup = (accepted ?? []).filter((r) => r.status !== "completed" && r.mode === "group");
-  const doneGroup = (accepted ?? []).filter((r) => r.status === "completed" && r.mode === "group");
+  // A coordinator-only row (appointed without ever applying) has interestState null and
+  // belongs in its own section, not mixed into "applied and waiting" below.
+  const activeGroup = (accepted ?? []).filter(
+    (r) => r.status !== "completed" && r.mode === "group" && r.interestState !== null,
+  );
+  const doneGroup = (accepted ?? []).filter(
+    (r) => r.status === "completed" && r.mode === "group" && r.interestState !== null,
+  );
+  const coordinating = (accepted ?? []).filter((r) => r.isCoordinator && r.status !== "completed");
   const loading = accepted === undefined || teams === undefined;
   const empty = !loading && (accepted?.length ?? 0) === 0 && (teams?.length ?? 0) === 0;
 
@@ -175,6 +189,49 @@ export function ProviderMyWork() {
                 <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
               )}
             </Card>
+          ))}
+        </section>
+      )}
+
+      {/* Group orders she is coordinating — appointed by the customer, which needs no
+          application of her own (isCoordinator can be true with interestState null). She can
+          attach the reference photo the whole team sees, and her sign-off is what
+          requests/complete.ts is waiting on before the customer can close the job out. */}
+      {coordinating.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-loom-indigo mb-2">{t("coordinator")}</h2>
+          {coordinating.map((r) => (
+            <div key={r._id}>
+              <Card className="mb-2">
+                <div className="font-semibold text-loom-indigo">{r.title}</div>
+                <div className="text-sm text-loom-indigoSoft">
+                  {statusLabel(r.status)}
+                  {r.pay !== null && ` · ₹${r.pay}`}
+                  {` · ${r.units} ${t("units")}`}
+                </div>
+                {r.customerName && (
+                  <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
+                )}
+                {r.status === "assigned" && (
+                  <div className="mt-2">
+                    {r.coordinatorSignedOffAt ? (
+                      <span className="text-sm text-loom-leaf font-medium">{t("signedOff")}</span>
+                    ) : (
+                      <Button
+                        variant="gold"
+                        disabled={signOff.isPending}
+                        onClick={() => {
+                          if (window.confirm(t("confirmSignOff"))) signOff.mutate(r._id);
+                        }}
+                      >
+                        {t("signOff")}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </Card>
+              {r.status === "assigned" && <RequestPattern requestId={r._id} canManage />}
+            </div>
           ))}
         </section>
       )}

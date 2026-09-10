@@ -20,10 +20,15 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("title, units")
+    .select(
+      "title, units, status, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, providers(name, shop_name)",
+    )
     .eq("id", team.request_id)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
+  const coordinatorProvider = request?.providers as unknown as
+    | { name: string; shop_name: string | null }
+    | null;
 
   // Embedded joins pull the provider, their SHG and the assigned skill in one query,
   // instead of three (sometimes four) per member.
@@ -94,8 +99,16 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     status: team.status,
     rationale: team.rationale,
     complete: team.complete,
+    requestId: team.request_id,
     requestTitle: request?.title ?? "",
     requestUnits: request?.units ?? 0,
+    requestStatus: request?.status ?? null,
+    coordinatorRole: request?.coordinator_role ?? "customer",
+    coordinatorProviderId: request?.coordinator_provider_id ?? null,
+    coordinatorName: coordinatorProvider?.shop_name ?? coordinatorProvider?.name ?? null,
+    agreedRate: request?.agreed_rate ?? null,
+    agreedRateUnit: request?.agreed_rate_unit ?? null,
+    coordinatorSignedOffAt: request?.coordinator_signed_off_at ?? null,
     skills,
     members,
   });

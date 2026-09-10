@@ -203,10 +203,28 @@ create table requests (
   -- interest window closes. Null on individual requests and on group requests predating the
   -- open-call model.
   headcount integer check (headcount is null or headcount > 0),
-  interest_deadline timestamptz
+  interest_deadline timestamptz,
+  -- Group orders only (migration 009): who is accountable for this job. Defaults to the
+  -- customer herself; coordinator_provider_id is set only when coordinator_role = 'provider'.
+  coordinator_role text not null default 'customer' check (coordinator_role in ('customer', 'provider')),
+  coordinator_provider_id uuid references providers (id),
+  agreed_rate double precision,
+  agreed_rate_unit text,
+  coordinator_signed_off_at timestamptz
 );
 create index requests_customer_id_idx on requests (customer_id);
 create index requests_status_idx on requests (status);
+
+-- Migration 009. A shared reference photo for a group order, same shape as portfolio_items
+-- but keyed to the request instead of a provider.
+create table request_patterns (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  request_id uuid not null references requests (id) on delete cascade,
+  storage_id text,
+  caption text
+);
+create index request_patterns_request_id_idx on request_patterns (request_id);
 
 create table request_skills (
   id uuid primary key default gen_random_uuid(),
@@ -399,6 +417,7 @@ alter table grievances        enable row level security;
 alter table chat_threads      enable row level security;
 alter table messages          enable row level security;
 alter table consents          enable row level security;
+alter table request_patterns  enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Performance indexes. Each corresponds to a filter/sort the API actually issues;

@@ -152,6 +152,23 @@ const DICT: Record<string, { ml: string; en: string }> = {
     ml: "കേൾക്കാൻ കഴിഞ്ഞില്ല. ഒന്നുകൂടി ശ്രമിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ.",
     en: "Couldn't hear that. Try again, or type instead.",
   },
+  coordinator: { ml: "ചുമതലക്കാരി", en: "Coordinator" },
+  coordinatorMyself: { ml: "ഞാൻ തന്നെ", en: "Myself" },
+  coordinatorSomeoneElse: { ml: "മറ്റൊരാൾ", en: "Someone else" },
+  coordinatorAppointed: { ml: "നിയോഗിച്ചത്", en: "Appointed" },
+  coordinatorYou: { ml: "നിങ്ങൾ", en: "You" },
+  agreedRate: { ml: "സമ്മതിച്ച നിരക്ക് ₹", en: "Agreed rate ₹" },
+  agreedRateUnit: { ml: "യൂണിറ്റ് (ഉദാ: ഒരെണ്ണത്തിന്)", en: "Unit (e.g. piece)" },
+  pattern: { ml: "മാതൃക", en: "Pattern" },
+  addPattern: { ml: "മാതൃക ഫോട്ടോ ചേർക്കുക", en: "Add a reference photo" },
+  noPatternYet: { ml: "ഇതുവരെ മാതൃക ചേർത്തിട്ടില്ല", en: "No reference photo yet" },
+  signOff: { ml: "ഒപ്പിടുക", en: "Sign off" },
+  signedOff: { ml: "ഒപ്പിട്ടു", en: "Signed off" },
+  awaitingSignoff: { ml: "ചുമതലക്കാരിയുടെ ഒപ്പ് കാത്തിരിക്കുന്നു", en: "Waiting on coordinator sign-off" },
+  confirmSignOff: {
+    ml: "ജോലി ശരിയാണെന്ന് ഉറപ്പാണോ? ഇത് തിരികെയെടുക്കാനാവില്ല.",
+    en: "Sure the work is right? This can't be undone.",
+  },
   consentTitle: { ml: "തുടരും മുമ്പ്", en: "Before you continue" },
   // Phone hashing moved from fnv1a to salted HMAC-SHA256 (migration 007), which is genuinely
   // hard to reverse — but the copy still doesn't claim "unrecoverable". A leaked salt, or a

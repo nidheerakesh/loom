@@ -18,7 +18,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, customer_id, status")
+    .select("id, customer_id, mode, status, coordinator_role, coordinator_signed_off_at")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -33,9 +33,21 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     throw new HttpError(409, "This work has not been assigned yet");
   }
 
+  // A group order with an appointed provider coordinator needs HER sign-off before the
+  // customer can close it out — that is the entire point of appointing someone other than
+  // herself. When the coordinator is the customer (the default), completing the job IS the
+  // sign-off: the same tap satisfies both, no second click for something she is already both
+  // sides of.
+  if (request.mode === "group" && request.coordinator_role === "provider" && !request.coordinator_signed_off_at) {
+    throw new HttpError(409, "Waiting on the coordinator to sign off before this can be marked finished", "awaiting-coordinator-signoff");
+  }
+
   const { error } = await supabaseAdmin
     .from("requests")
-    .update({ status: "completed" })
+    .update({
+      status: "completed",
+      coordinator_signed_off_at: request.coordinator_signed_off_at ?? new Date().toISOString(),
+    })
     .eq("id", requestId);
   if (error) throw new HttpError(500, error.message);
 

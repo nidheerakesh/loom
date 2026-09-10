@@ -462,6 +462,91 @@ async function main() {
   ok("applying after the interest deadline is refused",
     late.status === 409 && late.data?.reason === "interest-deadline-passed", `${late.status} ${late.data?.error ?? ""}`);
 
+  // ── F3 · GROUP COORDINATOR ───────────────────────────────────────────────────
+  // Every group task has one person accountable for it: the customer by default, or someone
+  // she appoints (who may be a provider). Here she appoints Provider Three, who never applies
+  // — appointment needs no application, per the feature's own design.
+  section("F3 · Group coordinator");
+  const coordCall = await post("requests/create", {
+    token: A.c2.token, title: "E2E coordinated order", description: "automated test",
+    mode: "group", units: 2, coordinatorProviderId: A.p3.userId, agreedRate: 350, agreedRateUnit: "piece",
+    skills: [{ skillId: newSkillId, quantity: 2 }],
+  });
+  const coordId = coordCall.data.requestId;
+  ok("customer posts a group order with an appointed coordinator", coordCall.status === 200, `id=${coordId}`);
+
+  const myReqs = await get("customers/my-requests", { token: A.c2.token });
+  const coordRow = myReqs.data?.find((r) => r._id === coordId);
+  ok("the appointed coordinator and agreed rate are readable back",
+    coordRow?.coordinatorRole === "provider" && coordRow?.agreedRate === 350,
+    `role=${coordRow?.coordinatorRole} rate=${coordRow?.agreedRate}${coordRow?.agreedRateUnit}`);
+
+  // Provider One applies and gets selected — she does the work; Provider Three coordinates it
+  // without ever applying.
+  await post("requests/respond", { token: A.p1.token, requestId: coordId, accept: true });
+  const coordSel = await post("requests/select-team", {
+    token: A.c2.token, requestId: coordId, providerIds: [A.p1.userId],
+  });
+  ok("customer selects the one applicant", coordSel.status === 200, `selected=${coordSel.data?.selected}`);
+
+  const coordinatorSeesIt = await get("requests/my-accepted", { token: A.p3.token });
+  const coordEntry = coordinatorSeesIt.data?.find((r) => r._id === coordId);
+  ok("the coordinator sees the job in My work despite never applying",
+    coordEntry?.isCoordinator === true && coordEntry?.interestState === null,
+    `isCoordinator=${coordEntry?.isCoordinator} interestState=${coordEntry?.interestState}`);
+
+  const tooSoon = await post("requests/complete", { token: A.c2.token, requestId: coordId });
+  ok("completing a coordinated order before sign-off is refused",
+    tooSoon.status === 409 && tooSoon.data?.reason === "awaiting-coordinator-signoff",
+    `${tooSoon.status} ${tooSoon.data?.error ?? ""}`);
+
+  const wrongSignoff = await post("requests/coordinator-signoff", { token: A.p1.token, requestId: coordId });
+  ok("a non-coordinator's sign-off attempt is refused", wrongSignoff.status === 403,
+    `${wrongSignoff.status} ${wrongSignoff.data?.error ?? ""}`);
+
+  const rightSignoff = await post("requests/coordinator-signoff", { token: A.p3.token, requestId: coordId });
+  ok("the appointed coordinator signs off", rightSignoff.status === 200);
+
+  const nowComplete = await post("requests/complete", { token: A.c2.token, requestId: coordId });
+  ok("completing now succeeds — the sign-off unblocked it", nowComplete.status === 200,
+    `${nowComplete.status} ${nowComplete.data?.error ?? ""}`);
+
+  // Pattern photo: coordinator-only to manage, visible to anyone with a real reason to see
+  // the job.
+  const patUpload = await post("requests/pattern-upload-url", {
+    token: A.p3.token, requestId: coordId, fileName: "reference.jpg",
+  });
+  ok("the coordinator can request a pattern upload URL",
+    patUpload.status === 200 && Boolean(patUpload.data?.path), `path=${patUpload.data?.path}`);
+
+  const patUploadDenied = await post("requests/pattern-upload-url", {
+    token: A.p1.token, requestId: coordId, fileName: "reference.jpg",
+  });
+  ok("a non-coordinator cannot upload a pattern photo", patUploadDenied.status === 403,
+    `${patUploadDenied.status} ${patUploadDenied.data?.error ?? ""}`);
+
+  const patAdd = await post("requests/pattern", {
+    token: A.p3.token, requestId: coordId, path: patUpload.data.path, caption: "E2E reference",
+  });
+  ok("the coordinator adds the pattern row", patAdd.status === 200);
+
+  const patListParticipant = await get("requests/pattern", { token: A.p1.token, requestId: coordId });
+  ok("a team member can see the shared reference photo",
+    Array.isArray(patListParticipant.data) && patListParticipant.data.length === 1,
+    `${patListParticipant.data?.length} pattern(s)`);
+
+  const patListStranger = await get("requests/pattern", { token: A.p2.token, requestId: coordId });
+  ok("a provider with no part in this job cannot see the reference photo", patListStranger.status === 403,
+    `${patListStranger.status} ${patListStranger.data?.error ?? ""}`);
+
+  const patItemId = patListParticipant.data[0]._id;
+  const patDeleteDenied = await post("requests/pattern-delete", { token: A.p1.token, itemId: patItemId });
+  ok("a non-coordinator cannot delete the pattern photo", patDeleteDenied.status === 403,
+    `${patDeleteDenied.status} ${patDeleteDenied.data?.error ?? ""}`);
+
+  const patDelete = await post("requests/pattern-delete", { token: A.p3.token, itemId: patItemId });
+  ok("the coordinator deletes the pattern photo", patDelete.status === 200);
+
   // ── G · CHAT PRIVACY ────────────────────────────────────────────────────────
   section("G · Chat and privacy");
   const th = await post("chat/create", { token: A.c1.token, providerIds: [A.p1.userId], title: "E2E conversation" });
