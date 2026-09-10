@@ -374,6 +374,11 @@ async function main() {
     if (process.env.DEBUG) console.log("    [my-teams]", JSON.stringify(mt.data).slice(0, 300));
     const sees = (mt.data ?? []).some((t) => t._id === teamId || t.teamId === teamId);
     ok(`${A[k].name} receives the invitation only AFTER confirmation`, sees, `${mt.data?.length} team item(s)`);
+    // requestId is what lets a plain team member's own screen show the reference photo — the
+    // API always allowed her to read it, nothing on her screen ever pointed her at it until now.
+    const myEntry = (mt.data ?? []).find((t) => t._id === teamId || t.teamId === teamId);
+    ok(`${A[k].name}'s membership carries the requestId her own screen needs for the pattern photo`,
+      typeof myEntry?.requestId === "string" && myEntry.requestId.length > 0);
     if (!accepter) accepter = k; else if (!decliner) decliner = k;
   }
 

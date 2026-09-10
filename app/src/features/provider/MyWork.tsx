@@ -24,6 +24,7 @@ type AcceptedRequest = {
 
 type MyTeam = {
   teamId: string;
+  requestId: string;
   teamStatus: string;
   requestStatus: string | null;
   requestTitle: string;
@@ -129,13 +130,19 @@ export function ProviderMyWork() {
         <section>
           <h2 className="font-semibold text-loom-indigo mb-2">{t("teamWork")}</h2>
           {joined.map((tm) => (
-            <Card key={tm.teamId} className="mb-2">
-              <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
-              <div className="text-sm text-loom-indigoSoft">
-                {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")} ·{" "}
-                {t(`status_${tm.requestStatus ?? tm.teamStatus}`)}
-              </div>
-            </Card>
+            <div key={tm.teamId}>
+              <Card className="mb-2">
+                <div className="font-semibold text-loom-indigo">{tm.requestTitle}</div>
+                <div className="text-sm text-loom-indigoSoft">
+                  {pickLang(lang, tm.skill, tm.skillMl)} · {tm.coveredUnits} {t("units")} ·{" "}
+                  {t(`status_${tm.requestStatus ?? tm.teamStatus}`)}
+                </div>
+              </Card>
+              {/* Visible to her the same as it is to the coordinator and the customer — the
+                  API already allowed any team member to read this, nothing on her own screen
+                  ever showed it. canManage is false: only the coordinator adds or removes it. */}
+              <RequestPattern requestId={tm.requestId} canManage={false} />
+            </div>
           ))}
         </section>
       )}
@@ -177,25 +184,33 @@ export function ProviderMyWork() {
         <section>
           <h2 className="font-semibold text-loom-indigo mb-2">{t("groupWork")}</h2>
           {activeGroup.map((r) => (
-            <Card key={r._id} className="mb-2">
-              <div className="font-semibold text-loom-indigo">{r.title}</div>
-              <div
-                className={`text-sm font-medium ${
-                  r.interestState === "accepted" ? "text-loom-leaf" : "text-loom-turmeric"
-                }`}
-              >
-                {r.interestState === "accepted" ? t("status_accepted") : t("waitingForCustomer")}
-              </div>
-              <div className="text-sm text-loom-indigoSoft">
-                {statusLabel(r.status)}
-                {r.pay !== null && ` · ₹${r.pay}`}
-                {` · ${r.units} ${t("units")}`}
-                {r.distanceKm !== null && ` · ${r.distanceKm} ${t("km")}`}
-              </div>
-              {r.customerName && (
-                <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
+            <div key={r._id}>
+              <Card className="mb-2">
+                <div className="font-semibold text-loom-indigo">{r.title}</div>
+                <div
+                  className={`text-sm font-medium ${
+                    r.interestState === "accepted" ? "text-loom-leaf" : "text-loom-turmeric"
+                  }`}
+                >
+                  {r.interestState === "accepted" ? t("status_accepted") : t("waitingForCustomer")}
+                </div>
+                <div className="text-sm text-loom-indigoSoft">
+                  {statusLabel(r.status)}
+                  {r.pay !== null && ` · ₹${r.pay}`}
+                  {` · ${r.units} ${t("units")}`}
+                  {r.distanceKm !== null && ` · ${r.distanceKm} ${t("km")}`}
+                </div>
+                {r.customerName && (
+                  <div className="text-sm text-loom-indigoSoft mt-1">{r.customerName}</div>
+                )}
+              </Card>
+              {/* Only once she's actually on the job, not while still waiting to be picked —
+                  and not if she's also the coordinator, whose own section above already shows
+                  this with the manage controls she actually has. */}
+              {r.interestState === "accepted" && !r.isCoordinator && (
+                <RequestPattern requestId={r._id} canManage={false} />
               )}
-            </Card>
+            </div>
           ))}
         </section>
       )}
