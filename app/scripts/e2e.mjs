@@ -639,6 +639,29 @@ async function main() {
   const waTeam = await waSay(A.p1.phone, "ടീം");
   ok("TEAM answers in Malayalam", /ക്ഷണ/.test(waTeam), waTeam.split("\n")[0]);
 
+  // Group orders are an open call now (this session's headline change), applied to through the
+  // exact same `interests` insert as individual work — so the bot's job feed is not allowed to
+  // silently stay individual-only. A fresh scratch provider with only this one skill, so
+  // nothing from earlier sections competes for the feed's top-3 slots.
+  const waP = await signUp("9000000104", "provider", "E2E Bot Provider Four");
+  const waSkill = await post("skills/resolve", { token: waP.token, phrases: ["waSkill reed craft"] });
+  const waSkillId = waSkill.data.readback[0].skillId;
+  const waGroup = await post("requests/create", {
+    token: A.c2.token, title: "E2E bot-visible group order", description: "automated test",
+    mode: "group", units: 1, headcount: 2, pay: 2000, skills: [{ skillId: waSkillId, quantity: 1 }],
+  });
+  const waJobs = await waSay("9000000104", "work");
+  ok("a group order shows up in the bot's job feed, tagged GROUP",
+    waJobs.includes("E2E bot-visible group order") && waJobs.includes("GROUP"),
+    waJobs.split("\n").find((l) => l.includes("GROUP")) ?? "(not found)");
+
+  const waApply = await waSay("9000000104", "1");
+  ok("applying to a group order over the bot registers real interest",
+    /അപേക്ഷിച്ചു|already applied/.test(waApply), waApply.split("\n")[0]);
+  const waInterests = await get("requests/interested-providers", { token: A.c2.token, requestId: waGroup.data.requestId });
+  ok("…and it is the same `interests` row the app itself would show the customer",
+    (waInterests.data ?? []).some((i) => i.providerId === waP.userId && i.state === "interested"));
+
   // A voice note is the point of the channel, so its failure mode matters more than its happy
   // path: with no ASR key it must say it cannot hear, never answer the menu as though it
   // understood silence, and never make Meta retry.

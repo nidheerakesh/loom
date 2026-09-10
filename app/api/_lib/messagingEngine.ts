@@ -12,7 +12,16 @@ import { score, skillFit } from "./scoring.js";
 
 const MAX_OFFERS = 3;
 
-export type Offer = { requestId: string; title: string; skill: string; distanceKm: number; pay: number | null };
+export type Offer = {
+  requestId: string;
+  title: string;
+  skill: string;
+  distanceKm: number;
+  pay: number | null;
+  mode: "individual" | "group";
+  headcount: number | null;
+  interestDeadline: string | null;
+};
 export type Invite = { teamId: string; title: string; skill: string; units: number };
 
 export async function providerFor(e164: string) {
@@ -55,12 +64,14 @@ export async function offersFor(provider: { id: string; home_location_id: string
   const candidateIds = [...new Set((reqSkillRows ?? []).map((r) => r.request_id))];
   if (candidateIds.length === 0) return [];
 
+  // Both individual and group requests — a group order is an open call (requests/respond.ts,
+  // requests/select-team.ts), applied to through the exact same `interests` insert below as
+  // individual work, so there is nothing channel-specific stopping it from showing here too.
   const { data: requests } = await supabaseAdmin
     .from("requests")
-    .select("id, title, pay, location_id")
+    .select("id, title, pay, location_id, mode, headcount, interest_deadline")
     .in("id", candidateIds)
-    .eq("status", "open")
-    .eq("mode", "individual"); // group orders are staffed by team assembly, never by interest
+    .eq("status", "open");
   if (!requests || requests.length === 0) return [];
 
   const [{ data: skillRows }, distances] = await Promise.all([
@@ -100,6 +111,9 @@ export async function offersFor(provider: { id: string; home_location_id: string
       skill: skillById.get(matched)?.canonical_name_ml ?? skillById.get(matched)?.canonical_name ?? "",
       distanceKm: Math.round(dist * 10) / 10,
       pay: r.pay,
+      mode: r.mode as "individual" | "group",
+      headcount: r.headcount,
+      interestDeadline: r.interest_deadline,
       total: score(skillFit(bestProf), dist, r.pay ?? undefined).total,
     });
   }
@@ -162,9 +176,10 @@ function listing(name: string, offers: Offer[]): string {
   if (offers.length === 0) {
     return `${name}, ഇപ്പോൾ പുതിയ ജോലി ഇല്ല.\nNo open work matching your skills right now. We'll message you when there is.`;
   }
-  const lines = offers.map(
-    (o, i) => `${i + 1}. ${o.title}\n   ${o.skill} · ${o.distanceKm} കി.മീ${o.pay ? ` · ₹${o.pay}` : ""}`,
-  );
+  const lines = offers.map((o, i) => {
+    const tag = o.mode === "group" ? ` · GROUP${o.headcount ? ` (${o.headcount})` : ""}` : "";
+    return `${i + 1}. ${o.title}${tag}\n   ${o.skill} · ${o.distanceKm} കി.മീ${o.pay ? ` · ₹${o.pay}` : ""}`;
+  });
   return [
     `${name}, ${offers.length} ജോലി കണ്ടെത്തി / ${offers.length} job${offers.length > 1 ? "s" : ""} found:`,
     "",
@@ -228,6 +243,13 @@ async function replyForProvider(provider: Provider | null, raw: string): Promise
     const offers = await offersFor(provider);
     const chosen = offers[pick - 1];
     if (!chosen) return `There is no job ${pick} right now.\n\n${listing(first, offers)}`;
+
+    // Same rule requests/respond.ts enforces for a group order's interest window — a provider
+    // applying here goes through the identical `interests` insert, so it needs the identical
+    // gate, or the bot would be a way around a deadline the app itself refuses to cross.
+    if (chosen.mode === "group" && chosen.interestDeadline && new Date(chosen.interestDeadline).getTime() < Date.now()) {
+      return `"${chosen.title}" — അപേക്ഷിക്കാനുള്ള സമയം കഴിഞ്ഞു.\nThe window to apply for this has closed.`;
+    }
 
     const { data: existing } = await supabaseAdmin
       .from("interests")
