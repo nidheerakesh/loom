@@ -4,6 +4,7 @@ import { apiGet, apiPost, POLL_MS } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, ListenButton, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
+import { detectSpeechLang } from "../../lib/speech";
 
 type ThreadRow = { _id: string; title: string; lastMessage: string | null };
 type MessageRow = {
@@ -129,21 +130,7 @@ export function ChatThread({
     <Screen title={title || t("chat")} right={<TextButton onClick={onBack}>‹ {t("back")}</TextButton>}>
       <div className="space-y-2 mb-4">
         {messages?.map((m) => (
-          <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
-            <div className={`rounded-[14px] px-3 py-2 max-w-[80%] ${m.mine ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-ink"}`}>
-              {!m.mine && m.senderName && (
-                <div className="text-xs font-semibold text-loom-leaf mb-0.5">{m.senderName}</div>
-              )}
-              {m.attachmentUrl && (
-                <img
-                  src={m.attachmentUrl}
-                  alt=""
-                  className="rounded-[10px] max-w-full max-h-[240px] object-cover mb-1"
-                />
-              )}
-              {m.body} {!m.mine && m.body && <ListenButton text={m.body} />}
-            </div>
-          </div>
+          <MessageBubble key={m._id} m={m} />
         ))}
       </div>
       {/* Sat at `bottom-0`, the same as the tab bar, so it rendered underneath it and the
@@ -169,6 +156,66 @@ export function ChatThread({
         <Button variant="gold" onClick={() => void submit()}>{t("send")}</Button>
       </div>
     </Screen>
+  );
+}
+
+// A message stays in whatever language whoever wrote it typed it in — the thread never
+// auto-translates, since that would run a translation call on every message for every reader
+// on every load. Instead: if this message's own script doesn't match the reader's UI
+// language, a "Translate" control appears. Fetched once per message, cached in local state —
+// re-toggling just shows/hides what's already there rather than re-fetching.
+function MessageBubble({ m }: { m: MessageRow }) {
+  const { token, t, lang: uiLang } = useAuth();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const translate = useMutation({
+    mutationFn: () => apiPost<{ translated: string }>("/api/chat/translate", { token, text: m.body, targetLang: uiLang }),
+    onSuccess: (r) => {
+      setTranslated(r.translated);
+      setShowTranslation(true);
+    },
+  });
+
+  const messageLang = m.body ? detectSpeechLang(m.body, uiLang) : uiLang;
+  const isForeign = m.body && messageLang !== uiLang;
+  const displayText = showTranslation && translated ? translated : m.body;
+
+  return (
+    <div className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
+      <div className={`rounded-[14px] px-3 py-2 max-w-[80%] ${m.mine ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-ink"}`}>
+        {!m.mine && m.senderName && (
+          <div className="text-xs font-semibold text-loom-leaf mb-0.5">{m.senderName}</div>
+        )}
+        {m.attachmentUrl && (
+          <img
+            src={m.attachmentUrl}
+            alt=""
+            className="rounded-[10px] max-w-full max-h-[240px] object-cover mb-1"
+          />
+        )}
+        {displayText} {!m.mine && m.body && <ListenButton text={displayText} />}
+        {!m.mine && isForeign && (
+          <div className="mt-1">
+            <TextButton
+              className={`text-xs ${m.mine ? "text-loom-cotton/80" : ""}`}
+              onClick={() => {
+                if (translated) {
+                  setShowTranslation((v) => !v);
+                } else {
+                  translate.mutate();
+                }
+              }}
+            >
+              {translate.isPending
+                ? "…"
+                : showTranslation
+                  ? t("showOriginal")
+                  : t("translateMessage")}
+            </TextButton>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -12,6 +12,7 @@ import r_chat_attachment_upload_url from "./chat/attachment-upload-url.js";
 import r_chat_create from "./chat/create.js";
 import r_chat_messages from "./chat/messages.js";
 import r_chat_threads from "./chat/threads.js";
+import r_chat_translate from "./chat/translate.js";
 import r_customers_history from "./customers/history.js";
 import r_customers_my_requests from "./customers/my-requests.js";
 import r_customers_update_profile from "./customers/update-profile.js";
@@ -85,6 +86,7 @@ export const routes: Record<string, Handler> = {
   "chat/create": r_chat_create,
   "chat/messages": r_chat_messages,
   "chat/threads": r_chat_threads,
+  "chat/translate": r_chat_translate,
   "customers/history": r_customers_history,
   "customers/my-requests": r_customers_my_requests,
   "customers/update-profile": r_customers_update_profile,

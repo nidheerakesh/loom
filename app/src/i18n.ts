@@ -40,6 +40,8 @@ const DICT: Record<string, { ml: string; en: string }> = {
   coverageIncomplete: { ml: "വൈദഗ്ധ്യം ബാക്കിയുണ്ട്", en: "Skills still missing" },
   typeMessage: { ml: "സന്ദേശം എഴുതുക…", en: "Type a message…" },
 attachPhoto: { ml: "ഫോട്ടോ ചേർക്കുക", en: "Attach a photo" },
+  translateMessage: { ml: "വിവർത്തനം ചെയ്യൂ", en: "Translate" },
+  showOriginal: { ml: "യഥാർത്ഥം കാണിക്കൂ", en: "Show original" },
   switchToCustomer: { ml: "ഉപഭോക്താവായി തുടരുക", en: "Continue as a customer" },
   switchToProvider: { ml: "വിദഗ്ധയായി തുടരുക", en: "Continue as a provider" },
   alsoHireHint: {

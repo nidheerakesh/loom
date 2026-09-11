@@ -107,6 +107,28 @@ async function main() {
     `${NEW_SKILL} → ${via(NEW_SKILL)?.canonicalName} (${via(NEW_SKILL)?.matchedVia ?? "new"})`);
   const newSkillId = via(NEW_SKILL)?.skillId;
 
+  // A fresh phrase every run, not the shared NEW_SKILL constant (which is an exact-match
+  // skip after its first run ever) — this actually exercises translation each time, proving
+  // Google Translate's keyless fallback produces a real Malayalam translation rather than
+  // echoing the English phrase back as both canonical names (the bug: a phrase like "chedi
+  // nadal" used to end up with canonicalNameMl === the untranslated input whenever no paid
+  // provider was configured).
+  const freshPhrase = `loomtest gardening ${Date.now()}`;
+  const rFresh = await post("skills/resolve", { token: A.p1.token, phrases: [freshPhrase] });
+  const freshReadback = (rFresh.data?.readback ?? [])[0];
+  ok("a brand-new English phrase gets a REAL Malayalam translation, not an echo of itself",
+    freshReadback?.canonicalNameMl && /[ഀ-ൿ]/.test(freshReadback.canonicalNameMl) && freshReadback.canonicalNameMl !== freshPhrase,
+    `${freshPhrase} → ${freshReadback?.canonicalNameMl}`);
+
+  const chatTranslate = await post("chat/translate", { token: A.p1.token, text: "How are you doing today?", targetLang: "ml" });
+  ok("chat/translate turns English into real Malayalam text",
+    chatTranslate.status === 200 && /[ഀ-ൿ]/.test(chatTranslate.data?.translated ?? ""),
+    `→ ${chatTranslate.data?.translated}`);
+  const chatTranslateBack = await post("chat/translate", { token: A.p1.token, text: "നല്ല ദിവസം", targetLang: "en" });
+  ok("chat/translate turns Malayalam into English (round trip works both directions)",
+    chatTranslateBack.status === 200 && !/[ഀ-ൿ]/.test(chatTranslateBack.data?.translated ?? "") && (chatTranslateBack.data?.translated ?? "").length > 0,
+    `→ ${chatTranslateBack.data?.translated}`);
+
   const r2 = await post("skills/resolve", { token: A.p2.token, phrases: ["stiching", NEW_SKILL] });
   const rb2 = r2.data?.readback ?? [];
   const typo = rb2.find((x) => (x.raw || "").toLowerCase() === "stiching");
