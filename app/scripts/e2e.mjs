@@ -523,18 +523,46 @@ async function main() {
   // Declining reverts the job to the customer, same as a declined team slot being simply
   // vacant rather than an error state — checked on a second, throwaway appointment so it
   // doesn't disturb the accepted one the rest of this section depends on.
-  const declineReq = await post("requests/create", {
+  const declineReqId = (await post("requests/create", {
     token: A.c2.token, title: "E2E declined-coordinator order", description: "automated test",
     mode: "group", units: 1, coordinatorProviderId: A.p2.userId, skills: [{ skillId: newSkillId, quantity: 1 }],
-  });
+  })).data.requestId;
   const declineResp = await post("requests/respond-coordinator", {
-    token: A.p2.token, requestId: declineReq.data.requestId, accept: false,
+    token: A.p2.token, requestId: declineReqId, accept: false,
   });
   ok("the appointed provider can decline", declineResp.status === 200);
-  const afterDecline = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === declineReq.data.requestId);
-  ok("declining reverts the coordinator back to the customer, not a stuck state",
-    afterDecline?.coordinatorRole === "customer" && afterDecline?.coordinatorResponse === "accepted",
-    `role=${afterDecline?.coordinatorRole} response=${afterDecline?.coordinatorResponse}`);
+  const afterDecline = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === declineReqId);
+  ok("declining reverts the coordinator role to the customer, not a stuck state",
+    afterDecline?.coordinatorRole === "customer", `role=${afterDecline?.coordinatorRole}`);
+  ok("her response stays 'declined', not silently forced to 'accepted' — the customer's screen needs to know",
+    afterDecline?.coordinatorResponse === "declined", `response=${afterDecline?.coordinatorResponse}`);
+  ok("she is remembered as having declined this request",
+    afterDecline?.coordinatorDeclinedIds?.includes(A.p2.userId), JSON.stringify(afterDecline?.coordinatorDeclinedIds));
+  ok("declining clears the decided-at marker — 'start work' should not think this was settled",
+    afterDecline?.coordinatorDecidedAt === null);
+
+  const reAppointDeclined = await post("requests/set-coordinator", {
+    token: A.c2.token, requestId: declineReqId, coordinatorRole: "provider", coordinatorProviderId: A.p2.userId,
+  });
+  ok("re-appointing the same provider who just declined is refused",
+    reAppointDeclined.status === 409 && reAppointDeclined.data?.reason === "coordinator-already-declined",
+    `${reAppointDeclined.status} ${reAppointDeclined.data?.error ?? ""}`);
+
+  const findWrongPhone = await post("providers/find-by-phone", { token: A.c2.token, phone: "9000099999" });
+  ok("looking up a phone nobody is registered with returns null, not an error",
+    findWrongPhone.status === 200 && findWrongPhone.data === null);
+
+  const findRightPhone = await post("providers/find-by-phone", { token: A.c2.token, phone: A.p1.phone });
+  ok("appointing by phone number finds the actual provider, not a browsable list of everyone",
+    findRightPhone.status === 200 && findRightPhone.data?._id === A.p1.userId, JSON.stringify(findRightPhone.data));
+
+  const reAppointFresh = await post("requests/set-coordinator", {
+    token: A.c2.token, requestId: declineReqId, coordinatorRole: "provider", coordinatorProviderId: A.p1.userId,
+  });
+  ok("appointing someone who did NOT decline (found by phone) succeeds", reAppointFresh.status === 200);
+  const afterReAppoint = (await get("customers/my-requests", { token: A.c2.token })).data?.find((r) => r._id === declineReqId);
+  ok("appointing anyone — even a fresh one — sets the decided-at marker",
+    typeof afterReAppoint?.coordinatorDecidedAt === "string" && afterReAppoint.coordinatorDecidedAt.length > 0);
 
   // Provider One applies and gets selected — she does the work; Provider Three coordinates it
   // without ever applying.
@@ -656,6 +684,29 @@ async function main() {
   ok("NON-participant gets 404, not 403 (a thread id must not be confirmable by probing)",
     readP2.status === 404, `status=${readP2.status}`);
 
+  const upUrl = await post("chat/attachment-upload-url", { token: A.c1.token, threadId, fileName: "e2e.png" });
+  ok("participant gets a signed upload URL for a chat photo", upUrl.status === 200 && Boolean(upUrl.data?.signedUrl));
+  if (upUrl.status === 200) {
+    const tinyPng = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    );
+    const put = await fetch(upUrl.data.signedUrl, { method: "PUT", headers: { "content-type": "image/png" }, body: tinyPng });
+    ok("uploading to the signed URL succeeds", put.ok, put.status);
+
+    const photoMsg = await post("chat/messages", { token: A.c1.token, threadId, body: "", attachmentPath: upUrl.data.path });
+    ok("sending an attachment-only message (no text) is accepted", photoMsg.status === 200);
+
+    const readAfterPhoto = await get("chat/messages", { token: A.p1.token, threadId });
+    const lastMsg = (readAfterPhoto.data ?? []).at(-1);
+    ok("the photo is readable back with a public URL", typeof lastMsg?.attachmentUrl === "string" && lastMsg.attachmentUrl.length > 0,
+      lastMsg?.attachmentUrl);
+  }
+
+  const upUrlOutsider = await post("chat/attachment-upload-url", { token: A.p2.token, threadId, fileName: "e2e.png" });
+  ok("a non-participant cannot get an upload URL for this thread", upUrlOutsider.status === 404,
+    `status=${upUrlOutsider.status}`);
+
   const listP2 = await get("chat/threads", { token: A.p2.token });
   ok("non-participant's thread list excludes it",
     Array.isArray(listP2.data) && !listP2.data.some((t) => t._id === threadId), `${listP2.data?.length} threads visible`);
@@ -669,6 +720,17 @@ async function main() {
     ok("confirming a team created a team chat for its members",
       Array.isArray(tThreads.data) && tThreads.data.length > 0, `${tThreads.data?.length} thread(s) for the team member`);
   }
+
+  // The customer whose request the team belongs to must see that team's chat too — she's
+  // always a participant (chatAccess.ts adds her regardless of who's coordinating), but
+  // visibleThreads()'s list query had its own bug: a team thread's context_id is the team's
+  // id, never the request's, so 'requestIds' (built only from context_type:'request' threads)
+  // never actually contained it, and customerOfRequest — keyed off that same set — silently
+  // stayed empty for every team thread there is. Checked against coordId's team from F3, which
+  // was staffed through the open call (select-team.ts), not auto-assembly.
+  const c2Threads = await get("chat/threads", { token: A.c2.token });
+  ok("the customer sees her own team's chat, not just the providers on it",
+    Array.isArray(c2Threads.data) && c2Threads.data.length > 0, `${c2Threads.data?.length} thread(s) for the customer`);
 
   // ── H · NEGATIVE / AUTHORISATION ────────────────────────────────────────────
   section("H · Negative and authorisation checks");

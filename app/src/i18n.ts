@@ -39,6 +39,7 @@ const DICT: Record<string, { ml: string; en: string }> = {
   coverageComplete: { ml: "എല്ലാ വൈദഗ്ധ്യവും ലഭിച്ചു", en: "All skills covered" },
   coverageIncomplete: { ml: "വൈദഗ്ധ്യം ബാക്കിയുണ്ട്", en: "Skills still missing" },
   typeMessage: { ml: "സന്ദേശം എഴുതുക…", en: "Type a message…" },
+attachPhoto: { ml: "ഫോട്ടോ ചേർക്കുക", en: "Attach a photo" },
   switchToCustomer: { ml: "ഉപഭോക്താവായി തുടരുക", en: "Continue as a customer" },
   switchToProvider: { ml: "വിദഗ്ധയായി തുടരുക", en: "Continue as a provider" },
   alsoHireHint: {
@@ -170,8 +171,26 @@ const DICT: Record<string, { ml: string; en: string }> = {
     en: "You'd be responsible for this job's price, reference photo and final sign-off.",
   },
   coordinatorMyself: { ml: "ഞാൻ തന്നെ", en: "Myself" },
-  coordinatorSomeoneElse: { ml: "മറ്റൊരാൾ", en: "Someone else" },
   coordinatorAppointed: { ml: "നിയോഗിച്ചത്", en: "Appointed" },
+  coordinatorByPhone: { ml: "ഫോൺ നമ്പർ വഴി പുതിയ ആളെ ചേർക്കുക", en: "Add someone new by phone number" },
+  findCoordinator: { ml: "കണ്ടെത്തുക", en: "Find" },
+  coordinatorNotFound: {
+    ml: "ഈ നമ്പറിൽ ഒരു തയ്യൽക്കാരിയും രജിസ്റ്റർ ചെയ്തിട്ടില്ല.",
+    en: "No provider is registered with that number.",
+  },
+  coordinatorAlreadyDeclined: { ml: "ഇതിനകം നിരസിച്ചു — മറ്റൊരാളെ തിരഞ്ഞെടുക്കൂ.", en: "already declined this — choose someone else." },
+  coordinatorDeclinedAlert: {
+    ml: "ചുമതലക്കാരി നിരസിച്ചു. ദയവായി മറ്റൊരാളെ തിരഞ്ഞെടുക്കൂ.",
+    en: "The coordinator declined. Please select someone new.",
+  },
+  coordinatorDeclinedBanner: {
+    ml: "ചുമതലക്കാരി നിരസിച്ചു — മറ്റൊരാളെ തിരഞ്ഞെടുക്കൂ.",
+    en: "Coordinator declined — select someone new.",
+  },
+  waitingForCoordinatorSelection: {
+    ml: "ചുമതലക്കാരിയെ തിരഞ്ഞെടുക്കുന്നത് കാത്തിരിക്കുന്നു",
+    en: "Waiting for coordinator selection",
+  },
   coordinatorYou: { ml: "നിങ്ങൾ", en: "You" },
   agreedRate: { ml: "സമ്മതിച്ച നിരക്ക് ₹", en: "Agreed rate ₹" },
   agreedRateUnit: { ml: "യൂണിറ്റ് (ഉദാ: ഒരെണ്ണത്തിന്)", en: "Unit (e.g. piece)" },

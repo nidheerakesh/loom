@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, POLL_MS } from "../../lib/api";
 import { useAuth } from "../../auth";
 import { Button, Card, Field, Screen, ListenButton, TextButton } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type ThreadRow = { _id: string; title: string; lastMessage: string | null };
-type MessageRow = { _id: string; body: string; senderId: string; senderRole: string; mine: boolean };
+type MessageRow = {
+  _id: string;
+  body: string;
+  senderId: string;
+  senderRole: string;
+  mine: boolean;
+  attachmentUrl: string | null;
+};
 
 type ProviderOption = { _id: string; name: string; shopName: string | null };
 
@@ -72,8 +79,10 @@ export function ChatThread({
   onBack: () => void;
 }) {
   const { token, t } = useAuth();
+  const queryClient = useQueryClient();
+  const queryKey = ["chat/messages", threadId];
   const { data: messages } = useQuery({
-    queryKey: ["chat/messages", threadId],
+    queryKey,
     queryFn: () => apiGet<MessageRow[]>("/api/chat/messages", { token: token!, threadId }),
     enabled: !!token,
     // Polled rather than pushed. Live updates used to come from a browser-side Supabase
@@ -84,16 +93,35 @@ export function ChatThread({
     refetchInterval: POLL_MS,
   });
   const send = useMutation({
-    mutationFn: (body: string) => apiPost("/api/chat/messages", { token, threadId, body }),
+    mutationFn: (payload: { body: string; attachmentPath?: string }) =>
+      apiPost("/api/chat/messages", { token, threadId, ...payload }),
   });
   const [text, setText] = useState("");
-
-
+  const [sendingPhoto, setSendingPhoto] = useState(false);
 
   const submit = async () => {
     if (!token || !text.trim()) return;
-    await send.mutateAsync(text);
+    await send.mutateAsync({ body: text });
     setText("");
+  };
+
+  // Open to any participant, not just the coordinator — she has the separate pattern-photo
+  // feature for the one reference image; this is ordinary conversation, which is nobody's
+  // job to gatekeep.
+  const sendPhoto = async (file: File) => {
+    if (!token) return;
+    setSendingPhoto(true);
+    try {
+      const { signedUrl, path } = await apiPost<{ signedUrl: string; path: string }>(
+        "/api/chat/attachment-upload-url",
+        { token, threadId, fileName: file.name },
+      );
+      await fetch(signedUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
+      await send.mutateAsync({ body: "", attachmentPath: path });
+      void queryClient.invalidateQueries({ queryKey });
+    } finally {
+      setSendingPhoto(false);
+    }
   };
 
   return (
@@ -102,7 +130,14 @@ export function ChatThread({
         {messages?.map((m) => (
           <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
             <div className={`rounded-[14px] px-3 py-2 max-w-[80%] ${m.mine ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-ink"}`}>
-              {m.body} {!m.mine && <ListenButton text={m.body} />}
+              {m.attachmentUrl && (
+                <img
+                  src={m.attachmentUrl}
+                  alt=""
+                  className="rounded-[10px] max-w-full max-h-[240px] object-cover mb-1"
+                />
+              )}
+              {m.body} {!m.mine && m.body && <ListenButton text={m.body} />}
             </div>
           </div>
         ))}
@@ -110,7 +145,20 @@ export function ChatThread({
       {/* Sat at `bottom-0`, the same as the tab bar, so it rendered underneath it and the
           message box could not be reached. The tab bar is 56px plus safe-area inset; this
           clears it and matches the pb-24 the Screen already reserves. */}
-      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-line flex gap-2 z-20">
+      <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-line flex gap-2 z-20 items-center">
+        <label className="text-2xl leading-none cursor-pointer px-1" aria-label={t("attachPhoto")}>
+          📷
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={sendingPhoto}
+            onChange={(e) => {
+              if (e.target.files?.[0]) void sendPhoto(e.target.files[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
         <div className="flex-1">
           <Field className="mb-0" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("typeMessage")} />
         </div>

@@ -217,7 +217,16 @@ create table requests (
   -- Migration 012. Mirrors team_members' invited/accepted/declined for the coordinator role
   -- specifically — she is appointed, not automatically responsible.
   coordinator_response text not null default 'pending' check (coordinator_response in ('pending', 'accepted', 'declined')),
-  coordinator_appointed_at timestamptz
+  coordinator_appointed_at timestamptz,
+  -- Migration 014. Provider ids who have already declined coordinating THIS request — checked
+  -- by set-coordinator.ts so a decline can't just be re-sent to the same person by mistake.
+  coordinator_declined_ids uuid[] not null default '{}',
+  -- Migration 014. Set every time set-coordinator.ts runs, for any role — the one signal that
+  -- the customer actually went through the coordinator step, as opposed to a group order that
+  -- defaults to customer-coordinated because nobody has looked at it yet. requests/complete.ts
+  -- does not gate on this (a provider coordinator's sign-off is still the real gate); the
+  -- frontend uses it to hold "start work" behind an explicit decision.
+  coordinator_decided_at timestamptz
 );
 create index requests_customer_id_idx on requests (customer_id);
 create index requests_status_idx on requests (status);
@@ -370,7 +379,10 @@ create table messages (
   sender_id text not null,
   sender_role role_enum not null,
   body text not null,
-  read_at timestamptz
+  read_at timestamptz,
+  -- Migration 013: an optional photo, same "portfolio" bucket as pattern photos and provider
+  -- portfolios, under a "chat/" prefix.
+  attachment_path text
 );
 create index messages_thread_id_idx on messages (thread_id);
 
