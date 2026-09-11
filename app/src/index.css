@@ -28,17 +28,17 @@
      --loom-paper  input fields, previously the hardcoded `bg-white` in ui.tsx. */
 @layer base {
   :root {
-    --loom-cotton: #f3efe6;
-    --loom-cottonDeep: #e7e0d2;
-    --loom-indigo: #26364f;
-    --loom-indigoSoft: #4c6284;
+    --loom-cotton: #faf3ea;
+    --loom-cottonDeep: #f3e0da;
+    --loom-indigo: #c15a7d;
+    --loom-indigoSoft: #d98aa8;
     --loom-kasavu: #c9a227;
     --loom-turmeric: #d98b21;
     --loom-madder: #9c3b36;
     --loom-leaf: #5b7a5b;
-    --loom-ink: #1c1a17;
-    --loom-line: #e7e0d2;
-    --loom-paper: #ffffff;
+    --loom-ink: #2b1f22;
+    --loom-line: #f3e0da;
+    --loom-paper: #fffaf5;
 
     --background: 0 0% 100%;
     --foreground: 20 14.3% 4.1%;
@@ -81,17 +81,17 @@
      the ordinary convention in dark UIs and it costs no component changes — if it reads wrong,
      split out a --loom-primary pair rather than fighting the inversion. */
   .dark {
-    --loom-cotton: #10161f;
-    --loom-cottonDeep: #17202c;
-    --loom-indigo: #ece5d6;
-    --loom-indigoSoft: #97a3b4;
+    --loom-cotton: #1f171a;
+    --loom-cottonDeep: #2a1f23;
+    --loom-indigo: #f3d9e3;
+    --loom-indigoSoft: #e8a8bf;
     --loom-kasavu: #d9b443;
     --loom-turmeric: #e0a253;
     --loom-madder: #c96a65;
     --loom-leaf: #82a37c;
-    --loom-ink: #ece5d6;
-    --loom-line: #2a3442;
-    --loom-paper: #1e2734;
+    --loom-ink: #f3d9e3;
+    --loom-line: #3a2c31;
+    --loom-paper: #2a1f23;
 
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
