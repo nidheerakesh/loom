@@ -9,9 +9,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 // phone-number field. The product explained itself only after you had already signed in.
 //
 // Copy is carried over from docs/presentation/landing-page.html, which was already written and
-// already true, rather than invented again. The status section is the exception: it had gone
-// stale, claiming GPS, the moderation surface and WhatsApp were still to come when all three
-// had shipped. A status section that undersells is the same kind of wrong as one that oversells.
+// already true, rather than invented again.
 //
 // Built from the loom CSS variables, so it follows the theme without a single dark: variant.
 
@@ -201,32 +199,6 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
               </li>
             ))}
           </ol>
-        </Section>
-
-        <Section eyebrow={t("landStatusEyebrow")} head={t("landStatusHead")}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="bg-loom-cottonDeep rounded-[14px] p-4">
-              <h4 className="font-semibold text-loom-leaf mb-2 text-sm">{t("landWorking")}</h4>
-              <ul className="space-y-1.5 text-sm text-loom-ink">
-                {[t("landYes1"), t("landYes2"), t("landYes3"), t("landYes4"), t("landYes5")].map((s) => (
-                  <li key={s} className="leading-snug">
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-loom-cottonDeep rounded-[14px] p-4">
-              <h4 className="font-semibold text-loom-madder mb-2 text-sm">{t("landNotYet")}</h4>
-              <ul className="space-y-1.5 text-sm text-loom-ink">
-                {[t("landNo1"), t("landNo2"), t("landNo3")].map((s) => (
-                  <li key={s} className="leading-snug">
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p className="mt-5 text-loom-indigo font-medium leading-relaxed">{t("landNext")}</p>
         </Section>
 
         <footer className="border-t border-loom-line mt-14 pt-8 text-sm text-loom-indigoSoft space-y-1">

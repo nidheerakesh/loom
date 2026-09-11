@@ -325,10 +325,7 @@ attachPhoto: { ml: "ഫോട്ടോ ചേർക്കുക", en: "Attach a 
   },
   landUnits: { ml: "യൂണിറ്റ്", en: "units" },
   landHowEyebrow: { ml: "എങ്ങനെ", en: "How it works" },
-  landHowHead: {
-    ml: "അവൾ വായിക്കുന്ന ഭാഷയിൽ, ഉറപ്പുള്ള ഉത്തരം.",
-    en: "Deterministic, in the language she reads.",
-  },
+  landHowHead: { ml: "അവൾ വായിക്കുന്ന ഭാഷയിൽ, ഉറപ്പുള്ള ഉത്തരം.", en: "Deterministic, in the language she reads." },
   landStep1: { ml: "അവൾ പറയുന്നതുപോലെ വൈദഗ്ധ്യം എഴുതുന്നു", en: "She enters her skills, however she says them" },
   landStep1Body: {
     ml: "sewing, thayyal, തയ്യൽ, എന്തിന് stiching പോലും — എല്ലാം ഒരേ വൈദഗ്ധ്യമായി മാറുന്നു. അല്ലെങ്കിൽ വിപണി പര്യായങ്ങളായി ചിതറി നിശ്ശബ്ദമായി നിലയ്ക്കും.",
@@ -343,25 +340,6 @@ attachPhoto: { ml: "ഫോട്ടോ ചേർക്കുക", en: "Attach a 
   landStep3Body: {
     ml: "ഓരോ തീരുമാനവും വിശദീകരണം എഴുതുന്നതിന് മുമ്പേ രേഖപ്പെടുത്തുന്നു — അതുകൊണ്ട് വിശദീകരണത്തിന് എൻജിനെ എതിർക്കാനാവില്ല. പിന്നെ അത് മലയാളത്തിൽ വായിച്ചു കേൾപ്പിക്കും.",
     en: "Every decision is written to an audit table before a word of explanation is rendered, so the explanation cannot contradict the engine. Then it is read out in Malayalam.",
-  },
-  landStatusEyebrow: { ml: "സത്യസന്ധമായ നില", en: "Honest status" },
-  landStatusHead: {
-    ml: "പണിതു, വിന്യസിച്ചു, അളന്നു — ഇനി ഒരു യഥാർത്ഥ ഓർഡർ.",
-    en: "Built, deployed and measured. Next: one real order.",
-  },
-  landWorking: { ml: "ഇപ്പോൾ പ്രവർത്തിക്കുന്നത്", en: "Working today" },
-  landNotYet: { ml: "ഇനിയും ആയിട്ടില്ല", en: "Not yet" },
-  landYes1: { ml: "ലൈവ്, പൊതുവായത്, ഇൻസ്റ്റാൾ വേണ്ട", en: "Live, public, no install" },
-  landYes2: { ml: "മലയാളം ആദ്യം, പറഞ്ഞുകേൾപ്പിക്കുന്ന വിശദീകരണത്തോടെ", en: "Malayalam-first, with spoken explanations" },
-  landYes3: { ml: "ഒറ്റയ്ക്കും കൂട്ടായുമുള്ള ചേരുവ", en: "Individual and collective matching" },
-  landYes4: { ml: "വാട്സ്ആപ്പിലും പ്രവർത്തിക്കും — ശബ്ദസന്ദേശം ഉൾപ്പെടെ", en: "Works over WhatsApp, voice notes included" },
-  landYes5: { ml: "വീടിന്റെ വിലാസം സൂക്ഷിക്കാത്ത ജി‌പി‌എസ്", en: "GPS that never stores her home address" },
-  landNo1: { ml: "ആപ്പിനുള്ളിൽ ശബ്ദം കൊണ്ട് എഴുതാനാവില്ല — വാട്സ്ആപ്പിൽ മാത്രം", en: "Speaking to the app itself — that works on WhatsApp only" },
-  landNo2: { ml: "ജോലി എല്ലാവർക്കുമായി പങ്കിടുന്ന ക്രമം", en: "Fair rotation, so work spreads rather than concentrates" },
-  landNo3: { ml: "ഇതുവരെ ഒരു യഥാർത്ഥ ഉപയോക്താവില്ല", en: "No pilot user yet" },
-  landNext: {
-    ml: "അടുത്തത്: ഒരു യഥാർത്ഥ സംഘത്തിൽ നിന്ന് ഒരു യഥാർത്ഥ ഓർഡർ. അതാണ് ലക്ഷ്യം — മറ്റൊരു ഫീച്ചറല്ല.",
-    en: "Next: one real order, from one real group. That is the milestone — not another feature.",
   },
   landCode: { ml: "കോഡ് വായിക്കുക", en: "Read the code" },
   errorGeneric: { ml: "എന്തോ കുഴപ്പം സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.", en: "Something went wrong. Please try again." },
