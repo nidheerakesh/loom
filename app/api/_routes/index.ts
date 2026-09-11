@@ -8,6 +8,7 @@ import r_auth_request_otp from "./auth/request-otp.js";
 import r_auth_sign_out from "./auth/sign-out.js";
 import r_auth_switch_role from "./auth/switch-role.js";
 import r_auth_verify_otp from "./auth/verify-otp.js";
+import r_chat_attachment_upload_url from "./chat/attachment-upload-url.js";
 import r_chat_create from "./chat/create.js";
 import r_chat_messages from "./chat/messages.js";
 import r_chat_threads from "./chat/threads.js";
@@ -22,6 +23,7 @@ import r_locations_list from "./locations/list.js";
 import r_matching_feed from "./matching/feed.js";
 import r_narration_get from "./narration/get.js";
 import r_narration_speak from "./narration/speak.js";
+import r_providers_find_by_phone from "./providers/find-by-phone.js";
 import r_providers_get from "./providers/get.js";
 import r_providers_portfolio from "./providers/portfolio/index.js";
 import r_providers_portfolio_delete from "./providers/portfolio/delete.js";
@@ -77,6 +79,7 @@ export const routes: Record<string, Handler> = {
   "auth/sign-out": r_auth_sign_out,
   "auth/switch-role": r_auth_switch_role,
   "auth/verify-otp": r_auth_verify_otp,
+  "chat/attachment-upload-url": r_chat_attachment_upload_url,
   "chat/create": r_chat_create,
   "chat/messages": r_chat_messages,
   "chat/threads": r_chat_threads,
@@ -91,6 +94,7 @@ export const routes: Record<string, Handler> = {
   "matching/feed": r_matching_feed,
   "narration/get": r_narration_get,
   "narration/speak": r_narration_speak,
+  "providers/find-by-phone": r_providers_find_by_phone,
   "providers/get": r_providers_get,
   "providers/portfolio": r_providers_portfolio,
   "providers/portfolio/delete": r_providers_portfolio_delete,
