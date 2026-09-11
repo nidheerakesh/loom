@@ -49,6 +49,10 @@ export function ProviderProfile() {
       apiPost("/api/providers/portfolio/delete", { token, itemId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portfolio", token] }),
   });
+  const removeSkill = useMutation({
+    mutationFn: (skillId: string) => apiPost("/api/skills/remove", { token, skillId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mySkills", token] }),
+  });
   const addPortfolioItem = useMutation({
     mutationFn: (body: { path: string; caption: string }) =>
       apiPost("/api/providers/portfolio", { token, ...body }),
@@ -114,9 +118,22 @@ export function ProviderProfile() {
       <Card>
         <h2 className="font-semibold text-loom-indigo mb-2">{t("addSkills")}</h2>
         <div className="flex flex-wrap gap-1 mb-2">
-          {skills?.map((s) => (
-            <span key={s._id} className="bg-loom-indigo text-loom-cotton rounded-full px-3 py-1 text-sm">
-              {pickLang(lang, s.canonicalName, s.canonicalNameMl)}
+          {skills?.map((sk) => (
+            <span
+              key={sk._id}
+              className="bg-loom-indigo text-loom-cotton rounded-full pl-3 pr-1 py-1 text-sm flex items-center gap-1"
+            >
+              {pickLang(lang, sk.canonicalName, sk.canonicalNameMl)}
+              <button
+                aria-label={t("removeSkill")}
+                className="w-5 h-5 leading-none rounded-full hover:bg-white/20"
+                disabled={removeSkill.isPending}
+                onClick={() => {
+                  if (window.confirm(t("confirmRemoveSkill"))) removeSkill.mutate(sk._id);
+                }}
+              >
+                ×
+              </button>
             </span>
           ))}
         </div>

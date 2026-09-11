@@ -48,8 +48,10 @@ import r_requests_select_team from "./requests/select-team.js";
 import r_requests_set_coordinator from "./requests/set-coordinator.js";
 import r_requests_update from "./requests/update.js";
 import r_speech_transcribe from "./speech/transcribe.js";
+import r_skills_find_or_create from "./skills/find-or-create.js";
 import r_skills_list from "./skills/list.js";
 import r_skills_mine from "./skills/mine.js";
+import r_skills_remove from "./skills/remove.js";
 import r_skills_resolve from "./skills/resolve.js";
 import r_team_assembly_add_member from "./team-assembly/add-member.js";
 import r_team_assembly_assemble from "./team-assembly/assemble.js";
@@ -118,9 +120,11 @@ export const routes: Record<string, Handler> = {
   "requests/select-team": r_requests_select_team,
   "requests/set-coordinator": r_requests_set_coordinator,
   "requests/update": r_requests_update,
+  "skills/find-or-create": r_skills_find_or_create,
   "skills/list": r_skills_list,
   "speech/transcribe": r_speech_transcribe,
   "skills/mine": r_skills_mine,
+  "skills/remove": r_skills_remove,
   "skills/resolve": r_skills_resolve,
   "team-assembly/add-member": r_team_assembly_add_member,
   "team-assembly/assemble": r_team_assembly_assemble,

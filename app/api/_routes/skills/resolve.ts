@@ -3,132 +3,23 @@ import { z } from "zod";
 import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { requireRole } from "../../_lib/auth.js";
-import { isProbableTypo, normalize } from "../../_lib/text.js";
-import { translateSkill } from "../../_lib/translate.js";
+import { resolveOrCreateSkill } from "../../_lib/skillResolve.js";
 
 // Add skills for a provider. Deterministic merge to existing skills; genuinely-new skills
 // are translated by an LLM (en<->ml) and created so EVERY skill becomes usable
 // across the app (Browse, Request, matching). No LLM influences a match — only labels a node.
-// Ported from convex/skills.ts's resolveExisting + createSkillNode + assignProviderSkills +
-// addSkills — Convex split these into internalQuery/internalMutation/action because it needed
-// ctx.runQuery/ctx.runMutation boundaries; a single Vercel function has no such boundary, so
-// they're inlined as plain async functions below.
-
+// The resolve/create half lives in _lib/skillResolve.ts, shared with
+// skills/find-or-create.ts (a customer naming a skill on a request needs the same
+// canonicalization, without this route's provider-only side effect below).
 const Body = z.object({ token: z.string().min(1), phrases: z.array(z.string()) });
 
-type SkillRow = { id: string; canonical_name: string; canonical_name_ml: string | null };
-type AliasRow = { skill_id: string; alias_text: string };
-
-type ResolveExisting =
-  | {
-      status: "resolved";
-      skillId: string;
-      canonicalName: string;
-      canonicalNameMl: string | null;
-      matchedVia: "exact" | "alias" | "typo";
-    }
-  | { status: "new" };
-
-async function resolveExisting(phrase: string): Promise<ResolveExisting> {
-  const norm = normalize(phrase);
-
-  const { data: skills, error: skillsErr } = await supabaseAdmin
-    .from("skills")
-    .select("id, canonical_name, canonical_name_ml")
-    .limit(500);
-  if (skillsErr) throw new HttpError(500, skillsErr.message);
-  const skillRows = (skills ?? []) as SkillRow[];
-
-  for (const s of skillRows) {
-    if (normalize(s.canonical_name) === norm || normalize(s.canonical_name_ml ?? "") === norm) {
-      return {
-        status: "resolved",
-        skillId: s.id,
-        canonicalName: s.canonical_name,
-        canonicalNameMl: s.canonical_name_ml ?? null,
-        matchedVia: "exact",
-      };
-    }
-  }
-
-  const { data: aliasHit, error: aliasErr } = await supabaseAdmin
-    .from("skill_aliases")
-    .select("skill_id, skills(id, canonical_name, canonical_name_ml)")
-    .eq("alias_text", norm)
-    .maybeSingle();
-  if (aliasErr) throw new HttpError(500, aliasErr.message);
-  if (aliasHit) {
-    const sk = aliasHit.skills as unknown as { id: string; canonical_name: string; canonical_name_ml: string | null } | null;
-    if (sk) {
-      return {
-        status: "resolved",
-        skillId: sk.id,
-        canonicalName: sk.canonical_name,
-        canonicalNameMl: sk.canonical_name_ml ?? null,
-        matchedVia: "alias",
-      };
-    }
-  }
-
-  const { data: allAliases, error: allAliasErr } = await supabaseAdmin
-    .from("skill_aliases")
-    .select("skill_id, alias_text")
-    .limit(2000);
-  if (allAliasErr) throw new HttpError(500, allAliasErr.message);
-  const aliasRows = (allAliases ?? []) as AliasRow[];
-
-  // Typo tier — deliberately NOT a meaning tier. It only rescues misspellings of something
-  // already in the catalogue. Meaning is the alias table's job above; anything genuinely new
-  // goes on to translation and becomes its own skill rather than being force-fitted to
-  // whatever it happens to resemble.
-  for (const s of skillRows) {
-    const surfaces = [s.canonical_name, s.canonical_name_ml ?? ""].filter(Boolean);
-    for (const a of aliasRows) if (a.skill_id === s.id) surfaces.push(a.alias_text);
-    if (surfaces.some((surface) => isProbableTypo(norm, surface))) {
-      return {
-        status: "resolved",
-        skillId: s.id,
-        canonicalName: s.canonical_name,
-        canonicalNameMl: s.canonical_name_ml ?? null,
-        matchedVia: "typo",
-      };
-    }
-  }
-  return { status: "new" };
-}
-
-// Create a new canonical skill (from an LLM translation) + an alias for the raw phrase.
-// Guards against a race by returning an existing skill with the same canonical name.
-async function createSkillNode(
-  canonicalName: string,
-  canonicalNameMl: string,
-  aliasText: string,
-): Promise<{ skillId: string; canonicalName: string; canonicalNameMl: string }> {
-  const { data: existing, error: existErr } = await supabaseAdmin
-    .from("skills")
-    .select("id, canonical_name, canonical_name_ml")
-    .eq("canonical_name", canonicalName)
-    .maybeSingle();
-  if (existErr) throw new HttpError(500, existErr.message);
-  if (existing) {
-    return {
-      skillId: existing.id,
-      canonicalName: existing.canonical_name,
-      canonicalNameMl: existing.canonical_name_ml ?? canonicalNameMl,
-    };
-  }
-  const { data: created, error: insErr } = await supabaseAdmin
-    .from("skills")
-    .insert({ canonical_name: canonicalName, canonical_name_ml: canonicalNameMl })
-    .select("id")
-    .single();
-  if (insErr) throw new HttpError(500, insErr.message);
-  const { error: aliasInsErr } = await supabaseAdmin
-    .from("skill_aliases")
-    .insert({ skill_id: created.id, alias_text: normalize(aliasText), source: "approved" });
-  if (aliasInsErr) throw new HttpError(500, aliasInsErr.message);
-  return { skillId: created.id, canonicalName, canonicalNameMl };
-}
+type Readback = {
+  raw: string;
+  skillId: string | null;
+  canonicalName: string | null;
+  canonicalNameMl: string | null;
+  matchedVia: "exact" | "alias" | "typo" | "created";
+};
 
 async function assignProviderSkills(providerId: string, skillIds: string[]): Promise<void> {
   const keep = new Set(skillIds);
@@ -153,14 +44,6 @@ async function assignProviderSkills(providerId: string, skillIds: string[]): Pro
   }
 }
 
-type Readback = {
-  raw: string;
-  skillId: string | null;
-  canonicalName: string | null;
-  canonicalNameMl: string | null;
-  matchedVia: "exact" | "alias" | "typo" | "created";
-};
-
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, phrases } = Body.parse(req.body);
   const s = await requireRole(token, "provider");
@@ -170,28 +53,9 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   for (const phrase of phrases) {
     if (!phrase.trim()) continue;
-    const r = await resolveExisting(phrase);
-    if (r.status === "resolved") {
-      skillIds.push(r.skillId);
-      readback.push({
-        raw: phrase,
-        skillId: r.skillId,
-        canonicalName: r.canonicalName,
-        canonicalNameMl: r.canonicalNameMl,
-        matchedVia: r.matchedVia,
-      });
-    } else {
-      const t = await translateSkill(phrase); // LLM (or graceful fallback)
-      const created = await createSkillNode(t.en, t.ml, phrase);
-      skillIds.push(created.skillId);
-      readback.push({
-        raw: phrase,
-        skillId: created.skillId,
-        canonicalName: created.canonicalName,
-        canonicalNameMl: created.canonicalNameMl,
-        matchedVia: "created",
-      });
-    }
+    const r = await resolveOrCreateSkill(phrase);
+    skillIds.push(r.skillId);
+    readback.push({ raw: phrase, skillId: r.skillId, canonicalName: r.canonicalName, canonicalNameMl: r.canonicalNameMl, matchedVia: r.matchedVia });
   }
 
   // dedupe while preserving order

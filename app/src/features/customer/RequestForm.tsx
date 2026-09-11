@@ -7,6 +7,7 @@ import { Button, Card, Field, Screen } from "../../ui";
 import { SignOut } from "../provider/Current";
 
 type SkillOption = { _id: string; canonicalName: string; canonicalNameMl: string | null };
+type ResolvedSkill = { skillId: string; canonicalName: string; canonicalNameMl: string | null; matchedVia: string };
 
 // Coordinator is deliberately not asked here. At creation time she doesn't yet know who is
 // actually on the team — that's the whole point of the open call — so appointing someone is a
@@ -46,6 +47,12 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
   const [expectedPrice, setExpectedPrice] = useState<number | "">("");
   const [expectedPriceUnit, setExpectedPriceUnit] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // A skill she just resolved by typing, not from the pre-loaded list — shown alongside the
+  // catalogue as its own chip so she can see it's selected, without waiting on skills/list's
+  // query to refetch (which would also silently include it for every OTHER customer's form).
+  const [customSkills, setCustomSkills] = useState<Map<string, ResolvedSkill>>(new Map());
+  const [customSkillText, setCustomSkillText] = useState("");
+  const [customSkillErr, setCustomSkillErr] = useState<string | null>(null);
   const [created, setCreated] = useState<{ requestId: string; group: boolean } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -53,6 +60,20 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
     const next = new Set(selected);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
+  };
+
+  const addCustomSkill = async () => {
+    const phrase = customSkillText.trim();
+    if (!phrase || !token) return;
+    setCustomSkillErr(null);
+    try {
+      const resolved = await apiPost<ResolvedSkill>("/api/skills/find-or-create", { token, phrase });
+      setCustomSkills((prev) => new Map(prev).set(resolved.skillId, resolved));
+      setSelected((prev) => new Set(prev).add(resolved.skillId));
+      setCustomSkillText("");
+    } catch (e) {
+      setCustomSkillErr(String(e));
+    }
   };
 
   const submit = async () => {
@@ -101,7 +122,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
         <Field label={t("description")} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="200 uniforms" />
         <Field value={description} onChange={(e) => setDescription(e.target.value)} placeholder="details…" />
         <div className="text-sm text-loom-indigoSoft mb-1">{t("addSkills")}</div>
-        <div className="flex flex-wrap gap-1 mb-3">
+        <div className="flex flex-wrap gap-1 mb-2">
           {skills?.map((s) => (
             <button
               key={s._id}
@@ -111,7 +132,33 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
               {pickLang(lang, s.canonicalName, s.canonicalNameMl)}
             </button>
           ))}
+          {/* A skill she named herself, not on the list above — kept separate from `skills`
+              (which is one shared query for every customer) so it appears here immediately
+              without waiting on a refetch, and without leaking into anyone else's form. */}
+          {[...customSkills.values()].map((cs) => (
+            <button
+              key={cs.skillId}
+              onClick={() => toggle(cs.skillId)}
+              className={`rounded-full px-3 py-2 text-sm ${selected.has(cs.skillId) ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-indigo"}`}
+            >
+              {pickLang(lang, cs.canonicalName, cs.canonicalNameMl)}
+            </button>
+          ))}
         </div>
+        <div className="flex gap-2 mb-1">
+          <div className="flex-1">
+            <Field
+              className="mb-0"
+              value={customSkillText}
+              onChange={(e) => setCustomSkillText(e.target.value)}
+              placeholder={t("skillNotListedPlaceholder")}
+            />
+          </div>
+          <Button variant="ghost" disabled={!customSkillText.trim()} onClick={() => void addCustomSkill()}>
+            {t("addSkillButton")}
+          </Button>
+        </div>
+        {customSkillErr && <div className="text-loom-madder text-sm mb-3">{customSkillErr}</div>}
         <div className="flex gap-2 mb-3">
           <Button variant={mode === "individual" ? "primary" : "ghost"} className="flex-1" onClick={() => setMode("individual")}>
             {t("individual")}

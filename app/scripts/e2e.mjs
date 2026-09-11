@@ -133,6 +133,28 @@ async function main() {
   ok("provider's own skills list back", mine.status === 200 && Array.isArray(mine.data) && mine.data.length >= 2,
     `${mine.data?.length} skills`);
 
+  const toRemove = mine.data?.[0]?._id;
+  const skillRemoved = await post("skills/remove", { token: A.p1.token, skillId: toRemove });
+  ok("a provider can remove a skill she added by mistake", skillRemoved.status === 200);
+  const mineAfterRemove = await get("skills/mine", { token: A.p1.token });
+  ok("the removed skill is actually gone from her list",
+    !(mineAfterRemove.data ?? []).some((s) => s._id === toRemove),
+    `${mineAfterRemove.data?.length} skills left`);
+  // Put it back — later sections (F1, etc.) depend on p1 having stitching.
+  await post("skills/resolve", { token: A.p1.token, phrases: ["sewing"] });
+
+  const customerPhrase = `E2E customer-named skill ${Date.now()}`;
+  const findOrCreate = await post("skills/find-or-create", { token: A.c1.token, phrase: customerPhrase });
+  ok("a customer can name a skill not on the pre-loaded list, without it touching her own profile",
+    findOrCreate.status === 200 && Boolean(findOrCreate.data?.skillId), JSON.stringify(findOrCreate.data));
+  const customerSkillId = findOrCreate.data?.skillId;
+  const listAfterCustom = await get("skills/list", {});
+  ok("the skill she named is now a real, reusable canonical skill — appears in the catalogue",
+    (listAfterCustom.data ?? []).some((sk) => sk._id === customerSkillId));
+  const c1SkillsAfter = await get("skills/mine", { token: A.c1.token });
+  ok("naming a skill for a job never assigned it to her own profile — she's a customer, not a provider",
+    c1SkillsAfter.status === 200 && (c1SkillsAfter.data ?? []).length === 0, `${c1SkillsAfter.data?.length}`);
+
   // ── C · PROFILES ────────────────────────────────────────────────────────────
   section("C · Profiles");
   for (const [k, cap] of [["p1", 4], ["p2", 4], ["p3", 4]]) {
