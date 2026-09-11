@@ -679,6 +679,9 @@ async function main() {
   const readP1 = await get("chat/messages", { token: A.p1.token, threadId });
   ok("participant reads the thread", readP1.status === 200 && Array.isArray(readP1.data) && readP1.data.length > 0,
     `${readP1.data?.length} messages`);
+  const lastFromC1 = (readP1.data ?? []).findLast((m) => m.senderId === A.c1.userId);
+  ok("a message carries the sender's actual name, not just an id she can't read",
+    lastFromC1?.senderName === A.c1.name, `senderName=${lastFromC1?.senderName}`);
 
   const readP2 = await get("chat/messages", { token: A.p2.token, threadId });
   ok("NON-participant gets 404, not 403 (a thread id must not be confirmable by probing)",

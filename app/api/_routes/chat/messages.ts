@@ -64,12 +64,37 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     .limit(200);
   if (error) throw new HttpError(500, error.message);
 
+  // A group thread has more than one other person in it — "mine" alone can't tell them apart,
+  // and messages.senderId is a raw uuid, not something to put on screen. Names are resolved
+  // per role rather than joined, since sender_id is a polymorphic id (provider or customer)
+  // with no FK of its own.
+  const providerIds = [...new Set((data ?? []).filter((m) => m.sender_role === "provider").map((m) => m.sender_id))];
+  const customerIds = [...new Set((data ?? []).filter((m) => m.sender_role === "customer").map((m) => m.sender_id))];
+  const [providersRes, customersRes] = await Promise.all([
+    providerIds.length
+      ? supabaseAdmin.from("providers").select("id, name, shop_name").in("id", providerIds)
+      : Promise.resolve({ data: [], error: null }),
+    customerIds.length
+      ? supabaseAdmin.from("customers").select("id, name").in("id", customerIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (providersRes.error) throw new HttpError(500, providersRes.error.message);
+  if (customersRes.error) throw new HttpError(500, customersRes.error.message);
+  const nameById = new Map<string, string>();
+  for (const p of (providersRes.data ?? []) as { id: string; name: string; shop_name: string | null }[]) {
+    nameById.set(p.id, p.shop_name ?? p.name);
+  }
+  for (const c of (customersRes.data ?? []) as { id: string; name: string }[]) {
+    nameById.set(c.id, c.name);
+  }
+
   res.status(200).json(
     (data ?? []).map((m) => ({
       _id: m.id,
       body: m.body,
       senderId: m.sender_id,
       senderRole: m.sender_role,
+      senderName: nameById.get(m.sender_id) ?? null,
       mine: m.sender_id === s.userId,
       attachmentUrl: attachmentUrl(m.attachment_path),
     })),

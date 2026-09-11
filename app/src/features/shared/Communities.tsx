@@ -11,6 +11,7 @@ type MessageRow = {
   body: string;
   senderId: string;
   senderRole: string;
+  senderName: string | null;
   mine: boolean;
   attachmentUrl: string | null;
 };
@@ -130,6 +131,9 @@ export function ChatThread({
         {messages?.map((m) => (
           <div key={m._id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
             <div className={`rounded-[14px] px-3 py-2 max-w-[80%] ${m.mine ? "bg-loom-indigo text-loom-cotton" : "bg-loom-cottonDeep text-loom-ink"}`}>
+              {!m.mine && m.senderName && (
+                <div className="text-xs font-semibold text-loom-leaf mb-0.5">{m.senderName}</div>
+              )}
               {m.attachmentUrl && (
                 <img
                   src={m.attachmentUrl}
