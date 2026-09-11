@@ -161,19 +161,14 @@ export async function visibleThreads(session: Session, limit = 50): Promise<Thre
 
   const isProvider = session.role === "provider";
 
-  // Everything the candidate threads could depend on, in one round of parallel queries.
-  const [requestsRes, interestsRes, teamsRes, membersRes] = await Promise.all([
-    requestIds.size
-      ? supabaseAdmin.from("requests").select("id, customer_id").in("id", [...requestIds])
-      : Promise.resolve({ data: [], error: null }),
-    isProvider && requestIds.size
-      ? supabaseAdmin
-          .from("interests")
-          .select("request_id")
-          .eq("provider_id", session.userId)
-          .in("request_id", [...requestIds])
-      : Promise.resolve({ data: [], error: null }),
-    // Teams belonging to a candidate request, plus the requests behind candidate team threads.
+  // teamsRes and membersRes first: a team thread's request id is only known once teamsRes
+  // comes back, and requestsRes needs that id too — a team chat's `context_id` is the team's
+  // id, never the request's, so no 'request'-context thread ever populated `requestIds` for
+  // it. Fetching requestsRes only for `requestIds` (as this used to) left `customerOfRequest`
+  // without an entry for any team reachable purely through a team thread, which is every team
+  // thread there is — so a customer could never see her own team's chat, appointed
+  // coordinator or not.
+  const [teamsRes, membersRes] = await Promise.all([
     requestIds.size || teamIds.size
       ? supabaseAdmin
           .from("teams")
@@ -195,7 +190,33 @@ export async function visibleThreads(session: Session, limit = 50): Promise<Thre
           .neq("state", "declined")
       : Promise.resolve({ data: [], error: null }),
   ]);
-  for (const r of [requestsRes, interestsRes, teamsRes, membersRes]) {
+  for (const r of [teamsRes, membersRes]) {
+    if (r.error) throw new HttpError(500, r.error.message);
+  }
+
+  const teamsOfRequest = new Map<string, string[]>();
+  const requestOfTeam = new Map<string, string>();
+  for (const t of (teamsRes.data ?? []) as { id: string; request_id: string }[]) {
+    requestOfTeam.set(t.id, t.request_id);
+    const list = teamsOfRequest.get(t.request_id) ?? [];
+    list.push(t.id);
+    teamsOfRequest.set(t.request_id, list);
+  }
+  const allRequestIds = new Set([...requestIds, ...requestOfTeam.values()]);
+
+  const [requestsRes, interestsRes] = await Promise.all([
+    allRequestIds.size
+      ? supabaseAdmin.from("requests").select("id, customer_id").in("id", [...allRequestIds])
+      : Promise.resolve({ data: [], error: null }),
+    isProvider && requestIds.size
+      ? supabaseAdmin
+          .from("interests")
+          .select("request_id")
+          .eq("provider_id", session.userId)
+          .in("request_id", [...requestIds])
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  for (const r of [requestsRes, interestsRes]) {
     if (r.error) throw new HttpError(500, r.error.message);
   }
 
@@ -207,15 +228,6 @@ export async function visibleThreads(session: Session, limit = 50): Promise<Thre
     ((interestsRes.data ?? []) as { request_id: string }[]).map((i) => i.request_id),
   );
   const myTeams = new Set(((membersRes.data ?? []) as { team_id: string }[]).map((m) => m.team_id));
-
-  const teamsOfRequest = new Map<string, string[]>();
-  const requestOfTeam = new Map<string, string>();
-  for (const t of (teamsRes.data ?? []) as { id: string; request_id: string }[]) {
-    requestOfTeam.set(t.id, t.request_id);
-    const list = teamsOfRequest.get(t.request_id) ?? [];
-    list.push(t.id);
-    teamsOfRequest.set(t.request_id, list);
-  }
 
   const visible = (t: ThreadRow): boolean => {
     if (t.context_type === "provider") {

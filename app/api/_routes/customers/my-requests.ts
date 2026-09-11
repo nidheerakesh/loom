@@ -16,7 +16,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   let query = supabaseAdmin
     .from("requests")
     .select(
-      "id, title, mode, units, status, headcount, interest_deadline, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, coordinator_response, coordinator_appointed_at, providers(name, shop_name)",
+      "id, title, mode, units, status, headcount, interest_deadline, coordinator_role, coordinator_provider_id, agreed_rate, agreed_rate_unit, coordinator_signed_off_at, coordinator_response, coordinator_appointed_at, coordinator_declined_ids, coordinator_decided_at, providers(name, shop_name)",
     )
     .eq("customer_id", s.userId)
     .order("created_at", { ascending: false });
@@ -72,6 +72,8 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
         coordinatorSignedOffAt: r.coordinator_signed_off_at ?? null,
         coordinatorResponse: r.coordinator_response ?? "accepted",
         coordinatorAppointedAt: r.coordinator_appointed_at ?? null,
+        coordinatorDeclinedIds: r.coordinator_declined_ids ?? [],
+        coordinatorDecidedAt: r.coordinator_decided_at ?? null,
       };
     }),
   );

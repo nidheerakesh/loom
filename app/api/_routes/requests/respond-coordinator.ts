@@ -14,15 +14,19 @@ const Body = z.object({ token: z.string().min(1), requestId: z.string().min(1), 
 //
 // Declining doesn't leave the job stuck waiting on a decision nobody can make: it reverts the
 // coordinator role straight back to the customer, the same way a declined team slot is simply
-// vacant rather than an error state. She can re-appoint the same or a different provider
-// afterwards if she wants to.
+// vacant rather than an error state. Unlike a first-time appointment, though, this isn't a
+// quiet revert to "customer" as if nothing had happened — coordinator_response stays
+// 'declined' (not silently forced to 'accepted') so the customer's own screen can tell her,
+// and coordinator_decided_at is cleared so "start work" is held behind picking someone new
+// rather than quietly falling back to a decision she never made. She cannot re-send this same
+// appointment either: set-coordinator.ts checks coordinator_declined_ids, which this appends to.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, requestId, accept } = Body.parse(req.body);
   const s = await requireRole(token, "provider");
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, mode, status, coordinator_role, coordinator_provider_id, coordinator_response")
+    .select("id, mode, status, coordinator_role, coordinator_provider_id, coordinator_response, coordinator_declined_ids")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -40,9 +44,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     : {
         coordinator_role: "customer" as const,
         coordinator_provider_id: null,
-        coordinator_response: "accepted" as const,
+        coordinator_response: "declined" as const,
         coordinator_appointed_at: null,
         coordinator_signed_off_at: null,
+        coordinator_decided_at: null,
+        coordinator_declined_ids: [...(request.coordinator_declined_ids ?? []), s.userId],
       };
 
   const { error: updErr } = await supabaseAdmin.from("requests").update(patch).eq("id", requestId);

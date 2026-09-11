@@ -39,7 +39,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("id, customer_id, mode, status")
+    .select("id, customer_id, mode, status, coordinator_declined_ids")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -56,6 +56,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       .maybeSingle();
     if (coordErr) throw new HttpError(500, coordErr.message);
     if (!coord) throw new HttpError(400, "That provider does not exist");
+    // She already said no once — re-sending the same request isn't a fresh ask, it's the
+    // same one again, and the frontend has no business offering it as if it were new.
+    if ((request.coordinator_declined_ids ?? []).includes(coordinatorProviderId)) {
+      throw new HttpError(409, "She already declined coordinating this job", "coordinator-already-declined");
+    }
   }
 
   const patch: Record<string, unknown> = {
@@ -73,6 +78,9 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   };
   if (agreedRate !== undefined) patch.agreed_rate = agreedRate;
   if (agreedRateUnit !== undefined) patch.agreed_rate_unit = agreedRateUnit;
+  // The one signal that she actually went through this step, whoever she picked — see the
+  // column comment in schema.sql for why the frontend needs this and complete.ts does not.
+  patch.coordinator_decided_at = new Date().toISOString();
 
   const { error: updErr } = await supabaseAdmin.from("requests").update(patch).eq("id", requestId);
   if (updErr) throw new HttpError(500, updErr.message);

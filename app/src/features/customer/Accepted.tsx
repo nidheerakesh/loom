@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api";
 import { pickLang } from "../../i18n";
@@ -27,6 +27,8 @@ type MyRequest = {
   coordinatorSignedOffAt: string | null;
   coordinatorResponse: "pending" | "accepted" | "declined";
   coordinatorAppointedAt: string | null;
+  coordinatorDeclinedIds: string[];
+  coordinatorDecidedAt: string | null;
 };
 type InterestedProvider = {
   providerId: string;
@@ -82,6 +84,8 @@ type TeamDetailData = {
   agreedRate: number | null;
   agreedRateUnit: string | null;
   coordinatorSignedOffAt: string | null;
+  coordinatorDeclinedIds: string[];
+  coordinatorDecidedAt: string | null;
   skills: TeamSkill[];
   members: TeamMember[];
 };
@@ -102,6 +106,19 @@ export function Accepted() {
   const [teamId, setTeamId] = useState<string | null>(null);
   const [applicantsFor, setApplicantsFor] = useState<MyRequest | null>(null);
   const [editing, setEditing] = useState<MyRequest | null>(null);
+
+  // A declined coordinator is a one-time thing to tell her about, not something to re-alert
+  // on every 15s poll while the request still sits in 'declined' — remembered per request id
+  // for the life of this screen.
+  const alertedDeclines = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const r of requests ?? []) {
+      if (r.coordinatorResponse === "declined" && !alertedDeclines.current.has(r._id)) {
+        alertedDeclines.current.add(r._id);
+        window.alert(`${r.title}: ${t("coordinatorDeclinedAlert")}`);
+      }
+    }
+  }, [requests, t]);
 
   if (teamId) return <TeamDetail teamId={teamId} onBack={() => setTeamId(null)} />;
   if (applicantsFor)
@@ -141,6 +158,17 @@ export function Accepted() {
               )}
             </div>
           )}
+          {/* She declined — the request card carries the same message as the one-time popup,
+              since the popup is easy to miss and this stays visible until she acts on it. */}
+          {r.mode === "group" && r.coordinatorResponse === "declined" && (
+            <div className="text-sm text-loom-madder">{t("coordinatorDeclinedBanner")}</div>
+          )}
+          {/* A team exists but nobody has gone through naming who's accountable for it yet —
+              "start work" stays hidden until she has, even though the default (herself) needs
+              no real decision from anyone else. */}
+          {r.mode === "group" && r.teamId && !r.coordinatorDecidedAt && r.coordinatorResponse !== "declined" && (
+            <div className="text-sm text-loom-turmeric">{t("waitingForCoordinatorSelection")}</div>
+          )}
           <div className="flex flex-wrap gap-2 mt-2">
             {r.teamId && <Button onClick={() => setTeamId(r.teamId)}>{t("teams")}</Button>}
             {/* Both individual and group work are awarded by the customer, not claimed by
@@ -166,6 +194,7 @@ export function Accepted() {
                 — requests/complete.ts refuses it server-side, so this mirrors that rather than
                 offering a button that would just come back as an error. */}
             {r.status === "assigned" &&
+              (r.mode !== "group" || !r.teamId || r.coordinatorDecidedAt) &&
               (r.mode !== "group" || r.coordinatorRole !== "provider" || r.coordinatorSignedOffAt) && (
                 <Button variant="leaf" onClick={() => complete.mutate(r._id)}>
                   {t("markFinished")}
@@ -298,6 +327,7 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
               candidates={team.members
                 .filter((m) => m.state !== "declined")
                 .map((m) => ({ id: m.providerId, name: m.shopName ?? m.name }))}
+              declinedIds={team.coordinatorDeclinedIds}
               initialRate={team.agreedRate}
               initialRateUnit={team.agreedRateUnit}
               onDone={() => {
@@ -611,6 +641,7 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
         <FinalizeGroup
           requestId={requestId}
           candidates={finalizing}
+          declinedIds={request.coordinatorDeclinedIds}
           initialRate={request.agreedRate}
           initialRateUnit={request.agreedRateUnit}
           onDone={onBack}
