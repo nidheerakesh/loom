@@ -7,6 +7,7 @@ import { Browse } from "./Browse";
 import { RequestForm } from "./RequestForm";
 import { Accepted } from "./Accepted";
 import { CustomerProfile } from "./Profile";
+import { Communities } from "../shared/Communities";
 
 export function CustomerApp() {
   const { t, token, me } = useAuth();
@@ -43,6 +44,7 @@ export function CustomerApp() {
       {tab === "browse" && <Browse />}
       {tab === "request" && <RequestForm onDone={() => setTab("accepted")} />}
       {tab === "accepted" && <Accepted />}
+      {tab === "communities" && <Communities />}
       {tab === "profile" && <CustomerProfile />}
       <TabBar
         active={tab}
@@ -51,6 +53,7 @@ export function CustomerApp() {
           { key: "browse", label: t("browse") },
           { key: "request", label: t("request") },
           { key: "accepted", label: t("accepted") },
+          { key: "communities", label: t("communities") },
           { key: "profile", label: t("profile") },
         ]}
       />

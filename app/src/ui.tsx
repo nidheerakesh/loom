@@ -1,6 +1,7 @@
 import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { canSpeak, onVoicesReady, speak, stopSpeaking } from "./lib/speech";
+import { malayalamizeNumbers } from "./lib/malayalamNumbers";
 import { apiPost } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
 
@@ -113,10 +114,13 @@ export function ListenButton({ text }: { text: string }) {
     // falls through to the browser engine that has always been here.
     void (async () => {
       if (!token) return;
+      // Same fix as the device voice: the server voice (Bhashini/Sarvam) reads bare digits in
+      // English too, so numbers are converted to Malayalam words before either voice hears them.
+      const spokenText = lang === "ml" ? malayalamizeNumbers(text) : text;
       try {
         const res = await apiPost<{ available: boolean; audio?: string; mime?: string }>(
           "/api/narration/speak",
-          { token, text, lang },
+          { token, text: spokenText, lang },
         );
         if (res.available && res.audio) {
           const el = new Audio(`data:${res.mime ?? "audio/wav"};base64,${res.audio}`);

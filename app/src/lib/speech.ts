@@ -1,4 +1,5 @@
 import type { Lang } from "../i18n";
+import { malayalamizeNumbers } from "./malayalamNumbers";
 
 // Text-to-speech, matching the TextToSpeech adapter shape in docs/TDD.md §4.
 //
@@ -46,8 +47,14 @@ export function speak(text: string, lang: Lang): SpeakResult {
   // like the app is broken rather than unsupported. The caller keeps showing the text.
   if (voices.length === 0) return "no-voice";
 
+  // A voice speaks the script it's handed, and digit characters aren't Malayalam script —
+  // every device tested reads "275" in English regardless of the utterance's declared
+  // language. Converting to Malayalam number words first is what actually makes a rate or a
+  // count come out in the language the rest of the sentence is in.
+  const spokenText = lang === "ml" ? malayalamizeNumbers(text) : text;
+
   s.cancel(); // barge-in: a new utterance replaces whatever is still playing
-  const u = new SpeechSynthesisUtterance(text);
+  const u = new SpeechSynthesisUtterance(spokenText);
   u.voice = voices[0];
   u.lang = tag;
   u.rate = 0.95; // marginally slower — this is instructional content, often unfamiliar terms
