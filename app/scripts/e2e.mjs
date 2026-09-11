@@ -112,9 +112,12 @@ async function main() {
   // Google Translate's keyless fallback produces a real Malayalam translation rather than
   // echoing the English phrase back as both canonical names (the bug: a phrase like "chedi
   // nadal" used to end up with canonicalNameMl === the untranslated input whenever no paid
-  // provider was configured).
+  // provider was configured). Run on a disposable scratch provider, not A.p1 — skills/resolve
+  // REPLACES a provider's whole skill set to match exactly the phrases given, so calling it
+  // with only this one phrase on p1 would wipe out the skills F1's team-assembly tests need.
   const freshPhrase = `loomtest gardening ${Date.now()}`;
-  const rFresh = await post("skills/resolve", { token: A.p1.token, phrases: [freshPhrase] });
+  const scratchTranslator = await signUp("9000000302", "provider", "Scratch Translator");
+  const rFresh = await post("skills/resolve", { token: scratchTranslator.token, phrases: [freshPhrase] });
   const freshReadback = (rFresh.data?.readback ?? [])[0];
   ok("a brand-new English phrase gets a REAL Malayalam translation, not an echo of itself",
     freshReadback?.canonicalNameMl && /[ഀ-ൿ]/.test(freshReadback.canonicalNameMl) && freshReadback.canonicalNameMl !== freshPhrase,
