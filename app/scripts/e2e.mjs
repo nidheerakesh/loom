@@ -249,6 +249,9 @@ async function main() {
   ok("each applicant carries her distance from the job, for sorting by nearness",
     (interested.data ?? []).every((p) => typeof p.distanceKm === "number" || p.distanceKm === null),
     (interested.data ?? []).map((p) => `${p.name}:${p.distanceKm}km`).join(", "));
+  ok("each applicant also carries the same score the job feed ranks by",
+    (interested.data ?? []).every((p) => typeof p.score === "number" || p.score === null),
+    (interested.data ?? []).map((p) => `${p.name}:${p.score}`).join(", "));
 
   const chose = await post("requests/choose-provider", { token: A.c1.token, requestId: reqId, providerId: A.p1.userId });
   ok("customer chooses one provider", chose.status === 200);
@@ -279,6 +282,50 @@ async function main() {
   const hist = await get("customers/history", { token: A.c1.token });
   ok("completed job appears in customer history", Array.isArray(hist.data) && hist.data.some((p) => p._id === A.p1.userId),
     `${hist.data?.length} past providers`);
+
+  // ── E2 · INDIVIDUAL JOBS GET THE SAME CHOICE GROUP ORDERS ALWAYS HAD ────────
+  // Auto-assembly vs. open call was a group-only distinction — an individual job could only
+  // ever be staffed by the customer reading every applicant herself. This is that same choice
+  // for individual work: an application deadline (respond.ts already enforced this for group
+  // only), and requests/auto-choose.ts as the "let the algorithm decide" alternative to
+  // choose-provider.ts.
+  section("E2 · Individual jobs — deadline and algorithmic choice");
+  const pastDeadlineInd = await post("requests/create", {
+    token: A.c1.token, title: "E2E closed individual call", description: "automated test",
+    mode: "individual", units: 1, pay: 300, interestDeadline: new Date(Date.now() - 1000).toISOString(),
+    skills: [{ skillId: stitchingId, quantity: 1 }],
+  });
+  const lateIndApply = await post("requests/respond", { token: A.p1.token, requestId: pastDeadlineInd.data.requestId, accept: true });
+  ok("applying to an individual job after ITS OWN deadline is refused, same as a group order",
+    lateIndApply.status === 409 && lateIndApply.data?.reason === "interest-deadline-passed",
+    `${lateIndApply.status} ${lateIndApply.data?.error ?? ""}`);
+
+  const autoCall = await post("requests/create", {
+    token: A.c1.token, title: "E2E auto-choose blouse", description: "automated test",
+    mode: "individual", units: 1, pay: 500, skills: [{ skillId: stitchingId, quantity: 1 }],
+  });
+  const autoReqId = autoCall.data.requestId;
+  const noApplicantsYet = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
+  ok("auto-choose refuses when nobody has applied yet", noApplicantsYet.status === 400 && noApplicantsYet.data?.reason === "no-applicants",
+    `${noApplicantsYet.status} ${noApplicantsYet.data?.error ?? ""}`);
+
+  await post("requests/respond", { token: A.p1.token, requestId: autoReqId, accept: true });
+  await post("requests/respond", { token: A.p2.token, requestId: autoReqId, accept: true });
+  const beforeAuto = await get("requests/interested-providers", { token: A.c1.token, requestId: autoReqId });
+  const bestByScore = [...(beforeAuto.data ?? [])].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
+
+  const auto = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
+  ok("the algorithm picks the highest-scoring applicant — same ranking the feed itself uses",
+    auto.status === 200 && auto.data?.providerId === bestByScore?.providerId,
+    `picked=${auto.data?.providerId} expected=${bestByScore?.providerId} (score ${bestByScore?.score})`);
+
+  const afterAuto = await get("requests/interested-providers", { token: A.c1.token, requestId: autoReqId });
+  const autoLoser = (afterAuto.data ?? []).find((p) => p.providerId !== auto.data.providerId);
+  ok("everyone else is declined, exactly like a manual choose-provider award",
+    autoLoser?.state === "declined", `${autoLoser?.name} state=${autoLoser?.state}`);
+
+  const auto2 = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
+  ok("auto-choosing an already-assigned job is refused", auto2.status === 409);
 
   // ── F · COLLECTIVE LIFECYCLE ────────────────────────────────────────────────
   section("F · Collective lifecycle — the headline claim");

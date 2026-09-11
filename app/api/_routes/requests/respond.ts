@@ -31,11 +31,11 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     throw new HttpError(409, "This work is no longer open");
   }
 
-  // A group order's interest window is a promise to everyone watching it, not just a UI
-  // hint — a provider who applies after the customer has started picking would be applying
-  // to a decision that may already be made. Declining (withdrawing) is still allowed anytime;
-  // only new applications are cut off.
-  if (accept && request.mode === "group" && request.interest_deadline) {
+  // An interest window is a promise to everyone watching it, not just a UI hint — a provider
+  // who applies after the customer has started picking would be applying to a decision that
+  // may already be made. Individual and group alike: both wait on applicants the same way.
+  // Declining (withdrawing) is still allowed anytime; only new applications are cut off.
+  if (accept && request.interest_deadline) {
     if (new Date(request.interest_deadline).getTime() < Date.now()) {
       throw new HttpError(409, "The window to express interest in this work has closed", "interest-deadline-passed");
     }

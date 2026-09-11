@@ -38,17 +38,24 @@ type InterestedProvider = {
   rate: number | null;
   rateUnit: string | null;
   distanceKm: number | null;
+  // The same weighted score (skillFit/proximity/pay) matching/feed.ts ranks the job feed by,
+  // computed for THIS applicant against THIS request — null only if she has none of the
+  // request's skills at all (shouldn't happen for a real applicant, but a request with no
+  // skills recorded is possible on an old row).
+  score: number | null;
   state: string;
 };
 
-type ApplicantSort = "default" | "distance" | "rating";
+type ApplicantSort = "default" | "distance" | "rating" | "score";
 
-// Distance-missing applicants sort last, not first — a null shouldn't look like "0km away".
+// Distance/score-missing applicants sort last, not first — a null shouldn't look like "best".
 function sortApplicants(list: InterestedProvider[], sortBy: ApplicantSort): InterestedProvider[] {
   if (sortBy === "default") return list;
   const sorted = [...list];
   if (sortBy === "distance") {
     sorted.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  } else if (sortBy === "score") {
+    sorted.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
   } else {
     sorted.sort((a, b) => b.rating - a.rating);
   }
@@ -57,7 +64,10 @@ function sortApplicants(list: InterestedProvider[], sortBy: ApplicantSort): Inte
 
 function ApplicantSortBar({ sortBy, onChange, t }: { sortBy: ApplicantSort; onChange: (s: ApplicantSort) => void; t: (k: string) => string }) {
   return (
-    <div className="flex gap-2 mb-2">
+    <div className="flex gap-2 mb-2 flex-wrap">
+      <TextButton className={sortBy === "score" ? "font-bold text-loom-indigo" : ""} onClick={() => onChange(sortBy === "score" ? "default" : "score")}>
+        {t("sortByScore")}
+      </TextButton>
       <TextButton className={sortBy === "distance" ? "font-bold text-loom-indigo" : ""} onClick={() => onChange(sortBy === "distance" ? "default" : "distance")}>
         {t("sortByDistance")}
       </TextButton>
@@ -153,7 +163,7 @@ export function Accepted() {
     return applicantsFor.mode === "group" ? (
       <GroupApplicants request={applicantsFor} onBack={() => setApplicantsFor(null)} />
     ) : (
-      <Applicants requestId={applicantsFor._id} onBack={() => setApplicantsFor(null)} />
+      <Applicants request={applicantsFor} onBack={() => setApplicantsFor(null)} />
     );
   if (editing) return <EditRequest request={editing} onBack={() => setEditing(null)} />;
 
@@ -551,9 +561,10 @@ function TeamDetail({ teamId, onBack }: { teamId: string; onBack: () => void }) 
 // Providers who put their hand up for an individual job. Several may apply; the customer
 // awards it to one, and choose-provider declines the rest so nobody is left waiting on work
 // that has already gone elsewhere.
-function Applicants({ requestId, onBack }: { requestId: string; onBack: () => void }) {
+function Applicants({ request, onBack }: { request: MyRequest; onBack: () => void }) {
   const { token, t } = useAuth();
   const queryClient = useQueryClient();
+  const requestId = request._id;
 
   const { data: applicants } = useQuery({
     queryKey: ["requests/interested-providers", requestId, token],
@@ -574,9 +585,22 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
     },
   });
 
+  // Same choice a group order already had (auto-assembly vs. open call), now here too: read
+  // the applicants herself, or ask the same scoring formula the job feed ranks by to just
+  // pick the best one. It's choose-provider.ts underneath — auto-choose.ts only decides WHO.
+  const autoChoose = useMutation({
+    mutationFn: () => apiPost<{ providerId: string }>("/api/requests/auto-choose", { token, requestId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
+      onBack();
+    },
+  });
+
   const [sortBy, setSortBy] = useState<ApplicantSort>("default");
   const waiting = sortApplicants((applicants ?? []).filter((a) => a.state === "interested"), sortBy);
   const awarded = (applicants ?? []).find((a) => a.state === "accepted");
+  const deadlinePassed =
+    !!request.interestDeadline && new Date(request.interestDeadline).getTime() < Date.now();
 
   return (
     <Screen
@@ -585,6 +609,15 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
         <TextButton onClick={onBack}>‹ {t("back")}</TextButton>
       }
     >
+      {request.interestDeadline && (
+        <Card className="mb-2">
+          <div className="text-sm text-loom-indigoSoft">
+            {t("applyBy")} {new Date(request.interestDeadline).toLocaleString()}
+          </div>
+          {deadlinePassed && <div className="text-sm text-loom-madder mt-1">{t("interestDeadlinePassed")}</div>}
+        </Card>
+      )}
+
       {applicants === undefined && <div className="text-loom-indigoSoft">…</div>}
 
       {awarded && (
@@ -598,7 +631,19 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
         <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
       )}
 
-      {!awarded && waiting.length > 0 && <ApplicantSortBar sortBy={sortBy} onChange={setSortBy} t={t} />}
+      {!awarded && waiting.length > 0 && (
+        <>
+          <ApplicantSortBar sortBy={sortBy} onChange={setSortBy} t={t} />
+          <Button
+            variant="ghost"
+            className="w-full mb-2"
+            disabled={autoChoose.isPending}
+            onClick={() => void autoChoose.mutate()}
+          >
+            {t("letAlgorithmDecide")}
+          </Button>
+        </>
+      )}
 
       {!awarded &&
         waiting.map((a) => (
@@ -609,6 +654,9 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
                 <Stars value={a.rating} />
                 {a.distanceKm !== null && (
                   <div className="text-xs text-loom-indigoSoft">{a.distanceKm} {t("km")}</div>
+                )}
+                {a.score !== null && (
+                  <div className="text-xs text-loom-indigoSoft">{t("matchScore")}: {(a.score * 100).toFixed(0)}%</div>
                 )}
               </div>
               <Button
@@ -624,6 +672,9 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
 
       {choose.isError && (
         <div className="text-loom-madder text-sm">{(choose.error).message}</div>
+      )}
+      {autoChoose.isError && (
+        <div className="text-loom-madder text-sm">{(autoChoose.error).message}</div>
       )}
     </Screen>
   );
@@ -759,6 +810,9 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
                   )}
                   {a.distanceKm !== null && (
                     <div className="text-xs text-loom-indigoSoft">{a.distanceKm} {t("km")}</div>
+                  )}
+                  {a.score !== null && (
+                    <div className="text-xs text-loom-indigoSoft">{t("matchScore")}: {(a.score * 100).toFixed(0)}%</div>
                   )}
                 </div>
                 <input

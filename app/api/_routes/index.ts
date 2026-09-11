@@ -32,6 +32,7 @@ import r_providers_portfolio_upload_url from "./providers/portfolio/upload-url.j
 import r_providers_search from "./providers/search.js";
 import r_providers_update_profile from "./providers/update-profile.js";
 import r_ratings_rate from "./ratings/rate.js";
+import r_requests_auto_choose from "./requests/auto-choose.js";
 import r_requests_choose_provider from "./requests/choose-provider.js";
 import r_requests_complete from "./requests/complete.js";
 import r_requests_coordinator_signoff from "./requests/coordinator-signoff.js";
@@ -106,6 +107,7 @@ export const routes: Record<string, Handler> = {
   "providers/search": r_providers_search,
   "providers/update-profile": r_providers_update_profile,
   "ratings/rate": r_ratings_rate,
+  "requests/auto-choose": r_requests_auto_choose,
   "requests/choose-provider": r_requests_choose_provider,
   "requests/complete": r_requests_complete,
   "requests/coordinator-signoff": r_requests_coordinator_signoff,

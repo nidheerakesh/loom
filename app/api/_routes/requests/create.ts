@@ -16,10 +16,13 @@ const Body = z.object({
   units: z.number().int().positive().max(10000),
   pay: z.number().nonnegative().max(10_000_000).optional(),
   deadline: z.string().optional(),
-  // Group orders only. How many people she wants, and when the interest window closes. Both
-  // optional even for a group order — an older client, or a customer who does not want a cap
-  // or a cutoff, still works exactly as before.
+  // Group orders only: how many people she wants. Optional even then — a customer who does
+  // not want a cap still works exactly as before.
   headcount: z.number().int().positive().max(1000).optional(),
+  // Any mode. When set, requests/respond.ts refuses an application after it passes and the
+  // customer gets requests/auto-choose.ts — "let the algorithm decide" — once it has, instead
+  // of only ever picking manually. Started as group-only; an individual job waiting on
+  // applicants has exactly the same "when do I stop waiting" question a group order does.
   interestDeadline: z.string().datetime().optional(),
   // Group orders only. Who is accountable for this job (default: the customer herself), and
   // the single rate every team member is paid for it. All optional — an older client, or a
@@ -70,7 +73,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       pay,
       deadline,
       headcount: mode === "group" ? headcount : undefined,
-      interest_deadline: mode === "group" ? interestDeadline : undefined,
+      interest_deadline: interestDeadline,
       coordinator_role: mode === "group" && coordinatorProviderId ? "provider" : "customer",
       coordinator_provider_id: mode === "group" ? coordinatorProviderId : undefined,
       agreed_rate: mode === "group" ? agreedRate : undefined,

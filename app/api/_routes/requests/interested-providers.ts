@@ -3,6 +3,7 @@ import { withHandler, HttpError } from "../../_lib/http.js";
 import { supabaseAdmin } from "../../_lib/supabase.js";
 import { requireRole } from "../../_lib/auth.js";
 import { distanceMap } from "../../_lib/geo.js";
+import { scoreApplicants } from "../../_lib/requestScoring.js";
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const token = typeof req.query.token === "string" ? req.query.token : undefined;
@@ -12,7 +13,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: request, error: reqErr } = await supabaseAdmin
     .from("requests")
-    .select("location_id")
+    .select("location_id, pay")
     .eq("id", requestId)
     .maybeSingle();
   if (reqErr) throw new HttpError(500, reqErr.message);
@@ -43,6 +44,18 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
     ? await distanceMap(request.location_id, rows.map((r) => r.p.home_location_id))
     : new Map<string, number>();
 
+  // The exact score matching/feed.ts ranked this job by for each of them — same formula the
+  // whole engine uses, so "who does the algorithm think is best" is answerable everywhere a
+  // request shows its applicants, not just on the provider's own feed.
+  const scores = request?.location_id
+    ? await scoreApplicants(
+        requestId,
+        request.location_id,
+        request.pay ?? null,
+        rows.map((r) => ({ providerId: r.p.id, homeLocationId: r.p.home_location_id })),
+      )
+    : new Map();
+
   res.status(200).json(
     rows.map(({ state, p }) => ({
       providerId: p.id,
@@ -55,6 +68,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       rate: p.rate ?? null,
       rateUnit: p.rate_unit ?? null,
       distanceKm: distances.get(p.home_location_id) ?? null,
+      score: scores.get(p.id)?.total ?? null,
       state,
     })),
   );

@@ -90,8 +90,7 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
             ? expectedPrice === "" ? undefined : Number(expectedPrice)
             : pay === "" ? undefined : Number(pay),
         headcount: mode === "group" && headcount !== "" ? headcount : undefined,
-        interestDeadline:
-          mode === "group" && interestDeadline ? new Date(interestDeadline).toISOString() : undefined,
+        interestDeadline: interestDeadline ? new Date(interestDeadline).toISOString() : undefined,
         agreedRate: mode === "group" && expectedPrice !== "" ? expectedPrice : undefined,
         agreedRateUnit: mode === "group" && expectedPriceUnit.trim() ? expectedPriceUnit.trim() : undefined,
         skills: [...selected].map((skillId) => ({ skillId, quantity: units })),
@@ -176,8 +175,12 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
             <Field label={`${t("price")} ₹`} type="number" value={pay} onChange={(e) => setPay(e.target.value === "" ? "" : Number(e.target.value))} />
           )}
         </div>
-        {mode === "group" && (
-          <div className="grid grid-cols-2 gap-2">
+        {/* Applies to either mode now — waiting on applicants is the same question whether
+            the job is one winner or several, and an individual job with no deadline still
+            works exactly as before (never enforced unless she sets one). Headcount stays
+            group-only: "how many people" has no meaning for a job with one winner. */}
+        <div className="grid grid-cols-2 gap-2">
+          {mode === "group" && (
             <Field
               label={t("headcountOptional")}
               type="number"
@@ -188,14 +191,14 @@ export function RequestForm({ onDone }: { onDone: () => void }) {
                 setHeadcount(e.target.value === "" ? "" : Math.max(1, Math.floor(Number(e.target.value)) || 1))
               }
             />
-            <Field
-              label={t("interestDeadline")}
-              type="datetime-local"
-              value={interestDeadline}
-              onChange={(e) => setInterestDeadline(e.target.value)}
-            />
-          </div>
-        )}
+          )}
+          <Field
+            label={t("interestDeadline")}
+            type="datetime-local"
+            value={interestDeadline}
+            onChange={(e) => setInterestDeadline(e.target.value)}
+          />
+        </div>
         {mode === "group" && (
           <div className="grid grid-cols-2 gap-2">
             <Field

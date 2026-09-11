@@ -16,16 +16,9 @@ export function skillFit(proficiency: number): number {
   return Math.max(0, Math.min(1, proficiency / 5));
 }
 
-export function score(
-  fit: number,
-  distanceKm: number,
-  pay: number | undefined,
-): {
-  skillFit: number;
-  proximity: number;
-  pay: number;
-  total: number;
-} {
+export type Score = { skillFit: number; proximity: number; pay: number; total: number };
+
+export function score(fit: number, distanceKm: number, pay: number | undefined): Score {
   const prox = proximity(distanceKm);
   const payN = normalizedPay(pay);
   const total = WEIGHTS.skill * fit + WEIGHTS.dist * prox + WEIGHTS.earn * payN;
