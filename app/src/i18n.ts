@@ -110,6 +110,8 @@ attachPhoto: { ml: "ഫോട്ടോ ചേർക്കുക", en: "Attach a 
   history: { ml: "മുമ്പ് ജോലി ചെയ്തവർ", en: "People you've worked with" },
   noResults: { ml: "ഫലങ്ങളൊന്നുമില്ല", en: "No results yet" },
   km: { ml: "കി.മീ", en: "km" },
+  sortByDistance: { ml: "ദൂരം അനുസരിച്ച്", en: "Sort by distance" },
+  sortByRating: { ml: "റേറ്റിംഗ് അനുസരിച്ച്", en: "Sort by rating" },
   yrs: { ml: "വർഷം", en: "yrs" },
   listen: { ml: "കേൾക്കുക", en: "Listen" },
   stop: { ml: "നിർത്തുക", en: "Stop" },

@@ -13,6 +13,18 @@ import { malayalamizeNumbers } from "./malayalamNumbers";
 
 const LOCALE: Record<Lang, string> = { ml: "ml-IN", en: "en-IN" };
 
+const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
+
+// Chat messages, skill phrases and job titles are free text — typed by whoever wrote them, in
+// whichever script they reached for, regardless of what language the PERSON READING them
+// happens to have her own UI set to. A message typed in Malayalam script should be read in a
+// Malayalam voice even if the reader's toggle says English; text with no Malayalam characters
+// at all falls back to her UI language, since plain Latin script alone can't tell "genuinely
+// English" apart from a transliteration.
+export function detectSpeechLang(text: string, uiLang: Lang): Lang {
+  return MALAYALAM_SCRIPT.test(text) ? "ml" : uiLang;
+}
+
 function synth(): SpeechSynthesis | null {
   return typeof window !== "undefined" && "speechSynthesis" in window
     ? window.speechSynthesis

@@ -84,7 +84,13 @@ export function ProviderCurrent() {
 
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-20" onClick={() => setOpen(null)}>
-          <div className="bg-loom-cotton max-w-[520px] w-full rounded-t-[14px] p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          {/* A long decision path or narration text had nowhere to go — the sheet sat fixed
+              to the viewport with no scroll of its own, so anything past the fold was just
+              unreachable, not merely off-screen. */}
+          <div
+            className="bg-loom-cotton max-w-[520px] w-full max-h-[85vh] overflow-y-auto rounded-t-[14px] p-4 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-loom-indigo">{open.title}</h3>
               <ListenButton text={open.text} />

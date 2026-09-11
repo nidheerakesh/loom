@@ -140,8 +140,10 @@ async function main() {
   ok("the removed skill is actually gone from her list",
     !(mineAfterRemove.data ?? []).some((s) => s._id === toRemove),
     `${mineAfterRemove.data?.length} skills left`);
-  // Put it back — later sections (F1, etc.) depend on p1 having stitching.
-  await post("skills/resolve", { token: A.p1.token, phrases: ["sewing"] });
+  // Restore her FULL original set (skills/resolve.ts replaces, not appends) — later sections
+  // (F1's swap/add candidates, etc.) depend on p1 still having every skill r1 gave her,
+  // including the one this test just removed.
+  await post("skills/resolve", { token: A.p1.token, phrases: ["sewing", "catering", NEW_SKILL] });
 
   const customerPhrase = `E2E customer-named skill ${Date.now()}`;
   const findOrCreate = await post("skills/find-or-create", { token: A.c1.token, phrase: customerPhrase });
@@ -219,6 +221,9 @@ async function main() {
   const interested = await get("requests/interested-providers", { token: A.c1.token, requestId: reqId });
   ok("customer sees both applicants", Array.isArray(interested.data) && interested.data.length >= 2,
     (interested.data ?? []).map((p) => `${p.name}:${p.state}`).join(", "));
+  ok("each applicant carries her distance from the job, for sorting by nearness",
+    (interested.data ?? []).every((p) => typeof p.distanceKm === "number" || p.distanceKm === null),
+    (interested.data ?? []).map((p) => `${p.name}:${p.distanceKm}km`).join(", "));
 
   const chose = await post("requests/choose-provider", { token: A.c1.token, requestId: reqId, providerId: A.p1.userId });
   ok("customer chooses one provider", chose.status === 200);
@@ -907,12 +912,14 @@ async function main() {
     nearKnown.status === 200 && !/^-?\d+\.\d+/.test(nearKnown.data?.label ?? ""),
     `→ ${nearKnown.data?.label}`);
 
-  const faraway = await post("accounts/set-location", { token: A.p1.token, lat: 8.5241, lng: 76.9366 });
+  // 25.8km from the nearest named area (Ernakulam) — far enough to snap to a fresh grid cell
+  // (past SNAP_KM), close enough to still honestly deserve a "Near X" label (under MAX_LABEL_KM).
+  const faraway = await post("accounts/set-location", { token: A.p1.token, lat: 9.80, lng: 76.10 });
   ok("a reading with nothing nearby is rounded to a ~1km grid, named — not shown as coordinates",
     faraway.status === 200 && !/^-?\d+\.\d+/.test(faraway.data?.label ?? "") && /^Near /.test(faraway.data?.label ?? ""),
     `→ ${faraway.data?.label}`);
 
-  const jittered = await post("accounts/set-location", { token: A.p1.token, lat: 8.52436, lng: 76.93688 });
+  const jittered = await post("accounts/set-location", { token: A.p1.token, lat: 9.80027, lng: 76.10022 });
   ok("a second reading 30m away reuses the same row — no exact-position trail",
     jittered.data?.locationId === faraway.data?.locationId);
 

@@ -1,6 +1,6 @@
 import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { canSpeak, onVoicesReady, speak, stopSpeaking } from "./lib/speech";
+import { canSpeak, onVoicesReady, speak, stopSpeaking, detectSpeechLang } from "./lib/speech";
 import { malayalamizeNumbers } from "./lib/malayalamNumbers";
 import { apiPost } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -86,12 +86,16 @@ export function Stars({ value, count }: { value: number; count?: number }) {
   );
 }
 
-// Speaks the text in whichever language the user is reading the app in.
+// Speaks the text in whichever language it's actually written in — not necessarily the
+// reader's own UI language. Free text (chat messages, skill phrases) is typed by whoever wrote
+// it; a Malayalam-script message should be read in a Malayalam voice even if the reader's own
+// toggle says English. Text with no Malayalam characters falls back to her UI language.
 //
 // Falls back to showing the text only when the device has no voice for that language —
 // reading Malayalam aloud in an English voice would be worse than not speaking at all.
 export function ListenButton({ text }: { text: string }) {
-  const { lang, t, token } = useAuth();
+  const { lang: uiLang, t, token } = useAuth();
+  const lang = detectSpeechLang(text, uiLang);
   const [available, setAvailable] = useState(() => canSpeak(lang));
   const [speaking, setSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);

@@ -37,8 +37,36 @@ type InterestedProvider = {
   rating: number;
   rate: number | null;
   rateUnit: string | null;
+  distanceKm: number | null;
   state: string;
 };
+
+type ApplicantSort = "default" | "distance" | "rating";
+
+// Distance-missing applicants sort last, not first — a null shouldn't look like "0km away".
+function sortApplicants(list: InterestedProvider[], sortBy: ApplicantSort): InterestedProvider[] {
+  if (sortBy === "default") return list;
+  const sorted = [...list];
+  if (sortBy === "distance") {
+    sorted.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  } else {
+    sorted.sort((a, b) => b.rating - a.rating);
+  }
+  return sorted;
+}
+
+function ApplicantSortBar({ sortBy, onChange, t }: { sortBy: ApplicantSort; onChange: (s: ApplicantSort) => void; t: (k: string) => string }) {
+  return (
+    <div className="flex gap-2 mb-2">
+      <TextButton className={sortBy === "distance" ? "font-bold text-loom-indigo" : ""} onClick={() => onChange(sortBy === "distance" ? "default" : "distance")}>
+        {t("sortByDistance")}
+      </TextButton>
+      <TextButton className={sortBy === "rating" ? "font-bold text-loom-indigo" : ""} onClick={() => onChange(sortBy === "rating" ? "default" : "rating")}>
+        {t("sortByRating")}
+      </TextButton>
+    </div>
+  );
+}
 type Candidate = {
   providerId: string;
   name: string;
@@ -546,7 +574,8 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
     },
   });
 
-  const waiting = (applicants ?? []).filter((a) => a.state === "interested");
+  const [sortBy, setSortBy] = useState<ApplicantSort>("default");
+  const waiting = sortApplicants((applicants ?? []).filter((a) => a.state === "interested"), sortBy);
   const awarded = (applicants ?? []).find((a) => a.state === "accepted");
 
   return (
@@ -569,6 +598,8 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
         <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
       )}
 
+      {!awarded && waiting.length > 0 && <ApplicantSortBar sortBy={sortBy} onChange={setSortBy} t={t} />}
+
       {!awarded &&
         waiting.map((a) => (
           <Card key={a.providerId} className="mb-2">
@@ -576,6 +607,9 @@ function Applicants({ requestId, onBack }: { requestId: string; onBack: () => vo
               <div>
                 <div className="font-semibold text-loom-indigo">{a.shopName ?? a.name}</div>
                 <Stars value={a.rating} />
+                {a.distanceKm !== null && (
+                  <div className="text-xs text-loom-indigoSoft">{a.distanceKm} {t("km")}</div>
+                )}
               </div>
               <Button
                 variant="gold"
@@ -624,6 +658,7 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
   // step (coordinator + real price) replaces the rest of this screen rather than sending her
   // back to the list, since there's nothing left on it worth returning to.
   const [finalizing, setFinalizing] = useState<{ id: string; name: string }[] | null>(null);
+  const [sortBy, setSortBy] = useState<ApplicantSort>("default");
 
   const selectTeam = useMutation({
     mutationFn: () =>
@@ -651,7 +686,7 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
   }
 
   const decided = request.status !== "open";
-  const waiting = (applicants ?? []).filter((a) => a.state === "interested");
+  const waiting = sortApplicants((applicants ?? []).filter((a) => a.state === "interested"), sortBy);
   const chosen = (applicants ?? []).filter((a) => a.state === "accepted");
   const deadlinePassed =
     !!request.interestDeadline && new Date(request.interestDeadline).getTime() < Date.now();
@@ -707,6 +742,7 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
           {waiting.length === 0 && applicants !== undefined && (
             <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
           )}
+          {waiting.length > 0 && <ApplicantSortBar sortBy={sortBy} onChange={setSortBy} t={t} />}
           {waiting.map((a) => (
             <Card key={a.providerId} className="mb-2">
               <label className="flex items-center justify-between cursor-pointer">
@@ -720,6 +756,9 @@ function GroupApplicants({ request, onBack }: { request: MyRequest; onBack: () =
                       {t("providerOwnRate")}: ₹{a.rate}
                       {a.rateUnit ? `/${a.rateUnit}` : ""}
                     </div>
+                  )}
+                  {a.distanceKm !== null && (
+                    <div className="text-xs text-loom-indigoSoft">{a.distanceKm} {t("km")}</div>
                   )}
                 </div>
                 <input
