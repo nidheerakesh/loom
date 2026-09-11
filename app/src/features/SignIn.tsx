@@ -4,6 +4,7 @@ import { useAuth } from "../auth";
 import { Button, Card, Field, TextButton } from "../ui";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Consent } from "./shared/Consent";
+import { LocationPicker } from "./shared/LocationPicker";
 
 type Role = "provider" | "customer";
 
@@ -17,7 +18,7 @@ type VerifyResult =
   | { status: "choose"; ticket: string; roles: Role[] }
   | { status: "signup"; ticket: string };
 
-type Step = "phone" | "code" | "choose" | "consent" | "signup";
+type Step = "phone" | "code" | "choose" | "consent" | "signup" | "location";
 
 // The server's English message is the fallback; its `reason` is what gets translated. A woman
 // signing in reads Malayalam, and "wrong code" and "expired code" ask her to do different
@@ -44,6 +45,9 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("provider");
+  // Held between account creation and setToken — location is asked before the app itself is
+  // ever revealed, as the last step of signup rather than a second gate she hits after.
+  const [freshToken, setFreshToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // The code on her phone can no longer work — expired, or locked by too many tries.
@@ -103,6 +107,14 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
         name: withName,
         consent,
       });
+      // A brand-new account (name + consent both present, i.e. the signup step) asks where
+      // she is before ever showing the app. An existing account picked via "choose" (both
+      // roles on one number) already has a location and goes straight in, same as before.
+      if (withName && consent) {
+        setFreshToken(res.token);
+        setStep("location");
+        return;
+      }
       setToken(res.token);
     });
 
@@ -235,6 +247,16 @@ export function SignIn({ onBack }: { onBack?: () => void } = {}) {
             >
               {t("continue")}
             </Button>
+          </>
+        )}
+
+        {step === "location" && freshToken && (
+          <>
+            <div className="mb-3 text-loom-indigo font-medium">{t("yourArea")}</div>
+            <LocationPicker token={freshToken} onSaved={() => setToken(freshToken)} />
+            <TextButton className="mt-3 w-full" onClick={() => setToken(freshToken)}>
+              {t("skipForNow")}
+            </TextButton>
           </>
         )}
 

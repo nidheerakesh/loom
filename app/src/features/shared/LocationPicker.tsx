@@ -16,11 +16,16 @@ type Area = { _id: string; label: string };
 export function LocationPicker({
   current,
   onSaved,
+  token: tokenOverride,
 }: {
   current?: string | null;
   onSaved?: (label: string) => void;
+  // Signup passes her fresh token explicitly — at that point the auth context's own token
+  // hasn't been set yet (that's what reveals the app), so this can't rely on useAuth() alone.
+  token?: string;
 }) {
-  const { token, t } = useAuth();
+  const { token: contextToken, t } = useAuth();
+  const token = tokenOverride ?? contextToken;
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(current ?? null);

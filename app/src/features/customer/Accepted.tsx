@@ -29,6 +29,9 @@ type MyRequest = {
   coordinatorAppointedAt: string | null;
   coordinatorDeclinedIds: string[];
   coordinatorDecidedAt: string | null;
+  // Individual jobs only — who actually got it, once status is 'assigned'/'completed'. Group
+  // orders show this via coordinatorName/team members instead.
+  assignedProviderName: string | null;
 };
 type InterestedProvider = {
   providerId: string;
@@ -182,6 +185,12 @@ export function Accepted() {
             {r.mode === "group" && r.headcount !== null && ` · ${r.headcount} ${t("peopleWanted")}`}
             {r.mode === "group" && r.agreedRate !== null && ` · ₹${r.agreedRate}${r.agreedRateUnit ? "/" + r.agreedRateUnit : ""}`}
           </div>
+          {/* An individual job's card said "assigned" with no way to tell who to — the only
+              place that information existed was the applicants screen, already gone once she'd
+              picked someone. */}
+          {r.mode === "individual" && r.assignedProviderName && (
+            <div className="text-sm text-loom-indigo">{t("assignedTo")}: {r.assignedProviderName}</div>
+          )}
           {/* Every group order has someone accountable for it — herself by default, shown
               only when she appointed someone else, so the common case (coordinating her own
               order) doesn't clutter the card with a badge that just says what's already true. */}
@@ -585,15 +594,16 @@ function Applicants({ request, onBack }: { request: MyRequest; onBack: () => voi
     },
   });
 
-  // Same choice a group order already had (auto-assembly vs. open call), now here too: read
-  // the applicants herself, or ask the same scoring formula the job feed ranks by to just
-  // pick the best one. It's choose-provider.ts underneath — auto-choose.ts only decides WHO.
+  // Same choice a group order already had (auto-assembly vs. open call), now here too: ask
+  // the same scoring formula the job feed ranks by who it would pick. Read-only — this only
+  // previews a name and a score. Finalizing is a second, explicit tap that goes through
+  // choose-provider.ts, same as picking someone herself, so she always sees who before it's
+  // real and can still change her mind.
+  type AutoPick = { providerId: string; name: string; shopName: string | null; score: number };
+  const [autoPick, setAutoPick] = useState<AutoPick | null>(null);
   const autoChoose = useMutation({
-    mutationFn: () => apiPost<{ providerId: string }>("/api/requests/auto-choose", { token, requestId }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["customers/my-requests", token] });
-      onBack();
-    },
+    mutationFn: () => apiPost<AutoPick>("/api/requests/auto-choose", { token, requestId }),
+    onSuccess: (pick) => setAutoPick(pick),
   });
 
   const [sortBy, setSortBy] = useState<ApplicantSort>("default");
@@ -631,7 +641,28 @@ function Applicants({ request, onBack }: { request: MyRequest; onBack: () => voi
         <div className="text-loom-indigoSoft">{t("noApplicantsYet")}</div>
       )}
 
-      {!awarded && waiting.length > 0 && (
+      {!awarded && autoPick && (
+        <Card className="mb-2">
+          <div className="text-sm text-loom-indigoSoft mb-1">{t("algorithmSuggests")}</div>
+          <div className="font-semibold text-loom-indigo">{autoPick.shopName ?? autoPick.name}</div>
+          <div className="text-xs text-loom-indigoSoft mb-2">{t("matchScore")}: {(autoPick.score * 100).toFixed(0)}%</div>
+          <div className="flex gap-2">
+            <Button
+              variant="gold"
+              className="flex-1"
+              disabled={choose.isPending}
+              onClick={() => choose.mutate(autoPick.providerId)}
+            >
+              {t("finalize")}
+            </Button>
+            <Button variant="ghost" className="flex-1" onClick={() => setAutoPick(null)}>
+              {t("cancel")}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!awarded && !autoPick && waiting.length > 0 && (
         <>
           <ApplicantSortBar sortBy={sortBy} onChange={setSortBy} t={t} />
           <Button
@@ -640,12 +671,12 @@ function Applicants({ request, onBack }: { request: MyRequest; onBack: () => voi
             disabled={autoChoose.isPending}
             onClick={() => void autoChoose.mutate()}
           >
-            {t("letAlgorithmDecide")}
+            {t("autoSelect")}
           </Button>
         </>
       )}
 
-      {!awarded &&
+      {!awarded && !autoPick &&
         waiting.map((a) => (
           <Card key={a.providerId} className="mb-2">
             <div className="flex items-center justify-between">

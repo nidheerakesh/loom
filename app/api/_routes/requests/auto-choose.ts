@@ -8,11 +8,15 @@ import { scoreApplicants } from "../../_lib/requestScoring.js";
 const Body = z.object({ token: z.string().min(1), requestId: z.string().min(1) });
 
 // "Let the algorithm decide" for individual work — the same choice group orders already had
-// (auto-assembly vs. open call), now available for the other staffing path too: instead of
-// reading every applicant herself, she can ask the same scoring formula matching/feed.ts
-// ranks the job feed by to just pick the best one, exactly like choose-provider.ts would if
-// she'd read the list and picked that name herself. It IS choose-provider.ts's own award
-// logic underneath — this only adds "who," not a different way of awarding the job.
+// (auto-assembly vs. open call), now available for the other staffing path too: the same
+// scoring formula matching/feed.ts ranks the job feed by picks the best applicant, instead of
+// her reading every one herself.
+//
+// Read-only on purpose — this used to award the job immediately, with no way to see who got
+// picked before it happened. Now it only computes and returns the pick; the frontend shows her
+// the name and score, and she finalizes it with a second, explicit call to the same
+// choose-provider.ts a manual pick would use. "Auto select" chooses WHO, not a different way
+// of awarding the job — finalizing is still one real decision, hers.
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   const { token, requestId } = Body.parse(req.body);
   const s = await requireRole(token, "customer");
@@ -32,15 +36,14 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const { data: interested, error: intErr } = await supabaseAdmin
     .from("interests")
-    .select("id, provider_id, providers(home_location_id)")
+    .select("provider_id, providers(home_location_id, name, shop_name)")
     .eq("request_id", requestId)
     .eq("state", "interested");
   if (intErr) throw new HttpError(500, intErr.message);
 
-  type Row = { id: string; provider_id: string; providers: { home_location_id: string } | null };
-  const candidates = ((interested ?? []) as unknown as Row[])
-    .filter((r) => r.providers !== null)
-    .map((r) => ({ providerId: r.provider_id, homeLocationId: r.providers!.home_location_id }));
+  type Row = { provider_id: string; providers: { home_location_id: string; name: string; shop_name: string | null } | null };
+  const rows = ((interested ?? []) as unknown as Row[]).filter((r) => r.providers !== null);
+  const candidates = rows.map((r) => ({ providerId: r.provider_id, homeLocationId: r.providers!.home_location_id }));
   if (candidates.length === 0) throw new HttpError(400, "No applicants yet", "no-applicants");
 
   const scores = await scoreApplicants(requestId, request.location_id, request.pay ?? null, candidates);
@@ -62,35 +65,12 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
       bestScore = sc;
     }
   }
-  const chosenInterest = ((interested ?? []) as unknown as Row[]).find((r) => r.provider_id === bestId)!;
+  const chosen = rows.find((r) => r.provider_id === bestId)!;
 
-  const { error: acceptErr } = await supabaseAdmin
-    .from("interests")
-    .update({ state: "accepted" })
-    .eq("id", chosenInterest.id);
-  if (acceptErr) throw new HttpError(500, acceptErr.message);
-
-  const { error: declineErr } = await supabaseAdmin
-    .from("interests")
-    .update({ state: "declined" })
-    .eq("request_id", requestId)
-    .neq("provider_id", bestId);
-  if (declineErr) throw new HttpError(500, declineErr.message);
-
-  const { error: statusErr } = await supabaseAdmin
-    .from("requests")
-    .update({ status: "assigned" })
-    .eq("id", requestId);
-  if (statusErr) throw new HttpError(500, statusErr.message);
-
-  const { error: auditErr } = await supabaseAdmin.from("matches").insert({
-    type: "individual",
-    provider_id: bestId,
-    request_id: requestId,
-    score: { awardedBy: "algorithm" as const, ...bestScore },
-    path: [["request", requestId], ["provider", bestId]],
+  res.status(200).json({
+    providerId: bestId,
+    name: chosen.providers!.name,
+    shopName: chosen.providers!.shop_name,
+    score: bestScore.total,
   });
-  if (auditErr) throw new HttpError(500, auditErr.message);
-
-  res.status(200).json({ providerId: bestId, score: bestScore.total });
 });

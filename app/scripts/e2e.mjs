@@ -263,6 +263,12 @@ async function main() {
   ok("the losing applicant is declined automatically", loser?.state === "declined",
     `${A.p3.name} state=${loser?.state} — nobody waits on work already given away`);
 
+  const myReqsAfterChoice = await get("customers/my-requests", { token: A.c1.token });
+  const reqRow = myReqsAfterChoice.data?.find((r) => r._id === reqId);
+  ok("her own request list shows who got an individual job, not just 'assigned'",
+    reqRow?.assignedProviderName === A.p1.name || reqRow?.assignedProviderName === (A.p1.shopName ?? A.p1.name),
+    `assignedProviderName=${reqRow?.assignedProviderName}`);
+
   const editAfter = await post("requests/update", { token: A.c1.token, requestId: reqId, title: "should not apply" });
   ok("request cannot be edited once assigned", editAfter.status >= 400, `${editAfter.status} ${editAfter.data?.error ?? ""}`);
 
@@ -287,8 +293,10 @@ async function main() {
   // Auto-assembly vs. open call was a group-only distinction — an individual job could only
   // ever be staffed by the customer reading every applicant herself. This is that same choice
   // for individual work: an application deadline (respond.ts already enforced this for group
-  // only), and requests/auto-choose.ts as the "let the algorithm decide" alternative to
-  // choose-provider.ts.
+  // only), and requests/auto-choose.ts as "auto select" — a PREVIEW of who the algorithm would
+  // pick, not an instant award. It used to award immediately with no way to see who first;
+  // now it only computes and returns the pick, and finalizing is a separate, explicit call to
+  // the same choose-provider.ts a manual pick uses.
   section("E2 · Individual jobs — deadline and algorithmic choice");
   const pastDeadlineInd = await post("requests/create", {
     token: A.c1.token, title: "E2E closed individual call", description: "automated test",
@@ -314,18 +322,33 @@ async function main() {
   const beforeAuto = await get("requests/interested-providers", { token: A.c1.token, requestId: autoReqId });
   const bestByScore = [...(beforeAuto.data ?? [])].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
 
-  const auto = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
-  ok("the algorithm picks the highest-scoring applicant — same ranking the feed itself uses",
-    auto.status === 200 && auto.data?.providerId === bestByScore?.providerId,
-    `picked=${auto.data?.providerId} expected=${bestByScore?.providerId} (score ${bestByScore?.score})`);
+  const preview = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
+  ok("auto-choose previews the highest-scoring applicant — same ranking the feed itself uses",
+    preview.status === 200 && preview.data?.providerId === bestByScore?.providerId && typeof preview.data?.name === "string",
+    `previewed=${preview.data?.providerId} (${preview.data?.name}) expected=${bestByScore?.providerId} (score ${bestByScore?.score})`);
+
+  const untouched = await get("requests/interested-providers", { token: A.c1.token, requestId: autoReqId });
+  ok("previewing does not award anything — both applicants are still just 'interested'",
+    (untouched.data ?? []).every((p) => p.state === "interested"),
+    (untouched.data ?? []).map((p) => `${p.name}:${p.state}`).join(", "));
+
+  const finalize = await post("requests/choose-provider", { token: A.c1.token, requestId: autoReqId, providerId: preview.data.providerId });
+  ok("finalizing the previewed pick goes through the same award path a manual choice would",
+    finalize.status === 200);
 
   const afterAuto = await get("requests/interested-providers", { token: A.c1.token, requestId: autoReqId });
-  const autoLoser = (afterAuto.data ?? []).find((p) => p.providerId !== auto.data.providerId);
+  const autoLoser = (afterAuto.data ?? []).find((p) => p.providerId !== preview.data.providerId);
   ok("everyone else is declined, exactly like a manual choose-provider award",
     autoLoser?.state === "declined", `${autoLoser?.name} state=${autoLoser?.state}`);
 
   const auto2 = await post("requests/auto-choose", { token: A.c1.token, requestId: autoReqId });
-  ok("auto-choosing an already-assigned job is refused", auto2.status === 409);
+  ok("previewing an already-assigned job is refused", auto2.status === 409);
+
+  const myReqsAfterAuto = await get("customers/my-requests", { token: A.c1.token });
+  const autoRow = myReqsAfterAuto.data?.find((r) => r._id === autoReqId);
+  ok("the customer's own request list now shows who got the job",
+    autoRow?.assignedProviderName === preview.data.name || autoRow?.assignedProviderName?.length > 0,
+    `assignedProviderName=${autoRow?.assignedProviderName}`);
 
   // ── F · COLLECTIVE LIFECYCLE ────────────────────────────────────────────────
   section("F · Collective lifecycle — the headline claim");

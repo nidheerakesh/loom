@@ -32,17 +32,28 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   // Two batched queries instead of two per request.
   const requestIds = requests.map((r) => r.id);
   const [interestsRes, teamsRes] = await Promise.all([
-    supabaseAdmin.from("interests").select("request_id, state").in("request_id", requestIds),
+    supabaseAdmin
+      .from("interests")
+      .select("request_id, state, providers(name, shop_name)")
+      .in("request_id", requestIds),
     supabaseAdmin.from("teams").select("id, request_id").in("request_id", requestIds),
   ]);
   if (interestsRes.error) throw new HttpError(500, interestsRes.error.message);
   if (teamsRes.error) throw new HttpError(500, teamsRes.error.message);
 
   const counts = new Map<string, { interested: number; accepted: number }>();
+  // Who actually got an individual job — the card showed "assigned" with no way to tell who
+  // to. Group orders have the coordinator for this; an individual job's only equivalent is
+  // whoever's interest is 'accepted'.
+  const assignedProviderByRequest = new Map<string, string>();
   for (const i of interestsRes.data ?? []) {
     const c = counts.get(i.request_id) ?? { interested: 0, accepted: 0 };
     if (i.state === "interested") c.interested += 1;
-    if (i.state === "accepted") c.accepted += 1;
+    if (i.state === "accepted") {
+      c.accepted += 1;
+      const p = i.providers as unknown as { name: string; shop_name: string | null } | null;
+      if (p) assignedProviderByRequest.set(i.request_id, p.shop_name ?? p.name);
+    }
     counts.set(i.request_id, c);
   }
   const teamByRequest = new Map<string, string>();
@@ -74,6 +85,7 @@ export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
         coordinatorAppointedAt: r.coordinator_appointed_at ?? null,
         coordinatorDeclinedIds: r.coordinator_declined_ids ?? [],
         coordinatorDecidedAt: r.coordinator_decided_at ?? null,
+        assignedProviderName: r.mode === "individual" ? assignedProviderByRequest.get(r.id) ?? null : null,
       };
     }),
   );
