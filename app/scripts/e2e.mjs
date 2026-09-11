@@ -894,6 +894,15 @@ async function main() {
   ok("a second reading 30m away reuses the same row — no exact-position trail",
     jittered.data?.locationId === faraway.data?.locationId);
 
+  // A "Near X" label is a claim of proximity — attaching it to whatever named place happens to
+  // be nearest, with no distance cap, produced exactly this: a real account's reading landed
+  // 175km from the nearest known area and still got called "Near Ernakulam", which read as a
+  // few km off rather than a different part of the state.
+  const reallyFaraway = await post("accounts/set-location", { token: A.p1.token, lat: 28.6139, lng: 77.2090 });
+  ok("a reading nowhere near any known area gets 'New area', not a misleadingly-named far-off one",
+    reallyFaraway.status === 200 && reallyFaraway.data?.label === "New area",
+    `→ ${reallyFaraway.data?.label}`);
+
   const manual = await post("accounts/set-location", { token: A.p1.token, locationId: areas.data[0]._id });
   ok("choosing an area from the list works", manual.status === 200 && manual.data?.label === areas.data[0].label,
     `→ ${manual.data?.label}`);

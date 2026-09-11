@@ -81,6 +81,12 @@ export function haversine(lat1: number, lng1: number, lat2: number, lng2: number
 const SNAP_KM = 3;
 // ~1.1km at this latitude. Coordinates are rounded to this before anything is stored.
 const GRID_DP = 2;
+// Beyond this, the nearest known place is too far to honestly call the reading "Near" it —
+// a label like "Near Ernakulam" attached to a point 175km away doesn't just fail to help, it
+// actively misleads (it reads as a few km off, not a different part of the state), which
+// matters here specifically because that same label is what a provider sees next to a job's
+// real distance.
+const MAX_LABEL_KM = 50;
 
 // Turn a captured GPS reading into a location row, without ever storing where she actually is.
 //
@@ -130,7 +136,7 @@ export async function resolveLocationId(lat: number, lng: number): Promise<strin
   // the nearest real area we already know, which is exactly as safe as the label it stands in
   // for: still not her exact position, since the row underneath is still the rounded grid cell,
   // unchanged.
-  const label = nearest ? `Near ${nearest.label}` : "New area";
+  const label = nearest && nearest.km <= MAX_LABEL_KM ? `Near ${nearest.label}` : "New area";
 
   // Two people in the same new cell must land on the same row rather than racing to create two.
   const { data: existing, error: exErr } = await supabaseAdmin
