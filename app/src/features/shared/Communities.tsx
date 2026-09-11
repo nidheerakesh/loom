@@ -232,6 +232,11 @@ function NewConversation({
           </button>
         </Card>
       ))}
+      {/* Screen's own pb-24 only clears the tab bar — enough for a single fixed bar sitting
+          right above it (ChatThread's message field). This screen stacks a SECOND fixed bar
+          (Start conversation) above the tab bar, so the last provider in a long list sat
+          permanently behind both, unreachable no matter how far the page scrolled. */}
+      <div className="h-20" />
 
       <div className="fixed bottom-[72px] left-0 right-0 max-w-[520px] mx-auto p-2 bg-loom-cotton border-t border-loom-line z-20">
         <Button
